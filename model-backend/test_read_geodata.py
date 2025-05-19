@@ -1,7 +1,5 @@
-import os
 import xarray as xr
 import numpy as np
-import pytest
 from src.mypackage.read_geodata import read_netcdf4_format
 
 
