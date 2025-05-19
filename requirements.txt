@@ -1,15 +1,5 @@
-# [build dependencies]
-setuptools>=65.0.0
-wheel>=0.38.0
-
-# [xarray dependencies]
-packaging==25.0
-pandas==2.2.3
-netCDF4
-xarray==2025.4.0
-
-# [dev. dependencies]
-pytest==7.1.2
-black==24.3.0
-nbstripout==0.6.0
-flake8==4.0.1
+numpy
+xarray
+netcdf4
+pytest
+pre-commit
