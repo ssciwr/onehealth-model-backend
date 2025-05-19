@@ -1,0 +1,35 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "model_backend"
+license = {text = "MIT License"}
+readme = "README.md"
+description = "Model backend for OneHealth project"
+requires-python = ">=3.9"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+authors = [
+  { name="Scientific Software Center", email="ssc@uni-heidelberg.de" },
+]
+version = "0.0.1"
+
+dependencies = [
+  "xarray",
+  "netcdf4",
+  "numpy"
+]
+
+[project.optional-dependencies]
+dev = [
+    "pre-commit",
+    "pytest",
+]
+
+[project.urls]
+Homepage = "https://github.com/ssciwr/onehealth-model-backend"
+Issues = "https://github.com/ssciwr/onehealth-model-backend/issues"
