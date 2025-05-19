@@ -1,5 +1,6 @@
 numpy
 xarray
 netcdf4
+jupyter
 pytest
 pre-commit
