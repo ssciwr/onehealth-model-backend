@@ -21,7 +21,8 @@ version = "0.0.1"
 dependencies = [
   "xarray",
   "netcdf4",
-  "numpy"
+  "numpy",
+  "jupyter"
 ]
 
 [project.optional-dependencies]
