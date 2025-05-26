@@ -1,8 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import Dict, Any
-import xarray as xr
-import numpy as np
-
+from ..base.types import oneData
 class PreprocessorBase(ABC):
     def __init__(self, preprocessor_name: str, config: Dict[str, Any]):
         """_summary_
@@ -33,11 +31,11 @@ class PreprocessorBase(ABC):
         return self._config
 
     @abstractmethod
-    def process(self, input_data: Any) -> xr.Dataset|xr.DataArray|np.ndarray:
+    def process(self, input: Any) -> oneData:
         """        Abstract method to process the input data.
         This method should be implemented by subclasses to define how the input data is processed.
 
         Args:
-            input_data (Any): The input data to be processed. This can be any type.
+            input (Any): The input data/filepath/other things to be processed. This can be any type.
         """
         pass
