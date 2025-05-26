@@ -1,6 +1,6 @@
 import xarray as xr
 import numpy as np
-from .read_geodata import read_netcdf4_format
+from model_backend.utils.read_geodata import read_netcdf4_format
 
 
 def test_read_netcdf4_format_file_not_exist():
