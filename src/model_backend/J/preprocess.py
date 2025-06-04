@@ -1,5 +1,3 @@
-from ..base.processor_base import PreprocessorBase
-
 from typing import Dict, Any
 import logging
 import cdsapi
@@ -11,12 +9,13 @@ from pathlib import Path
 
 from ..base.types import oneData
 
+# this is left here for compatibility and to avoid dependencies during early stage development
+# throw out when preprocessing is fully implemented. Talk to Tuyen about this.
 
-class JPreprocessor(PreprocessorBase):
-    """JPreprocessor is a class that extends PreprocessorBase to handle preprocessing tasks specific to the model type 'JModel'.
 
-    Args:
-        PreprocessorBase (_type_): Base class for preprocessors, providing a structure for preprocessing tasks.
+class JPreprocessor:
+    """JPreprocessor handles preprocessing tasks specific to the model type 'JModel'.
+    This consolidates the data preprocessing steps of the original R code into a Python class that can be used within the model backend.
     """
 
     def __init__(self, config: Dict[str, Any]):
@@ -65,8 +64,8 @@ class JPreprocessor(PreprocessorBase):
         logging.info("Downloading data in JPreprocessor")
 
         if self.config["target_file"].exists():
-            logging.info("Target file already exists, skipping download.")
-            return # If the target file already exists, skip downloading
+            logging.debug("Target file already exists, skipping download.")
+            return  # If the target file already exists, skip downloading
 
         client = cdsapi.Client()
 
