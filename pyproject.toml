@@ -19,10 +19,15 @@ authors = [
 version = "0.0.1"
 
 dependencies = [
-  "xarray",
-  "netcdf4",
-  "numpy",
-  "jupyter"
+  "xarray>=2025.4.0",
+  "netcdf4>=1.7.2",
+  "geopandas[all]>=1.1.0", 
+  "dask[complete]>=2025.5.1", 
+  "matplotlib>=3.10.3", 
+  "shapely>=2.1.1", 
+  "psycopg2-binary>=2.9.10", 
+  "numpy>=2.2.6", 
+  "PyYAML>=6.0.2",
 ]
 
 [project.optional-dependencies]
