@@ -5,6 +5,10 @@ from ..base.types import oneData
 from netCDF4 import Dataset
 
 
+# there is some potential for generalization here - all the dask stuff could go into a 
+# base class, and the individual models could just implement the model-specific logic 
+# and the creation of the task graph? 
+
 class JModel:
     """Class that extends BaseModel to handle model-specific tasks for the model type 'JModel'.
 
@@ -16,9 +20,7 @@ class JModel:
     description: str = (
         "JModel handles model-specific tasks for the model type 'JModel'."
     )
-    task_graph = (
-        Dict[str, list[str]] | None
-    )  # Placeholder for the task graph, to be defined later
+    task_graph: Dict[str, Any] | None = None
     input: str | None = None  # Placeholder for input data, to be defined later
     output: str | None = None  # Placeholder for output data, to be defined later
     run_mode: str = (
@@ -80,7 +82,17 @@ class JModel:
         """
         data = self.read_input_data()
 
-        raise NotImplementedError("Parallel run mode is not implemented yet.")
+        graph = self.task_graph
+        if graph is None:
+            self.define_task_graph()
+
+        graph["input"] = data
+        result = dask.compute(self.computation, scheduler=self.run_mode)
+        self.store(result[0])
+
+    def store(self, data: oneData) -> None:
+        # for now this needs to write to ncdf files, later postgres db
+        pass
 
     def define_task_graph(self) -> None:
         """Defines the task graph for the JModel."""
