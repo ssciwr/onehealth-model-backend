@@ -2,13 +2,11 @@ from typing import Dict, Any
 import dask
 import xarray as xr
 from ..base.types import oneData
-from netCDF4 import Dataset
 
 
-# there is some potential for generalization here - all the dask stuff could go into a 
-# base class, and the individual models could just implement the model-specific logic 
-# and the creation of the task graph? 
-
+# there is some potential for generalization here - all the dask stuff could go into a
+# base class, and the individual models could just implement the model-specific logic
+# and the creation of the task graph?
 class JModel:
     """Class that extends BaseModel to handle model-specific tasks for the model type 'JModel'.
 
@@ -48,7 +46,8 @@ class JModel:
         self.output = config.get("output", "JModel_output.nc")
 
         # get data variable to read, but do not read it yet
-        self.input = config.get("data", None)
+        self.input_file = config.get("data", None)
+        self.data_format = config.get("data_format", "NETCDF4")
 
     @classmethod
     def from_config(cls, config: Dict[str, Any]) -> "JModel":
@@ -68,8 +67,16 @@ class JModel:
         Returns:
             oneData: xarray dataset or data array containing the input data for the model.
         """
+
         # nothing done here yet
-        pass
+        data = xr.open_dataset(
+            self.input_file, engine="netcdf4", decode_coords=True, chunks="auto"
+        )
+
+        if data is None:
+            raise ValueError("Input data source is not defined in the configuration.")
+
+        return data
 
     def run(self) -> None:
         """Runs the JModel with the provided input data.
@@ -88,11 +95,21 @@ class JModel:
 
         graph["input"] = data
         result = dask.compute(self.computation, scheduler=self.run_mode)
-        self.store(result[0])
 
-    def store(self, data: oneData) -> None:
-        # for now this needs to write to ncdf files, later postgres db
-        pass
+        self.store_output_data(result[0])
+
+    def store_output_data(self, data: oneData) -> None:
+        """Stores the processed data to the specified output file.
+        *for now, this is netcdf4, later we will have a database connection for this*
+
+        Args:
+            data (oneData): Dataset to store
+        """
+        xr.Dataset.to_netcdf(
+            data,
+            self.output,
+            format="NETCDF4",
+        )
 
     def define_task_graph(self) -> None:
         """Defines the task graph for the JModel."""
