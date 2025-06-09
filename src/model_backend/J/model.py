@@ -2,7 +2,8 @@ from typing import Dict, Any
 import dask
 import xarray as xr
 import numpy as np
-import json
+import pandas as pd
+from scipy import interp1d
 
 type oneData = xr.Dataset | xr.DataArray | np.ndarray
 
@@ -11,21 +12,23 @@ type oneData = xr.Dataset | xr.DataArray | np.ndarray
 # base class, and the individual models could just implement the model-specific logic
 # and the creation of the task graph?
 class JModel:
-    """Class that extends BaseModel to handle model-specific tasks for the model type 'JModel'.
-
-    Args:
-        BaseModel (AbstractBaseClass): Base class for models, providing a structure for model operations.
+    """
+    Implements the model used in the paper *TODO*
     """
 
     name: str = "JModel"
-    description: str = (
-        "JModel handles model-specific tasks for the model type 'JModel'."
-    )
     task_graph: Dict[str, Any] | None = None
     input: str | None = None  # Placeholder for input data, to be defined later
     output: str | None = None  # Placeholder for output data, to be defined later
     run_mode: str = (
         "synchronous"  # Default run mode, can be changed based on configuration
+    )
+    r0_data: xr.Dataset | None = None  # Placeholder for R0 data, to be defined later
+    min_temp: np.float64 = 0.0  # Minimum temperature for interpolation
+    max_temp: np.float64 = 45.0  # Maximum temperature for interpolation
+    step: np.float64 = 0.1  # Step size for temperature interpolation
+    grid_data: xr.Dataset | None = (
+        None  # Placeholder for grid data, to be defined later
     )
 
     def __init__(
@@ -46,11 +49,19 @@ class JModel:
                 f"Invalid run mode: {self.run_mode}. Supported modes are 'single', 'processes', 'distributed', 'threads'."
             )
 
-        self.output = config.get("output", "JModel_output.nc")
+        r0_path = config["r0_data"]
+        self.r0_data = xr.Dataset(pd.read_csv(r0_path)) if r0_path else None
+        self.output = config["output"]
 
         # get data variable to read, but do not read it yet
-        self.input_file = config.get("data", None)
-        self.data_format = config.get("data_format", "NETCDF4")
+        self.input_file = config.get("input_file", None)
+        self.data_format = config["data_format"]
+        self.step_temp = (config.get("step", 0.1),)
+        self.min_temp = (config.get("min_temp", 0.0),)
+        self.max_temp = (config.get("max_temp", 45.0),) + self.step_temp
+
+        grid_data_url = config.get("grid_data", None)
+        self.grid_data = None  # TODO
 
     @classmethod
     def from_config(cls, config: Dict[str, Any]) -> "JModel":
@@ -118,45 +129,42 @@ class JModel:
         """Defines the task graph for the JModel."""
 
         transform_task = dask.delayed(self._transform_transmission_rates)
-        interpolate_task = dask.delayed(self._interpolate_transmission_rates)
 
         input = dask.delayed(lambda x: x, pure=True)(xr.Dataset())
-        transformed = transform_task(input)
-        interpolated = interpolate_task(transformed)
+        interpolated = transform_task(input)
         self.input_key = input.key
         self.computation = interpolated
         self.task_graph = dict(interpolated.dask)
 
-    # individual functions that define the model logic
-    def _interpolate_transmission_rates(
-        self,
-        data: oneData,
-        min_temp: np.float64 = 0.0,
-        max_temp: np.float64 = 45.0,
-        step: np.float64 = 0.1,
-    ) -> xr.Dataset:
-        temps = np.arange(min_temp, max_temp + step, step)
+    def _transform_transmission_rates(self, data: oneData) -> oneData:
+        temps = np.arange(self.min_temp, self.max_temp, self.step_temp)
 
         valid = (
-            ~np.isnan(data.Median_R0)
-            & (data.Temperature >= min_temp)
-            & (data.Temperature <= max_temp)
+            ~np.isnan(self.r0_data.Median_R0)
+            & (self.r0_data.Temperature >= self.min_temp)
+            & (self.r0_data.Temperature <= self.max_temp)
         ).values
 
-        interpolated = np.interp(
-            temps,
-            data.Temperature[valid].values,
-            data.Median_R0[valid].values,
-            left=np.nan,
-            right=np.nan,
+        interp_function = interp1d(
+            self.r0_data.Temperature[valid].values,
+            self.r0_data.Median_R0[valid].values,
+            bounds_error=False,
+            fill_value=0.0,
+            kind="linear",
         )
 
-        return xr.Dataset(
-            data_vars={
-                "Temperature": ("Temperature", temps),
-                "Median_R0": ("Temperature", interpolated),
-            },
+        # FIXME: this must use temps as the interpolation points, not the data["t2m"] values
+        # but why would this be necessary? The data["t2m"] values are the temperatures
+        # that we want to interpolate the R0 values for if I understand correctly, so we should use them as the x-values of the interpolation function??
+        r0_map = xr.Dataset(
+            xr.apply_ufunc(
+                interp_function,
+                data["t2m"],
+                dask="allowed",
+                input_core_dims=[[]],
+                output_core_dims=[[]],
+                vectorize=True,
+            )
         )
 
-    def _transform_transmission_rates(self, data: oneData) -> oneData:
-        return data
+        return r0_map
