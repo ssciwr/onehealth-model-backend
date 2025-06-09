@@ -1,7 +1,10 @@
 from typing import Dict, Any
 import dask
 import xarray as xr
-from ..base.types import oneData
+import numpy as np
+import json
+
+type oneData = xr.Dataset | xr.DataArray | np.ndarray
 
 
 # there is some potential for generalization here - all the dask stuff could go into a
@@ -125,8 +128,35 @@ class JModel:
         self.task_graph = dict(interpolated.dask)
 
     # individual functions that define the model logic
-    def _interpolate_transmission_rates(self, data: oneData) -> oneData:
-        return data
+    def _interpolate_transmission_rates(
+        self,
+        data: oneData,
+        min_temp: np.float64 = 0.0,
+        max_temp: np.float64 = 45.0,
+        step: np.float64 = 0.1,
+    ) -> xr.Dataset:
+        temps = np.arange(min_temp, max_temp + step, step)
+
+        valid = (
+            ~np.isnan(data.Median_R0)
+            & (data.Temperature >= min_temp)
+            & (data.Temperature <= max_temp)
+        ).values
+
+        interpolated = np.interp(
+            temps,
+            data.Temperature[valid].values,
+            data.Median_R0[valid].values,
+            left=np.nan,
+            right=np.nan,
+        )
+
+        return xr.Dataset(
+            data_vars={
+                "Temperature": ("Temperature", temps),
+                "Median_R0": ("Temperature", interpolated),
+            },
+        )
 
     def _transform_transmission_rates(self, data: oneData) -> oneData:
         return data
