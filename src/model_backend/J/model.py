@@ -1,9 +1,11 @@
 from typing import Dict, Any
-import dask
 import xarray as xr
 import numpy as np
 import pandas as pd
 from scipy import interp1d
+
+from ..utils.read_data import read_geodata
+
 
 type oneData = xr.Dataset | xr.DataArray | np.ndarray
 
@@ -30,6 +32,10 @@ class JModel:
     grid_data: xr.Dataset | None = (
         None  # Placeholder for grid data, to be defined later
     )
+    nuts_level: int = 0  # NUTS level for the model, default is 0
+    resolution: str = "10M"  # Resolution for the nuts data
+    year: int = 2024
+    month: int | None = None  # Month for the model, default is None
 
     def __init__(
         self,
@@ -60,8 +66,20 @@ class JModel:
         self.min_temp = (config.get("min_temp", 0.0),)
         self.max_temp = (config.get("max_temp", 45.0),) + self.step_temp
 
-        grid_data_url = config.get("grid_data", None)
-        self.grid_data = None  # TODO
+        grid_data_base_url = config.get("grid_data", None)
+        self.nuts_level = config.get("nuts_level", 3)
+        self.resolution = config.get("resolution", "10M")
+        self.year = config.get("year", 2024)
+        self.month = config.get("month", None)
+
+        self.grid_data = read_geodata(
+            base_url=grid_data_base_url,
+            nuts_level=self.nuts_level,
+            resolution=self.resolution,
+            year=self.year,
+            month=self.month,
+            url=lambda base_url, resolution, year, nuts_level: f"{base_url}/geojson/NUTS_RG_{resolution}_{year}_4326_LEVL_{nuts_level}.geojson",
+        )
 
     @classmethod
     def from_config(cls, config: Dict[str, Any]) -> "JModel":
@@ -92,7 +110,9 @@ class JModel:
 
         return data
 
-    def run(self) -> None:
+    def run(
+        self,
+    ) -> None:
         """Runs the JModel with the provided input data.
 
         Args:
@@ -101,43 +121,8 @@ class JModel:
         Returns:
             xr.Dataset|xr.DataArray: Processed output data from the model.
         """
+
         data = self.read_input_data()
-
-        graph = self.task_graph
-        if graph is None:
-            self.define_task_graph()
-
-        graph["input"] = data
-        result = dask.compute(self.computation, scheduler=self.run_mode)
-
-        self.store_output_data(result[0])
-
-    def store_output_data(self, data: oneData) -> None:
-        """Stores the processed data to the specified output file.
-        *for now, this is netcdf4, later we will have a database connection for this*
-
-        Args:
-            data (oneData): Dataset to store
-        """
-        xr.Dataset.to_netcdf(
-            data,
-            self.output,
-            format="NETCDF4",
-        )
-
-    def define_task_graph(self) -> None:
-        """Defines the task graph for the JModel."""
-
-        transform_task = dask.delayed(self._transform_transmission_rates)
-
-        input = dask.delayed(lambda x: x, pure=True)(xr.Dataset())
-        interpolated = transform_task(input)
-        self.input_key = input.key
-        self.computation = interpolated
-        self.task_graph = dict(interpolated.dask)
-
-    def _transform_transmission_rates(self, data: oneData) -> oneData:
-        temps = np.arange(self.min_temp, self.max_temp, self.step_temp)
 
         valid = (
             ~np.isnan(self.r0_data.Median_R0)
@@ -153,9 +138,7 @@ class JModel:
             kind="linear",
         )
 
-        # FIXME: this must use temps as the interpolation points, not the data["t2m"] values
-        # but why would this be necessary? The data["t2m"] values are the temperatures
-        # that we want to interpolate the R0 values for if I understand correctly, so we should use them as the x-values of the interpolation function??
+        # TODO: make sure this works as intended, current results differ from R
         r0_map = xr.Dataset(
             xr.apply_ufunc(
                 interp_function,
@@ -167,4 +150,17 @@ class JModel:
             )
         )
 
-        return r0_map
+        self.store_output_data(r0_map)
+
+    def store_output_data(self, data: oneData) -> None:
+        """Stores the processed data to the specified output file.
+        *for now, this is netcdf4, later we will have a database connection for this*
+
+        Args:
+            data (oneData): Dataset to store
+        """
+        xr.Dataset.to_netcdf(
+            data,
+            self.output,
+            format="NETCDF4",
+        )
