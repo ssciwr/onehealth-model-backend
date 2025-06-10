@@ -7,7 +7,7 @@ name = "model_backend"
 license = {text = "MIT License"}
 readme = "README.md"
 description = "Model backend for OneHealth project"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 classifiers = [
     "Programming Language :: Python :: 3",
     "License :: OSI Approved :: MIT License",
@@ -22,7 +22,10 @@ dependencies = [
   "xarray",
   "netcdf4",
   "numpy",
-  "jupyter"
+  "jupyter",
+  "scipy (>=1.15.3,<2.0.0)",
+  "geopandas (>=1.1.0,<2.0.0)",
+  "rioxarray (>=0.19.0,<0.20.0)"
 ]
 
 [project.optional-dependencies]

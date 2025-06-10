@@ -1,10 +1,10 @@
 import os
 
 import pandas as pd
-from sandbox.edwin.interpolators import interpolator_function
+from interpolators import interpolator_function
 
 FILENAME_R0_POSTERIOR_STATS = "R0_pip_stats.csv"
-PATH_R0_POSTERIOR_STATS = os.path.join("./", FILENAME_R0_POSTERIOR_STATS)
+PATH_R0_POSTERIOR_STATS = os.path.join("./data/in", FILENAME_R0_POSTERIOR_STATS)
 
 X_COLUMN_STATS = "Temperature"
 Y_COLUMN_STATS = "Median_R0"
