@@ -71,7 +71,7 @@ class JModel:
             self.r0_data.Temperature[1] - self.r0_data.Temperature[0]
         )  # assume uniform step size
         self.min_temp = self.r0_data.Temperature.min()
-        self.max_temp = self.r0_data.Temperature.max() + self.step_temp
+        self.max_temp = self.r0_data.Temperature.max()
 
         if grid_data_baseurl is not None:
             self.grid_data_baseurl = grid_data_baseurl
