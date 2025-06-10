@@ -16,7 +16,7 @@ class JModel:
     input: str | Path | None = None  # Placeholder for input data, to be defined later
     output: str | Path | None = None  # Placeholder for output data, to be defined later
     run_mode: str = "forbidden"
-    r0_data: xr.Dataset | None = None  # Placeholder for R0 data, to be defined later
+    r0_data: pd.DataFrame  # Placeholder for R0 data, to be defined later
     min_temp: np.float64 = 0.0  # Minimum temperature for interpolation
     max_temp: np.float64 = 45.0  # Maximum temperature for interpolation
     step: np.float64 = 0.1  # Step size for temperature interpolation
@@ -25,7 +25,6 @@ class JModel:
     nuts_level: int = 0  # NUTS level for the model, default is 0
     resolution: str = "10M"  # Resolution for the nuts data
     year: int = 2024
-    month: int | None = None  # Month for the model, default is None
 
     def __init__(
         self,
@@ -37,7 +36,6 @@ class JModel:
         nuts_level: int = 3,
         resolution: str = "10M",
         year: int = 2024,
-        month: int | None = None,
     ):
         """Initializes the JModel with the given configuration.
 
@@ -69,7 +67,6 @@ class JModel:
             raise ValueError("R0 data path must be provided in the configuration.")
         else:
             self.r0_data = pd.read_csv(r0_path) if r0_path else None
-
         self.step_temp = (
             self.r0_data.Temperature[1] - self.r0_data.Temperature[0]
         )  # assume uniform step size
@@ -86,7 +83,6 @@ class JModel:
         self.nuts_level = nuts_level
         self.resolution = resolution
         self.year = year
-        self.month = month
 
     def read_input_data(self) -> oneData:
         """Read input data from given source 'self.input'
