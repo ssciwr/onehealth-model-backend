@@ -92,8 +92,7 @@ class JModel:
         """
 
         # nothing done here yet
-        data = xr.open_dataset(self.input, engine="rasterio", chunks="auto")
-
+        data = xr.open_dataset(self.input, chunks="auto")
         if data is None:
             raise ValueError("Input data source is not defined in the configuration.")
 
@@ -104,7 +103,10 @@ class JModel:
             nuts_level=self.nuts_level,
             resolution=self.resolution,
             year=self.year,
-            url=lambda base_url, resolution, year, nuts_level: f"{base_url}/geojson/NUTS_RG_{resolution}_{year}_4326_LEVL_{nuts_level}.geojson",
+            url=lambda base_url,
+            resolution,
+            year,
+            nuts_level: f"{base_url}/geojson/NUTS_RG_{resolution}_{year}_4326_LEVL_{nuts_level}.geojson",
         )
 
         # ensure the data has a coordinate reference system (CRS)

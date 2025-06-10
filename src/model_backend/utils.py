@@ -17,6 +17,7 @@ def detect_csr(data: xr.Dataset) -> xr.Dataset:
     Returns:
         xr.Dataset: dataset with the CRS set to EPSG:4326 if it was not already defined and the coordinates match the expected ranges.
     """
+
     # this currently only detects EPSG:4326 standard lat/lon coordinates
     if (
         -180.2 <= data.x.min().values <= -179.9
@@ -37,7 +38,10 @@ def read_geodata(
     year: int = 2024,
     resolution: str = "10M",
     base_url: str = "https://gisco-services.ec.europa.eu/distribution/v2/nuts",
-    url: callable = lambda base_url, resolution, year, nuts_level: f"{base_url}/geojson/NUTS_RG_{resolution}_{year}_4326_LEVL_{nuts_level}.geojson",
+    url: callable = lambda base_url,
+    resolution,
+    year,
+    nuts_level: f"{base_url}/geojson/NUTS_RG_{resolution}_{year}_4326_LEVL_{nuts_level}.geojson",
 ):
     """load Eurostat NUTS geospatial data from the Eurostat service.
 
