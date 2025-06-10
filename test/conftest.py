@@ -31,7 +31,7 @@ def make_rioxarray_testdata(path: Path, valid: bool = True) -> xr.Dataset:
     # First load with netCDF engine
     with xr.open_dataset(path / "test_data.nc") as data:
         # Properly set spatial attributes needed by rioxarray - this is what makes .rio work
-        ds = data.copy()  #FIXME: this still leaks resources
+        ds = data.copy()  # FIXME: this still leaks resources
     return ds
 
 

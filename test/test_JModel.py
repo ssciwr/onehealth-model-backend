@@ -114,9 +114,9 @@ def test_model_read_input_data(make_test_data, tmp_path):
         assert (
             read_data.x.size == 1 and read_data.y.size == 1
         )  # due to clipping on the european union and a very coarse grid we have for test data
-        assert read_data.t2m[0, 0] == data.t2m.values[7, 5], (
-            "Temperature data should match the test data values where it's clipped"
-        )
+        assert (
+            read_data.t2m[0, 0] == data.t2m.values[7, 5]
+        ), "Temperature data should match the test data values where it's clipped"
 
 
 def test_model_run(make_test_data, tmp_path):
@@ -139,13 +139,14 @@ def test_model_run(make_test_data, tmp_path):
         with xr.open_dataset(output_path) as output_data:
             assert isinstance(output_data, xr.Dataset)
             assert "t2m" in output_data.data_vars
-            assert output_data.t2m.shape == (1, 1), (
-                "Output data shape should match input data shape"
-            )
+            assert output_data.t2m.shape == (
+                1,
+                1,
+            ), "Output data shape should match input data shape"
             assert output_data.rio.crs == "EPSG:4326", "CRS should be set to EPSG:4326"
-            assert output_data.x.min() >= -180.2 and output_data.x.max() <= 180.2, (
-                "Longitude values should be within the expected range for EPSG:4326"
-            )
-            assert output_data.y.min() >= -90.1 and output_data.y.max() <= 90.2, (
-                "Latitude values should be within the expected range for EPSG:4326"
-            )
+            assert (
+                output_data.x.min() >= -180.2 and output_data.x.max() <= 180.2
+            ), "Longitude values should be within the expected range for EPSG:4326"
+            assert (
+                output_data.y.min() >= -90.1 and output_data.y.max() <= 90.2
+            ), "Latitude values should be within the expected range for EPSG:4326"

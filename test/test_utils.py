@@ -10,10 +10,7 @@ def test_read_geodata():
         year=2024,
         resolution="10M",
         base_url="https://gisco-services.ec.europa.eu/distribution/v2/nuts",
-        url=lambda base_url,
-        resolution,
-        year,
-        nuts_level: f"{base_url}/geojson/NUTS_RG_{resolution}_{year}_4326_LEVL_{nuts_level}.geojson",
+        url=lambda base_url, resolution, year, nuts_level: f"{base_url}/geojson/NUTS_RG_{resolution}_{year}_4326_LEVL_{nuts_level}.geojson",
     )
 
     assert isinstance(data, gpd.GeoDataFrame), "Data should be a GeoDataFrame"
@@ -28,10 +25,7 @@ def test_read_geodata():
             year=2024,
             resolution="10M",
             base_url="https://gisco-services.ec.europa.eu/distribution/v2/nuts",
-            url=lambda base_url,
-            resolution,
-            year,
-            nuts_level: f"{base_url}/geojson/NUTS_RG_{resolution}_{year}_4326_LEVL_{nuts_level}_INVALID.geojson",
+            url=lambda base_url, resolution, year, nuts_level: f"{base_url}/geojson/NUTS_RG_{resolution}_{year}_4326_LEVL_{nuts_level}_INVALID.geojson",
         )
 
 
