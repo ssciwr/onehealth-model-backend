@@ -3,6 +3,7 @@ from pathlib import Path
 import pandas as pd
 import pytest
 import xarray as xr
+import math
 
 
 def test_jmodel_initialization():
@@ -29,8 +30,8 @@ def test_jmodel_initialization():
     assert model.nuts_level == 3
     assert model.resolution == "10M"
     assert model.year == 2024
-    assert model.min_temp == 8.6
-    assert model.max_temp == 13.0
+    assert math.isclose(model.min_temp, 8.6)
+    assert math.isclose(model.max_temp, 13.0)
 
     with pytest.raises(ValueError):
         JModel(
@@ -105,12 +106,12 @@ def test_model_read_input_data(make_test_data, tmp_path):
         )
         read_data = model.read_input_data()
         assert isinstance(read_data, xr.Dataset)
-        assert "temp" in read_data.data_vars
+        assert "t2m" in read_data.data_vars
         assert read_data.t2m == data.t2m
         assert read_data.rio.crs == "EPSG:4326", "CRS should be set to EPSG:4326"
 
-        assert read_data.x.min() >= -180.2 and read_data.x.max() <= 180.2
-        assert read_data.y.min() >= -90.1 and read_data.y.max() <= 90.2
+        assert read_data.x.min() > -180.1 and read_data.x.max() < 180.1
+        assert read_data.y.min() > -90.1 and read_data.y.max() < 90.1
         assert (
             read_data.x.size == 1 and read_data.y.size == 1
         )  # due to clipping on the european union and a very coarse grid we have for test data
@@ -143,9 +144,9 @@ def test_model_run(make_test_data, tmp_path):
                 "Output data shape should match input data shape"
             )
             assert output_data.rio.crs == "EPSG:4326", "CRS should be set to EPSG:4326"
-            assert output_data.x.min() >= -180.2 and output_data.x.max() <= 180.2, (
+            assert output_data.x.min() > -180.1 and output_data.x.max() < 180.1, (
                 "Longitude values should be within the expected range for EPSG:4326"
             )
-            assert output_data.y.min() >= -90.1 and output_data.y.max() <= 90.2, (
+            assert output_data.y.min() >= -90.1 and output_data.y.max() <= 90.1, (
                 "Latitude values should be within the expected range for EPSG:4326"
             )
