@@ -18,7 +18,6 @@ def detect_csr(data: xr.Dataset) -> xr.Dataset:
         xr.Dataset: dataset with the CRS set to EPSG:4326 if it was not already defined and the coordinates match the expected ranges.
     """
     # this currently only detects EPSG:4326 standard lat/lon coordinates
-
     if (
         -180.2 <= data.x.min().values <= -179.9
         and 179.8 <= data.x.max().values <= 180.2
@@ -66,4 +65,4 @@ def read_geodata(
         nuts_data = gpd.read_file(url_str)
         return nuts_data
     except Exception as e:
-        raise RuntimeError(f"Failed to download from {url}: {e}")
+        raise RuntimeError(f"Failed to download from {url_str}: {e}")
