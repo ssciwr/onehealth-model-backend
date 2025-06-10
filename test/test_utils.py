@@ -5,7 +5,7 @@ import xarray as xr
 import numpy as np
 
 
-def make_test_data(defect=False) -> xr.Dataset:
+def make_test_data(tmp_path, defect=False) -> xr.Dataset:
     if defect:
         lon = np.linspace(-120, 120, 10)
         lat = np.linspace(-70, 76, 10)
@@ -26,6 +26,8 @@ def make_test_data(defect=False) -> xr.Dataset:
         },
     )
 
+    ds.to_netcdf(tmp_path / "test_data.nc")
+    ds = xr.open_dataset(tmp_path / "test_data.nc", engine="rasterio")
     return ds
 
 
@@ -56,10 +58,8 @@ def test_read_geodata():
 
 
 def test_detect_csr(tmp_path):
-    data = make_test_data()
+    data = make_test_data(tmp_path)
     # write and read to convert to rioxarray raster
-    data.to_netcdf(tmp_path / "test_data.nc")
-    data = xr.open_dataset(tmp_path / "test_data.nc", engine="rasterio")
 
     # reassign coords
     lon = np.linspace(-180, 180, 10)
