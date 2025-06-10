@@ -66,5 +66,4 @@ def read_geodata(
         nuts_data = gpd.read_file(url_str)
         return nuts_data
     except Exception as e:
-        print(f"Failed to download from {url}: {e}")
-        return None
+        raise RuntimeError(f"Failed to download from {url}: {e}")
