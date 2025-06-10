@@ -66,7 +66,7 @@ class JModel:
         if r0_path is None:
             raise ValueError("R0 data path must be provided in the configuration.")
         else:
-            self.r0_data = pd.read_csv(r0_path) if r0_path else None
+            self.r0_data = pd.read_csv(r0_path)
         self.step_temp = (
             self.r0_data.Temperature[1] - self.r0_data.Temperature[0]
         )  # assume uniform step size
