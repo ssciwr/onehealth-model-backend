@@ -3,8 +3,9 @@ import numpy as np
 import pandas as pd
 from pathlib import Path
 from .utils import read_geodata, detect_csr
+from typing import Union
 
-type oneData = xr.Dataset | xr.DataArray | np.ndarray
+oneData = Union[xr.Dataset, xr.DataArray, np.ndarray]
 
 
 class JModel:
