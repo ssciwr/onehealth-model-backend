@@ -19,13 +19,13 @@ authors = [
 version = "0.0.1"
 
 dependencies = [
-  "xarray[parallel]>=2025.4.0",
-  "rioxarray>=0.19.0",
-  "netcdf4>=1.7.2",
-  "geopandas[all]>=1.1.0", 
-  "matplotlib>=3.10.3", 
-  "numpy>=2.2.6", 
-  "dask >=2025.5.0",
+  "xarray[parallel]",
+  "rioxarray",
+  "netcdf4",
+  "geopandas[all]", 
+  "matplotlib", 
+  "numpy", 
+  "dask",
 ]
 
 [project.optional-dependencies]
