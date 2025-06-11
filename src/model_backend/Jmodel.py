@@ -2,7 +2,7 @@ import xarray as xr
 import pandas as pd
 import dask.array as da
 from pathlib import Path
-from .utils import read_geodata, detect_csr, oneData
+from .utils import read_geodata, detect_csr
 import numpy as np
 
 
@@ -149,11 +149,11 @@ class JModel:
 
         return result
 
-    def read_input_data(self) -> oneData:
+    def read_input_data(self) -> xr.Dataset:
         """Read input data from given source 'self.input'
 
         Returns:
-            oneData: xarray dataset or data array containing the input data for the model.
+            xr.Dataset: xarray dataset containing the input data for the model.
         """
 
         # nothing done here yet
@@ -222,11 +222,11 @@ class JModel:
 
             self.store_output_data(r0_map)
 
-    def store_output_data(self, data: oneData) -> None:
+    def store_output_data(self, data: xr.Dataset) -> None:
         """Stores the processed data to the specified output file.
         *for now, this is netcdf4, later we will have a database connection for this*
 
         Args:
-            data (oneData): Dataset to store
+            data (xr.Dataset): Dataset to store
         """
         data.to_netcdf(self.output)
