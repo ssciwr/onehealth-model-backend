@@ -1,8 +1,5 @@
 import geopandas as gpd
 import xarray as xr
-import numpy as np
-
-type oneData = xr.Dataset | xr.DataArray | np.ndarray
 
 
 def detect_csr(data: xr.Dataset) -> xr.Dataset:
