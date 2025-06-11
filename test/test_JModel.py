@@ -14,7 +14,7 @@ def test_jmodel_initialization():
     model = JModel(
         input="input_data.csv",
         output="output_data.csv",
-        r0_path=path,
+        r0_path=str(path),
         run_mode="allowed",
         grid_data_baseurl="https://example.com/grid_data",
         nuts_level=3,
@@ -37,7 +37,7 @@ def test_jmodel_initialization():
         JModel(
             input=None,
             output="output_data.csv",
-            r0_path=path,
+            r0_path=str(path),
             run_mode="invalid_forbiddenmode",  # Invalid run mode
             grid_data_baseurl="https://example.com/grid_data",
             nuts_level=3,
@@ -48,7 +48,7 @@ def test_jmodel_initialization():
         JModel(
             input="input_data.csv",
             output=None,
-            r0_path=path,
+            r0_path=str(path),
             run_mode="forbidden",  # Invalid run mode
             grid_data_baseurl="https://example.com/grid_data",
             nuts_level=3,
@@ -71,7 +71,7 @@ def test_jmodel_initialization():
         JModel(
             input="input_data.csv",
             output="output_data.csv",
-            r0_path=path,
+            r0_path=str(path),
             run_mode="invalid_mode",  # Invalid run mode
             grid_data_baseurl="https://example.com/grid_data",
             nuts_level=3,
@@ -83,7 +83,7 @@ def test_jmodel_initialization():
         JModel(
             input="input_data.csv",
             output="output_data.csv",
-            r0_path=path,
+            r0_path=str(path),
             run_mode="parallel",  # Invalid run mode
             grid_data_baseurl=None,
             nuts_level=3,
@@ -97,7 +97,7 @@ def test_model_read_input_data(make_test_data, tmp_path):
         model = JModel(
             input=tmp_path / "test_data.nc",
             output="output_data.csv",
-            r0_path=Path.cwd() / "test" / "test_r0.csv",
+            r0_path=str(Path.cwd() / "test" / "test_r0.csv"),
             run_mode="allowed",
             grid_data_baseurl="https://gisco-services.ec.europa.eu/distribution/v2/nuts",
             nuts_level=3,
@@ -125,7 +125,7 @@ def test_model_run(make_test_data, tmp_path):
         model = JModel(
             input=tmp_path / "test_data.nc",
             output=tmp_path / "output_data.nc",
-            r0_path=Path.cwd() / "test" / "test_r0.csv",
+            r0_path=str(Path.cwd() / "test" / "test_r0.csv"),
             run_mode="allowed",
             grid_data_baseurl="https://gisco-services.ec.europa.eu/distribution/v2/nuts",
             nuts_level=3,
