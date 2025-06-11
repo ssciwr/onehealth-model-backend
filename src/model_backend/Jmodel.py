@@ -1,10 +1,9 @@
 import xarray as xr
-import numpy as np
 import pandas as pd
+import dask.array as da
 from pathlib import Path
-from .utils import read_geodata, detect_csr
-
-type oneData = xr.Dataset | xr.DataArray | np.ndarray
+from .utils import read_geodata, detect_csr, oneData
+import numpy as np
 
 
 class JModel:
@@ -20,11 +19,12 @@ class JModel:
     min_temp: np.float64 = 0.0  # Minimum temperature for interpolation
     max_temp: np.float64 = 45.0  # Maximum temperature for interpolation
     step: np.float64 = 0.1  # Step size for temperature interpolation
-
+    temp_colname: str = "t2m"
+    out_colname: str = "R0"
     grid_data_baseurl: str | None = None
-    nuts_level: int = 0  # NUTS level for the model, default is 0
-    resolution: str = "10M"  # Resolution for the nuts data
-    year: int = 2024
+    nuts_level: int | None = None  # NUTS level for the model, default is 0
+    resolution: str | None = None  # Resolution for the nuts data
+    year: int | None = None
 
     def __init__(
         self,
@@ -33,9 +33,11 @@ class JModel:
         r0_path: str | None = None,
         run_mode: str = "forbidden",
         grid_data_baseurl: str | None = None,
-        nuts_level: int = 3,
-        resolution: str = "10M",
-        year: int = 2024,
+        nuts_level: int | None = None,
+        resolution: str | None = None,
+        year: int | None = None,
+        temp_colname: str = "t2m",
+        out_colname: str = "R0",
     ):
         """Initializes the JModel with the given configuration.
 
@@ -46,9 +48,9 @@ class JModel:
         # set up plumbing for the model
         self.run_mode = run_mode
 
-        if self.run_mode not in ["allowed", "forbidden", "parallelized"]:
+        if self.run_mode not in ["forbidden", "parallelized"]:
             raise ValueError(
-                f"Invalid run mode: {self.run_mode}. Supported modes are 'allowed', 'forbidden', 'parallelized'."
+                f"Invalid run mode: {self.run_mode}. Supported modes are 'forbidden', 'parallelized'. For the meaning of these modes, see the documentation. of xarray.apply_ufunc"
             )
 
         # set data paths and get r0 data
@@ -73,16 +75,79 @@ class JModel:
         self.min_temp = self.r0_data.Temperature.min()
         self.max_temp = self.r0_data.Temperature.max()
 
-        if grid_data_baseurl is not None:
+        self.temp_colname = temp_colname
+        self.out_colname = out_colname
+
+        if all(
+            [
+                grid_data_baseurl is not None,
+                nuts_level is not None,
+                resolution is not None,
+                year is not None,
+            ]
+        ):
             self.grid_data_baseurl = grid_data_baseurl
-        else:
+            self.nuts_level = nuts_level
+            self.resolution = resolution
+            self.year = year
+        elif any(
+            [
+                grid_data_baseurl is None,
+                nuts_level is None,
+                resolution is None,
+                year is None,
+            ]
+        ) and not all(
+            [
+                grid_data_baseurl is None,
+                nuts_level is None,
+                resolution is None,
+                year is None,
+            ]
+        ):
             raise ValueError(
-                "Grid data base URL must be provided in the configuration."
+                "Grid data configuration is incomplete. Please provide all parameters: grid_data_baseurl, nuts_level, resolution, and year, or do not set any to have them all set to 'None'."
+            )
+        else:
+            # don´t do anything here, because None indicates the grid data is not used
+            pass
+
+    def _interpolate_r0(
+        self, temp: np.ndarray | da.core.Array
+    ) -> np.ndarray | da.core.Array:
+        """Interpolates R0 values based on temperature using the stored R0 data.
+        Args:
+            temp (np.ndarray | da.core.Array): Temperature values to interpolate R0 for.
+        Returns:
+            np.ndarray | da.core.Array: Interpolated R0 values corresponding to the input temperature values.
+        """
+        temp_values = temp.compute() if hasattr(temp, "compute") else temp
+        if not isinstance(temp_values, np.ndarray) and not isinstance(
+            temp, da.core.Array
+        ):
+            temp_values = temp_values.values  # Ensure temp is a numpy array
+
+        # Create result array with same shape as input
+        result = np.full_like(temp, np.nan, dtype=float)
+
+        # Find valid temperature values (equivalent to R's valid mask)
+        valid_mask = (
+            ~np.isnan(temp_values)
+            & (temp_values >= self.min_temp)
+            & (temp_values <= self.max_temp)
+        )
+
+        # Only interpolate where we have valid values
+        if np.any(valid_mask):
+            result[valid_mask] = np.interp(
+                temp_values[valid_mask],  # Only pass valid values
+                self.r0_data.Temperature.values,
+                self.r0_data.Median_R0.values,
+                left=np.nan,
+                right=np.nan,
             )
 
-        self.nuts_level = nuts_level
-        self.resolution = resolution
-        self.year = year
+        return result
 
     def read_input_data(self) -> oneData:
         """Read input data from given source 'self.input'
@@ -92,85 +157,70 @@ class JModel:
         """
 
         # nothing done here yet
-        data = xr.open_dataset(self.input, chunks="auto")
+        data = xr.open_dataset(
+            self.input, chunks=None if self.run_mode == "forbidden" else "auto"
+        )
+
         if data is None:
             raise ValueError("Input data source is not defined in the configuration.")
-
-        # read grid data, set coordinate reference system (CRS) if not set and then crop the data
-        # will be thrown away again after this function is done
-        grid_data = read_geodata(
-            base_url=self.grid_data_baseurl,
-            nuts_level=self.nuts_level,
-            resolution=self.resolution,
-            year=self.year,
-            url=lambda base_url, resolution, year, nuts_level: f"{base_url}/geojson/NUTS_RG_{resolution}_{year}_4326_LEVL_{nuts_level}.geojson",
-        )
 
         # ensure the data has a coordinate reference system (CRS)
         data = detect_csr(data)
 
-        if grid_data.crs != data.rio.crs:
-            raise ValueError(
-                f"Coordinate reference system mismatch: Grid data CRS {grid_data.crs} does not match input data CRS {data.rio.crs}."
+        # read the grid data if we want to crop the data
+        if all(
+            [
+                self.grid_data_baseurl is not None,
+                self.nuts_level is not None,
+                self.resolution is not None,
+                self.year is not None,
+            ]
+        ):
+            grid_data = read_geodata(
+                base_url=self.grid_data_baseurl,
+                nuts_level=self.nuts_level,
+                resolution=self.resolution,
+                year=self.year,
+                url=lambda base_url,
+                resolution,
+                year,
+                nuts_level: f"{base_url}/geojson/NUTS_RG_{resolution}_{year}_4326_LEVL_{nuts_level}.geojson",
             )
 
-        # crop the data to the grid. This will remove the pixels outside the grid area
-        data = data.rio.clip(
-            grid_data.geometry.values,
-            grid_data.crs,
-            drop=True,  # Drop pixels outside the clipping area
-        )
+            if grid_data.crs != data.rio.crs:
+                raise ValueError(
+                    f"Coordinate reference system mismatch: Grid data CRS {grid_data.crs} does not match input data CRS {data.rio.crs}."
+                )
 
-        return data
+            # crop the data to the grid. This will remove the pixels outside the grid area
+            data = data.rio.clip(
+                grid_data.geometry.values,
+                grid_data.crs,
+                drop=True,  # Drop pixels outside the clipping area
+            )
+
+        if self.run_mode == "forbidden":
+            # run synchronously on one cpu
+            return data.compute()
+        else:
+            return data
 
     def run(
         self,
     ) -> None:
         """Runs the JModel with the provided input data. Reads the data first, then applies the R0 interpolation based on temperature values from the stored R0 data, finally writes the result back to file."""
 
-        data = self.read_input_data()
-
-        def interpolate(temp):
-            # Create result array with same shape as input
-            result = np.full_like(temp, np.nan, dtype=float)
-
-            # Find valid temperature values (equivalent to R's valid mask)
-            valid_mask = (
-                ~np.isnan(temp) & (temp >= self.min_temp) & (temp <= self.max_temp)
-            )
-
-            # Only interpolate where we have valid values
-            if np.any(valid_mask):
-                result[valid_mask] = np.interp(
-                    temp[valid_mask],  # Only pass valid values
-                    self.r0_data.Temperature.values,
-                    self.r0_data.Median_R0.values,
-                    left=np.nan,
-                    right=np.nan,
-                )
-
-            return result
-
-        # run synchronously on one cpu if thhe run mode is "forbidden", which comes in handy for small data
-        if self.run_mode == "forbidden":
-            r0_map = xr.DataArray(
-                interpolate(data["t2m"].values),
-                coords=data["t2m"].coords,
-                dims=data["t2m"].dims,
-                name="r0",
-            )
-        else:
+        with self.read_input_data() as data:
             r0_map = xr.apply_ufunc(
-                interpolate,
-                data["t2m"],
+                self._interpolate_r0,
+                data[self.temp_colname],
                 input_core_dims=[[]],
                 output_core_dims=[[]],
-                vectorize=True,
-                dask="parallelized",
+                dask=self.run_mode,
                 keep_attrs=True,
-            )
+            ).rename(self.out_colname)
 
-        self.store_output_data(r0_map)
+            self.store_output_data(r0_map)
 
     def store_output_data(self, data: oneData) -> None:
         """Stores the processed data to the specified output file.

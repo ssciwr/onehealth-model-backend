@@ -25,12 +25,14 @@ dependencies = [
   "geopandas[all]>=1.1.0", 
   "matplotlib>=3.10.3", 
   "numpy>=2.2.6", 
+  "dask >=2025.5.0",
 ]
 
 [project.optional-dependencies]
 dev = [
     "pre-commit",
     "pytest",
+    "pytest-cov",
 ]
 
 [project.urls]
