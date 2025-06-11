@@ -19,16 +19,20 @@ authors = [
 version = "0.0.1"
 
 dependencies = [
-  "xarray",
+  "xarray[parallel]",
+  "rioxarray",
   "netcdf4",
-  "numpy",
-  "jupyter"
+  "geopandas[all]", 
+  "matplotlib", 
+  "numpy", 
+  "dask",
 ]
 
 [project.optional-dependencies]
 dev = [
     "pre-commit",
     "pytest",
+    "pytest-cov",
 ]
 
 [project.urls]
