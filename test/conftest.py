@@ -2,7 +2,7 @@ import pytest
 import numpy as np
 import xarray as xr
 from pathlib import Path
-import rioxarray  # Make sure this is imported
+import rioxarray  # noqa Make sure this is imported
 
 
 def make_rioxarray_testdata(path: Path, valid: bool = True) -> xr.Dataset:
