@@ -38,7 +38,7 @@ def test_jmodel_initialization():
         JModel(
             input="input_data.csv",
             output=None,
-            r0_path=path,
+            r0_path=str(path),
             run_mode="forbidden",  # Invalid run mode
             grid_data_baseurl="https://example.com/grid_data",
             nuts_level=3,
@@ -61,7 +61,7 @@ def test_jmodel_initialization():
         JModel(
             input="input_data.csv",
             output="output_data.csv",
-            r0_path=path,
+            r0_path=str(path),
             run_mode="invalid_mode",  # Invalid run mode
             grid_data_baseurl="https://example.com/grid_data",
             nuts_level=3,
