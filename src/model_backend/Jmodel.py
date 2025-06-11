@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import xarray as xr
 import pandas as pd
 import dask.array as da
