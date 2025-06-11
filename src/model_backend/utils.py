@@ -1,5 +1,8 @@
 import geopandas as gpd
 import xarray as xr
+import numpy as np
+
+type oneData = xr.Dataset | xr.DataArray | np.ndarray
 
 
 def detect_csr(data: xr.Dataset) -> xr.Dataset:
@@ -10,20 +13,22 @@ def detect_csr(data: xr.Dataset) -> xr.Dataset:
         EPSG.4326 standard lat/lon coordinates, which are defined as follows:
         - Longitude: -180 to 180 degrees
         - Latitude: -90 to 90 degrees
+        The spatial coordinates of the dataset must be callsed 'latitude' and 'longitude'.
 
     Raises:
         ValueError: When the CRS is not defined and the coordinates do not match the expected ranges for EPSG:4326.
 
     Returns:
         xr.Dataset: dataset with the CRS set to EPSG:4326 if it was not already defined and the coordinates match the expected ranges.
+
     """
 
     # this currently only detects EPSG:4326 standard lat/lon coordinates
     if (
-        -180.2 <= data.x.min().values <= -179.9
-        and 179.8 <= data.x.max().values <= 180.2
-        and -90.1 <= data.y.min().values <= -89.9
-        and 89.9 <= data.y.max().values <= 90.2
+        -180.2 <= data.longitude.min().values <= -179.9
+        and 179.8 <= data.longitude.max().values <= 180.2
+        and -90.1 <= data.latitude.min().values <= -89.9
+        and 89.9 <= data.latitude.max().values <= 90.2
     ):
         data = data.rio.write_crs("EPSG:4326")
     else:
@@ -38,7 +43,10 @@ def read_geodata(
     year: int = 2024,
     resolution: str = "10M",
     base_url: str = "https://gisco-services.ec.europa.eu/distribution/v2/nuts",
-    url: callable = lambda base_url, resolution, year, nuts_level: f"{base_url}/geojson/NUTS_RG_{resolution}_{year}_4326_LEVL_{nuts_level}.geojson",
+    url: callable = lambda base_url,
+    resolution,
+    year,
+    nuts_level: f"{base_url}/geojson/NUTS_RG_{resolution}_{year}_4326_LEVL_{nuts_level}.geojson",
 ):
     """load Eurostat NUTS geospatial data from the Eurostat service.
 
