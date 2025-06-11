@@ -101,11 +101,21 @@ def test_model_read_input_data(make_test_data, tmp_path):
         assert "t2m" in read_data.data_vars, "correct data dim should be in the dataset"
         assert read_data.rio.crs == "EPSG:4326", "CRS should be set to EPSG:4326"
 
-        assert read_data.longitude.min() > -180.1 and read_data.longitude.max() < 180.1, "Longitude values should be within the expected range for EPSG:4326"
-        assert read_data.latitude.min() > -90.1 and read_data.latitude.max() < 90.1, "Latitude values should be within the expected range for EPSG:4326"
-        assert read_data.t2m.shape[1] < data.t2m.shape[1], "Longitude dimension should be smaller than original data due to geo clipping"
-        assert read_data.t2m.shape[0] < data.t2m.shape[0], "Latitude dimension should be smaller than original data due to geo clipping"
-        assert read_data.latitude.size == 13 and read_data.longitude.size == 9, "Longitude and latitude dimensions should match the expected size after clipping"
+        assert (
+            read_data.longitude.min() > -180.1 and read_data.longitude.max() < 180.1
+        ), "Longitude values should be within the expected range for EPSG:4326"
+        assert (
+            read_data.latitude.min() > -90.1 and read_data.latitude.max() < 90.1
+        ), "Latitude values should be within the expected range for EPSG:4326"
+        assert (
+            read_data.t2m.shape[1] < data.t2m.shape[1]
+        ), "Longitude dimension should be smaller than original data due to geo clipping"
+        assert (
+            read_data.t2m.shape[0] < data.t2m.shape[0]
+        ), "Latitude dimension should be smaller than original data due to geo clipping"
+        assert (
+            read_data.latitude.size == 13 and read_data.longitude.size == 9
+        ), "Longitude and latitude dimensions should match the expected size after clipping"
 
 
 def test_model_read_input_data_noclip(make_test_data, tmp_path):
@@ -125,9 +135,16 @@ def test_model_read_input_data_noclip(make_test_data, tmp_path):
         assert "t2m" in read_data.data_vars, "correct data dim should be in the dataset"
         assert read_data.rio.crs == "EPSG:4326", "CRS should be set to EPSG:4326"
 
-        assert read_data.longitude.min() > -180.1 and read_data.longitude.max() < 180.1, "Longitude values should be within the expected range for EPSG:4326"
-        assert read_data.latitude.min() > -90.1 and read_data.latitude.max() < 90.1, "Latitude values should be within the expected range for EPSG:4326"
-        assert read_data.latitude.size == data.latitude.size and read_data.longitude.size == data.longitude.size, "Longitude dimension should the same  as input because of no clipping"
+        assert (
+            read_data.longitude.min() > -180.1 and read_data.longitude.max() < 180.1
+        ), "Longitude values should be within the expected range for EPSG:4326"
+        assert (
+            read_data.latitude.min() > -90.1 and read_data.latitude.max() < 90.1
+        ), "Latitude values should be within the expected range for EPSG:4326"
+        assert (
+            read_data.latitude.size == data.latitude.size
+            and read_data.longitude.size == data.longitude.size
+        ), "Longitude dimension should the same  as input because of no clipping"
         assert not np.isnan(read_data.t2m.values).any()
 
 

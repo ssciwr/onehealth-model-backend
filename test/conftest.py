@@ -4,7 +4,9 @@ import xarray as xr
 from pathlib import Path
 
 
-def make_rioxarray_testdata(path: Path, valid: bool = True, resolution: int = 10) -> xr.Dataset:
+def make_rioxarray_testdata(
+    path: Path, valid: bool = True, resolution: int = 10
+) -> xr.Dataset:
     if valid:
         lon = np.linspace(-180, 180, resolution)
         lat = np.linspace(-90, 90, resolution)
