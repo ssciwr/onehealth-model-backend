@@ -24,10 +24,10 @@ def detect_csr(data: xr.Dataset) -> xr.Dataset:
 
     # this currently only detects EPSG:4326 standard lat/lon coordinates
     if (
-        -180.2 <= data.longitude.min().values <= -179.9
-        and 179.8 <= data.longitude.max().values <= 180.2
-        and -90.1 <= data.latitude.min().values <= -89.9
-        and 89.9 <= data.latitude.max().values <= 90.2
+        -181. < data.longitude.min().values < -179.
+        and 179. < data.longitude.max().values < 181.
+        and -91. < data.latitude.min().values < -89.
+        and 89. < data.latitude.max().values < 91.
     ):
         data = data.rio.write_crs("EPSG:4326")
     else:
