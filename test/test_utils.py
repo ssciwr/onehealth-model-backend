@@ -20,7 +20,7 @@ def test_read_geodata():
     with pytest.raises(
         RuntimeError,
     ):
-        data = read_geodata(
+        read_geodata(
             nuts_level=3,
             year=2024,
             resolution="10M",
