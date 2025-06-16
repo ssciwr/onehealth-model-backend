@@ -12,7 +12,7 @@ def detect_csr(data: xr.Dataset) -> xr.Dataset:
         EPSG.4326 standard lat/lon coordinates, which are defined as follows:
         - Longitude: -180 to 180 degrees
         - Latitude: -90 to 90 degrees
-        The spatial coordinates of the dataset must be callsed 'latitude' and 'longitude'.
+        The spatial coordinates of the dataset must be called 'latitude' and 'longitude'.
 
     Raises:
         ValueError: When the CRS is not defined and the coordinates do not match the expected ranges for EPSG:4326.
