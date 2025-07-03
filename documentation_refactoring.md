@@ -1,0 +1,174 @@
+## List of terms
+
+- LCD: Local Climate Data
+- DTR: Diurnal Temperature Range
+
+
+
+## How the code works
+### Name: `aedes_albopictus_model.m`
+
+1. Create variables to assign the prefix of each dataset that will be used
+   ```matlab
+   tmean_prefix = 'ERA5land_global_t2m_daily_0.5_';
+   pr_prefix = 'ERA5land_global_tp_daily_0.5_';
+   dens_prefix = 'pop_dens_';
+   ```
+
+2. Create a for loop to iterate over years. The following operations are done in each loop:
+    a. The name for each dataset is completed with the year and extension:
+    ```matlab
+    tmean = [tmean_prefix, num2str(years), '.nc'];
+    pr = [pr_prefix, num2str(years), '.nc'];
+    dens = [dens_prefix, num2str(years), '_global_0.5.nc'];
+    ```
+    
+    b. Log the year that is being processed:
+    ```matlab
+    year = years; % change years according to file name
+    disp(['Year in Process: ', num2str(years)]);
+    ```
+
+    c. Run the model that calculates the differential equations. This model receives the following datasets
+    - `tmean`: mean temperature dataset
+    - `pr`: precipitation dataset
+    - `dens`: population density dataset
+    - `year`: year of the dataset
+    
+    ```matlab
+    %model_run(tmax,tmin,tmean, pr,dens,year);
+    model_run(tmean, pr,dens,year);            % for tmean only with NO DTR (Tmax or Tmin is not present)
+    disp(['Year done: ', num2str(years)]);
+    ```  
+3. End the program
+
+### Name: `model_run.m`
+1. Create a variable name for the output file.
+```matlab
+outfile = strcat('Mosquito_abundance_Global_', num2str(year), '.nc')      % change the output file name as required
+
+if exist(outfile) == 2
+    delete(outfile)
+end
+```
+2. Copy the dataset that contains the precipitation (one of the ERA5*.nc) and store this copy using the variable name for the output file.
+```matlab
+copyfile(pr, outfile);   % overwriting the file gives us advantage that we can loose the ;latitude and longitude information of Tmax,
+% Tmin file and only work with time varible in 3rd dimension and then rewrite this over same nc file
+```
+3. Rename the internal variable (`pr`) of this copy with the name `adults`. It means, we have a new .nc file that contains
+`longitude`, `latitude` and the variable name `adults`. With this we can just overwrite the variable adult with the calculations we intend to do.
+```matlab
+ncid = netcdf.open(outfile,'NC_WRITE');
+netcdf.reDef(ncid)
+netcdf.renameVar(ncid,3,'adults');
+netcdf.endDef(ncid);
+netcdf.close(ncid);
+```
+
+4. Defines a delta time step.
+TODO: get more information about this time step
+```matlab
+step_t = 10;
+```
+
+5. Load variables from each dataset involved (`tmean`, `pr`, `dens`)
+   a. Load Temperature variables and applies some preprocessing steps with `load_temp2(tmean, step_t)` function
+   ```matlab
+   [Temp, Tmean] = load_temp2(tmean, step_t);       % Without DTR if Tmean is only available, no Tmax or Tmin
+   ```
+   b. Load Population density variables and applies some preprocessing steps with `load_hdp(dens)`
+   ```matlab
+   DENS = load_hpd(dens);
+   ```
+   c. Load Precipitation variable with `load_rainfall(pr)` function
+   ```matlab
+   PR = load_rainfall(pr);
+   ```
+   d. Load Latitude variable from the `tmean` dataset with the function `load_latitude(tmean)`
+   ```matlab
+   LAT = load_latitude(tmean);
+   ```
+
+6. Calculate **Juvenile Carrying Capacity**: \(K_{L}(W,P)\)
+\(W\): Rainfall accumulation, this the information we get from `PR`
+\(P\): Human density, this is the information we get from `DENS`
+```matlab
+CC = capacity(PR, DENS);
+```
+- file associated: `capacity.m`
+- Equation in Supplement Information: 14
+
+7. Calculate **Hatching fraction depending in human density and rainfall**: \(Q(W,P)\)
+$$
+Q(W,P) = (1 - k_{rat}) \left( \frac{(1+k_{0})e^{\left(-k_{var}(W(t)-k_{opt})\right)^2}}{e^{\left( -k_{var} (W(t)-k_{opt})^2 \right)}} \right) + k_{rat} \left( \frac{k_{dens}}{k_{dens} + e^{-k_{fac}P}} \right)
+$$
+
+Where:
+\(W\): Precipitation, we get this information from `PR`
+\(P\): Human density, we get this information from `DENS`
+\(k_{opt}\) = 8;
+\(k_{var}\) = 0.05;
+\(k_{0}\) = 1.5;
+\(k_{rat}\)= 0.2;
+\(k_{dens}\) = 0.01;
+\(k_{fac}\) = 0.01;
+```matlab
+egg_active = water_hatch(PR, DENS);
+```
+- file associated: `water_hatch.m`
+- Equation in Supplement Information: 13
+
+8. Create a **Vector Initial population**: \(V_{0}\)
+```matlab
+previous = 'no_previous';
+v0 = load_initial(previous, size(Temp));
+```
+- File associated: `load_initial.m`
+- TODO: Ask about the name and meaning of this variable.
+
+9. Calculate the parameters for each time step and run ODEs
+```matlab
+v = call_func(v0, Temp, Tmean, LAT, CC, egg_active, step_t);
+```
+- Input variables:
+  - initial vector: `v0`
+  - temperature: `Temp`
+  - mean temperature: `Tmean`
+  - latitude: `LAT`
+  - juvenile carrying capacity: `CC`
+  - hatching fraction depending in human density and rainfall: `egg_active`
+  - time step: `step_time`
+- File associated: `call_func.m`
+
+10.  Once all the variables are calculated, write to the output file
+```matlab
+ncwrite(outfile,'adults', permute(v(:,:,5,:),[1,2,4,3]));
+```
+
+### Name: `call_func.m`
+
+Description: This file the main file that contains the ODEs to calculate the 6 differential equations
+proposed in the paper.
+
+- Input Variables:
+  - `v`
+  - `Temp` 
+  - `Tmean`
+  - `LAT`
+  - `CC`
+  - `egg_activate`
+  - `step_t`
+  
+- Process:
+  
+1. Calculate the **Diapause Lay**
+
+- File associated: `mosquito_dia_lay.m`
+- TODO: ask about the equation.
+
+2. Calculate the **Diapause Hatch**
+- File associated: `msoquito_dia_hatch.m`
+- TODO: asl about the equation
+
+3. Calculate **Diapausing egg mortality rate**: \
