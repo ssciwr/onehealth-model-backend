@@ -169,6 +169,92 @@ proposed in the paper.
 
 2. Calculate the **Diapause Hatch**
 - File associated: `msoquito_dia_hatch.m`
-- TODO: asl about the equation
+- TODO: ask about the equation
 
-3. Calculate **Diapausing egg mortality rate**: \
+3. Calculate **Diapausing egg mortality rate** : \(m_{Ed}(T)\)
+$$
+m_{Ed}(T) = -\ln\left(  0.955 \left(-0.5 \left(\frac{T-18.8}{21.53}\right)^6 \right) \right)
+$$
+
+- Input Variables: 
+  - `Temp`
+  - `step_t`
+- File associated: `mosq_surv_ed.m`
+- Comments: hardcoded values do not correspond to the values in the paper.
+
+4. Create a n-dimensional matrix `v_out` full of zeros.
+
+5. Create a for loop that iterates over the time:
+  5.1. Creates a temperattures vector
+    ```octave
+    T = Temp(:,:,t);
+    ```
+  5.2. Calculates the Mosquito Birth
+    - Inputs:
+      - `T`
+    - File associated:
+      - `mosq_birth.m`
+    - Comments:
+      - TODO: This equation is not present in the suplement material.
+    - 
+    ```octave
+    T = Temp(:,:,t);
+    ```
+    5.3. Calculates the Mosquito development j
+    - Inputs:
+      - `T`
+    - File associated:
+      - `mosq_dev_j.m`
+    - Comments:
+      - TODO: This equation is not present in the suplement material.
+    - 
+    ```octave
+    dev_j = mosq_dev_j(T);
+    ```
+    5.3. Calculates the Mosquito development i
+    - Inputs:
+      - `T`
+    - File associated:
+      - `mosq_dev_i.m`
+    - Comments:
+      - TODO: This equation is not present in the suplement material.
+    - 
+    ```octave
+    dev_j = mosq_dev_i(T);
+    ```
+    5.4. Other calculations I do not understand
+    ```octave
+    dev_e = 1./7.1;      %original function of the model 
+    dia_lay = diapause_lay(:,:,ceil(t/step_t));
+    dia_hatch = diapause_hatch(:,:,ceil(t/step_t));
+    ed_surv = ed_survival(:,:,t);
+    water_hatch = egg_activate(:,:,ceil(t/step_t));
+    mort_e = mosq_mort_e(T);
+    mort_j = mosq_mort_j(T);
+    
+    T = Tmean(:,:,ceil(t/step_t));
+    mort_a = mosq_mort_a(T);
+    ```
+    5.5. ODE
+    ```octave
+    vars = {ceil(t/step_t), step_t, Temp, CC, birth, dia_lay, dia_hatch, mort_e, mort_j, mort_a, ed_surv, dev_j, dev_i, dev_e, water_hatch};
+    v = RK4(@eqsys, @eqsys_log, v, vars, step_t); % Runge-Kutta 4 method
+    % v = FE(@eqsys, @eqsys_log, v, vars, step_t); % Forward Euler method
+    ```
+    5.6. Additional calculations
+    ```octave
+    if mod(t/step_t,365) == 200
+        v(:,:,2) = 0;
+    end
+    
+    if mod(t,step_t) == 0
+        if mod(ceil(t/step_t),30) == 0
+            disp(['MOY: ', num2str(t/step_t/30)]);
+        end
+        for j = 1:5
+            %v_out(:,:,j,t/step_t) = v(:,:,j);
+            v_out(:,:,j,t/step_t) = max(v(:,:,j), 0);  % if any abundance is negative it will make it zero
+        end
+    end
+
+    ```
