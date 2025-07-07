@@ -26,6 +26,8 @@ dependencies = [
   "matplotlib", 
   "numpy", 
   "dask",
+  "scipy", 
+  "numba"
 ]
 
 [project.optional-dependencies]
