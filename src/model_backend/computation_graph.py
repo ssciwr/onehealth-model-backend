@@ -24,8 +24,8 @@ class ComputationGraph:
     Attributes:
         modules (dict[str, Any]): A dictionary of modules, where each module is a module object imported from a given path.
         module_functions (dict[str, dict[str, Callable]]): A dictionary mapping module names to dictionaries of function names and their corresponding callable objects.
-        task_graph (dict[str, dask.delayed.Delayed]): A dictionary representing the Dask computational graph, where each node is a task or data node.
-        config (dict[str, Any]): A configuration dictionary for the computation, containing paths for input and output data, as well as the computational graph structure.
+        task_graph (dict[str, dask.delayed.Delayed]): A dictionary representing the Dask computational graph, where each node is a dask.delayed object.
+        config (dict[str, Any]): A configuration dictionary for the computation, the computational graph structure.
         sink_node (dask.delayed.Delayed | None): The sink node of the computational graph, which is the final node that triggers the execution of the entire computation.
     """
 
@@ -179,7 +179,7 @@ class ComputationGraph:
             tuple[dict[str, dask.delayed.Delayed], dask.delayed.Delayed]: A tuple containing the Dask computational graph and the sink node.
 
         """
-        # TODO: function isn't particularly elegant or tasetful. Streamline and make simpler.
+        # TODO: function isn't particularly elegant or tasteful. Streamline and make simpler.
 
         # building the graph consists of three steps:
         # 1. find the name of the sink node. There must only be one or we cannot guarantee that the graph will be executed completely.
@@ -248,7 +248,7 @@ class ComputationGraph:
         """
 
         # verify the high-level structure of the configuration
-        needed_high_level_keys = ["data", "graph", "execution"]
+        needed_high_level_keys = ["graph", "execution"]
         if not all(key in config for key in needed_high_level_keys):
             return (
                 False,
@@ -288,6 +288,12 @@ class ComputationGraph:
                 )
 
             # the module specifications must have paths if they are not one of the default modules, sucht that we know where to find the module.
+            if "name" not in value["module"]:
+                return (
+                    False,
+                    f"Module {value['module']} does not have a name defined.",
+                )
+
             if "path" not in value["module"] and value["module"]["name"] not in [
                 "JModel",
                 "utilities",
