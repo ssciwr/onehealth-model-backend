@@ -185,10 +185,7 @@ def read_input_data(model_data: JModelData) -> xr.Dataset:
             nuts_level=model_data.nuts_level,
             resolution=model_data.resolution,
             year=model_data.year,
-            url=lambda base_url,
-            resolution,
-            year,
-            nuts_level: f"{base_url}/geojson/NUTS_RG_{resolution}_{year}_4326_LEVL_{nuts_level}.geojson",
+            url=lambda base_url, resolution, year, nuts_level: f"{base_url}/geojson/NUTS_RG_{resolution}_{year}_4326_LEVL_{nuts_level}.geojson",
         )
 
         if grid_data.crs != data.rio.crs:
