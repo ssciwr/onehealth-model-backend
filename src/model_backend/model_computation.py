@@ -2,7 +2,10 @@
 This module defines the Computation class. This class represents a model as a computation directed acyclic graph (DAG) that executes a series of tasks which together represent the run of a given oneHealth model and manages the setup and execution of such a graph.
 """
 
-import dask.task_spec as daskTS
+# dask needed for parallel execution and lazy evaluation
+import dask
+
+# stdlib imports
 import json
 from typing import Callable, Any
 from pathlib import Path
@@ -27,21 +30,49 @@ class ModelComputation:
 
     modules: dict[str, Any] = {}
     module_functions: dict[str, dict[str, Callable]] = {}
-    dask_graph: dict[str, daskTS.Task | daskTS.DataNode] = (
-        None  # Placeholder for the Dask graph
-    )
     config: dict[str, Any] = None  # Configuration for the computation
+    sink_node: dask.delayed.Delayed | None = (
+        None  # The sink node of the computational graph
+    )
 
     def __init__(self, config: dict[str, Any]):
+        """_summary_
+
+        Args:
+            config (dict[str, Any]): _description_
+
+        Raises:
+            ValueError: _description_
+        """
         config_valid, msg = self._verify(config)
+
         if not config_valid:
             raise ValueError(f"Configuration verification failed: {msg}")
+
         self.config = config
+
+        # load needed code
         self.modules = self._load_modules(config)
         self.module_functions = self._get_functions_from_module(self.modules)
-        self.computational_graph = self._build_comp_graph(config)
+
+        # build the computational graph and find the sink node which we use to execute the graph
+        self.sink_node = self._build_dag(config)
+
+        # set the dask scheduler
+        dask.config.set(scheduler=config["execution"]["scheduler"])
 
     def _load_modules(self, config: dict[str, Any]) -> dict[str, Any]:
+        """_summary_
+
+        Args:
+            config (dict[str, Any]): _description_
+
+        Raises:
+            ImportError: _description_
+
+        Returns:
+            dict[str, Any]: _description_
+        """
         modules = {"JModel": JModel, "utilities": utils}
 
         for module_name, module_info in config["modules"].items():
@@ -56,6 +87,18 @@ class ModelComputation:
     def _get_functions_from_module(
         self, modules: dict[str, Any]
     ) -> dict[str, dict[str, Callable]]:
+        """_summary_
+
+        Args:
+            modules (dict[str, Any]): _description_
+
+        Raises:
+            ValueError: _description_
+            ValueError: _description_
+
+        Returns:
+            dict[str, dict[str, Callable]]: _description_
+        """
         module_functions = {}
 
         for module_name, module in modules.items():
@@ -76,7 +119,18 @@ class ModelComputation:
                 )
         return module_functions
 
-    def _find_computations_node(self, config: dict[str, Any]) -> str:
+    def _find_sink_node(self, config: dict[str, Any]) -> str:
+        """_summary_
+
+        Args:
+            config (dict[str, Any]): _description_
+
+        Raises:
+            ValueError: _description_
+
+        Returns:
+            str: _description_
+        """
         all_inputs = []
 
         for node in config["graph"].values():
@@ -84,20 +138,37 @@ class ModelComputation:
                 all_inputs.extend(node["input"])
         all_inputs = set(all_inputs)
 
-        sink = None
+        sink_node = None
         for node_name, _ in config["graph"].items():
             if node_name not in all_inputs:
-                if sink is not None:
+                if sink_node is not None:
                     raise ValueError(
                         "Multiple sink nodes found in the computational graph."
                     )
-                sink = node_name
-        return sink
+                sink_node = node_name
 
-    def _build_comp_graph(
-        self, config: dict[str, Any]
-    ) -> dict[str, daskTS.Task | daskTS.DataNode]:
-        comp_graph: dict[str, daskTS.Task | daskTS.DataNode] = {}
+        if sink_node is None:
+            raise ValueError("No sink node found in the computational graph.")
+        return sink_node
+
+    def _build_dag(self, config: dict[str, Any]) -> dask.delayed.Delayed:
+        """_summary_
+
+        Args:
+            config (dict[str, Any]): _description_
+
+        Raises:
+            ValueError: _description_
+            ValueError: _description_
+
+        Returns:
+            dict[str, daskTS.Task | daskTS.DataNode]: _description_
+        """
+        tmp_delayed = {}
+
+        sink_node_name = self._find_sink_node(config)
+
+        # forward pass through the dict -> build up all the dask.delayed objects
         for current_node in config["graph"].keys():
             task_func_name = config["graph"][current_node]["function"]
             task_func_module = config["graph"][current_node]["module"]
@@ -113,42 +184,78 @@ class ModelComputation:
                 )
 
             task_func = self.module_functions[task_func_module][task_func_name]
-            task_params = (
-                config["graph"][current_node]["params"].values()
-                if config["graph"][current_node]["params"] is not None
-                else []
-            )
-            input_funcs = config["graph"][current_node]["inputs"]
 
-            dependencies = [daskTS.TaskRef(node) for node in input_funcs]
-            comp_graph[current_node] = daskTS.Task(
-                current_node, task_func, [*dependencies, *task_params]
-            )
+            task = dask.delayed(task_func)
+            tmp_delayed[current_node] = task
 
-        return comp_graph
+        delayed_tasks = {}
+        for current_node, node_info in config["graph"].items():
+            task = tmp_delayed[current_node]
+            input_nodes = node_info["input"]
+            args = node_info["args"] if node_info["args"] is not None else []
+            kwargs = node_info["kwargs"] if node_info["kwargs"] is not None else {}
+
+            # resolve input nodes
+            resolved_inputs = [tmp_delayed[input_node] for input_node in input_nodes]
+
+            # create the task with the resolved inputs
+            if len(resolved_inputs) > 0:
+                task = task(*resolved_inputs, *args, **kwargs)
+            else:
+                task = task(*args, **kwargs)
+            delayed_tasks[current_node] = task
+
+        return delayed_tasks[sink_node_name]
 
     def _verify(self, config: dict[str, Any]) -> bool:
+        """_summary_
+
+        Args:
+            config (dict[str, Any]): _description_
+
+        Returns:
+            bool: _description_
+        """
         needed_high_level_keys = ["data", "graph", "execution"]
         if not all(key in config for key in needed_high_level_keys):
-            return False
+            return (
+                False,
+                f"Configuration is missing required keys. Required keys are {needed_high_level_keys}.",
+            )
 
         if not all(key in config["data"] for key in ["input", "output"]):
-            return False
+            return (
+                False,
+                "Data configuration is missing required keys. Required keys are 'input' and 'output'.",
+            )
 
         if "scheduler" not in config["execution"]:
-            return False
+            return False, "Execution configuration is missing 'scheduler' key."
 
+        if config["execution"]["scheduler"] not in [
+            "synchronous",
+            "multithreaded",
+            "multiprocessing",
+            "distributed",
+        ]:
+            return (
+                False,
+                f"Unsupported scheduler: {config['execution']['scheduler']}. Supported schedulers are 'synchronous', 'multithreaded', 'multiprocessing'.",
+            )
+
+        # verify the computation structure
         # all nodes in the computational graph must define their input nodes and the function they execute, as well as additional parameters they might need. They also need to define the name of the module they are part of.
         for node, value in config["graph"].items():
             if value is None or not isinstance(value, dict):
                 return False, f"Node {node} is not a dict."
 
             if any(
-                key not in value for key in ["function", "input", "params", "module"]
+                key not in value
+                for key in ["function", "input", "args", "kwargs", "module"]
             ):
                 return (
                     False,
-                    f"Node {node} is missing required keys. Required keys are 'function', 'input', 'params', and 'module'.",
+                    f"Node {node} is missing required keys. Required keys are 'function', 'input', 'args', 'kwargs', and 'module'.",
                 )
 
             if "path" not in value["module"] and value["module"]["name"] not in [
@@ -170,40 +277,48 @@ class ModelComputation:
             if not isinstance(value["input"], list):
                 return False, f"input nodes for node {node} must be a list"
             # the parameters must either be a dictionary of parameters or None
-            if not isinstance(value["params"], dict) and value["params"] is not None:
-                return False, f"parameters for node {node} must be a dictionary"
+            if not isinstance(value["args"], list) and value["args"] is not None:
+                return False, f"arguments for node {node} must be a list"
+
+            if not isinstance(value["kwargs"], dict) and value["kwargs"] is not None:
+                return False, f"keyword arguments for node {node} must be a dict"
 
         return True, "Configuration is valid."
 
-    def execute(self):
-        pass
+    def execute(self, client: dask.distributed.Client = None):
+        if self.sink_node is None:
+            raise ValueError("Sink node is not defined. Cannot execute the graph.")
+
+        if self.scheduler is None:
+            raise ValueError("Scheduler is not defined. Cannot execute the graph.")
+
+        return self.sink_node.compute(scheduler=self.scheduler, client=client)
 
     def visualize(self):
-        pass
+        """Visualizes the computational graph.
 
-    @property
-    def dask_computational_graph(self) -> Any:
-        """Returns the Dask graph for the computation."""
-        if self.dask_graph is None:
-            raise ValueError("Dask graph has not been built yet.")
-        return self.dask_graph
+        Raises:
+            ValueError: If the sink node is not defined.
 
-    @property
-    def raw_computational_graph(self) -> Any:
-        """Returns the computational graph for the computation."""
-        if self.computational_graph is None:
-            raise ValueError("Computational graph has not been built yet.")
-        return self.computational_graph
+        Returns:
+            Any: The visualization of the sink node.
+        """
+        if self.sink_node is None:
+            raise ValueError("Sink node is not defined. Cannot visualize the graph.")
+        return self.sink_node.visualize()
 
     @property
     def known_modules(self) -> dict[str, Any]:
         """Returns the known modules dictionary."""
-        return self.modules
+        return list(self.modules.keys())
 
     @property
-    def known_utilities(self) -> dict[str, Callable]:
-        """Returns the known utilities dictionary."""
-        return self.utilities
+    def known_functions(self) -> dict[str, list[str]]:
+        """Returns the known functions dictionary."""
+        return {
+            module_name: list(functions.keys())
+            for module_name, functions in self.module_functions.items()
+        }
 
     @classmethod
     def from_config(cls, path_to_config: str | Path) -> "ModelComputation":
