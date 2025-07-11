@@ -93,10 +93,8 @@ def juvenile_carrying_capacity(rainfall, population_density):
     print(f"PR shape (time, rows, cols): {pr.shape}")
     print(f"DENS shape (rows, cols): {dens.shape}")
 
-    print(pr_new.values)
-
     # Update for time index 0
-    # pr_new[0, :, :] = ALPHA * pr_new[0, :, :] + BETA * dens
+    pr_new[0, :, :] = ALPHA * pr_new[0, :, :] + BETA * dens[0, :, :]
 
     # # Recursive update for time >= 1
     # for k in range(1, pr_new.shape[0]):  # time is first dimension now
