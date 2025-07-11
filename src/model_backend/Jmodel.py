@@ -46,22 +46,16 @@ def setup_modeldata(
     """
 
     # set up plumbing for the model
-    run_mode = run_mode
-
     if run_mode not in ["forbidden", "parallelized"]:
         raise ValueError(
             f"Invalid run mode: {run_mode}. Supported modes are 'forbidden', 'parallelized'. For the meaning of these modes, see the documentation. of xarray.apply_ufunc"
         )
 
     # set data paths and get r0 data
-    if input is not None:
-        input = input
-    else:
+    if input is  None:
         raise ValueError("Input data path must be provided in the configuration.")
 
-    if output is not None:
-        output = output
-    else:
+    if output is  None:
         raise ValueError("Output data path must be provided in the configuration.")
 
     # read R0 data from the given path
@@ -75,22 +69,7 @@ def setup_modeldata(
     min_temp = r0_data.Temperature.min()
     max_temp = r0_data.Temperature.max()
 
-    temp_colname = temp_colname
-    out_colname = out_colname
-
-    if all(
-        [
-            grid_data_baseurl is not None,
-            nuts_level is not None,
-            resolution is not None,
-            year is not None,
-        ]
-    ):
-        grid_data_baseurl = grid_data_baseurl
-        nuts_level = nuts_level
-        resolution = resolution
-        year = year
-    elif any(
+    if any(
         [
             grid_data_baseurl is None,
             nuts_level is None,
