@@ -1,4 +1,4 @@
-from model_backend import JModel
+from model_backend import j_model as jm
 import xarray as xr
 from pathlib import Path
 import pandas as pd
@@ -12,7 +12,7 @@ def test_jmodel_initialization():
 
     path = Path.cwd() / "test" / "test_r0.csv"
 
-    model = JModel(
+    model = jm.setup_modeldata(
         input="input_data.csv",
         output="output_data.csv",
         r0_path=path,
@@ -35,7 +35,7 @@ def test_jmodel_initialization():
     assert math.isclose(model.max_temp, 13.0)
 
     with pytest.raises(ValueError):
-        JModel(
+        jm.setup_modeldata(
             input="input_data.csv",
             output=None,
             r0_path=str(path),
@@ -46,7 +46,7 @@ def test_jmodel_initialization():
             year=2024,
         )
     with pytest.raises(ValueError):
-        JModel(
+        jm.setup_modeldata(
             input="input_data.csv",
             output="output_data.csv",
             r0_path=None,
@@ -58,7 +58,7 @@ def test_jmodel_initialization():
         )
 
     with pytest.raises(ValueError):
-        JModel(
+        jm.setup_modeldata(
             input="input_data.csv",
             output="output_data.csv",
             r0_path=str(path),
@@ -70,7 +70,7 @@ def test_jmodel_initialization():
         )
 
     with pytest.raises(ValueError):
-        JModel(
+        jm.setup_modeldata(
             input="input_data.csv",
             output="output_data.csv",
             r0_path=path,
@@ -84,7 +84,7 @@ def test_jmodel_initialization():
 
 def test_model_read_input_data(make_test_data, tmp_path):
     with make_test_data as data:
-        model = JModel(
+        model = jm.setup_modeldata(
             input=tmp_path / "test_data.nc",
             output="output_data.csv",
             r0_path=Path.cwd() / "test" / "test_r0.csv",
@@ -95,7 +95,7 @@ def test_model_read_input_data(make_test_data, tmp_path):
             year=2024,
         )
 
-        read_data = model.read_input_data().compute()
+        read_data = jm.read_input_data(model).compute()
 
         assert isinstance(read_data, xr.Dataset), "should be xr dataset"
         assert "t2m" in read_data.data_vars, "correct data dim should be in the dataset"
@@ -120,7 +120,7 @@ def test_model_read_input_data(make_test_data, tmp_path):
 
 def test_model_read_input_data_noclip(make_test_data, tmp_path):
     with make_test_data as data:
-        model = JModel(
+        model = jm.setup_modeldata(
             input=tmp_path / "test_data.nc",
             output="output_data.csv",
             r0_path=Path.cwd() / "test" / "test_r0.csv",
@@ -130,7 +130,7 @@ def test_model_read_input_data_noclip(make_test_data, tmp_path):
             resolution=None,
             year=None,
         )
-        read_data = model.read_input_data().compute()
+        read_data = jm.read_input_data(model).compute()
         assert isinstance(read_data, xr.Dataset), "should be xr dataset"
         assert "t2m" in read_data.data_vars, "correct data dim should be in the dataset"
         assert read_data.rio.crs == "EPSG:4326", "CRS should be set to EPSG:4326"
@@ -150,7 +150,7 @@ def test_model_read_input_data_noclip(make_test_data, tmp_path):
 
 def test_model_run(make_test_data, tmp_path):
     with make_test_data as _:  # only the written file is needed here
-        model = JModel(
+        model = jm.setup_modeldata(
             input=tmp_path / "test_data.nc",
             output=tmp_path / "output_data.nc",
             r0_path=Path.cwd() / "test" / "test_r0.csv",
@@ -162,7 +162,14 @@ def test_model_run(make_test_data, tmp_path):
             out_colname="r0",
         )
 
-        model.run()
+        data = jm.read_input_data(model).compute()
+        assert isinstance(data, xr.Dataset), "should be xr dataset"
+
+        output_data = jm.run_model(model, data)
+        assert isinstance(output_data, xr.DataArray), "should be xr dataset"
+
+        jm.store_output_data(model, output_data)
+
         output_path = tmp_path / "output_data.nc"
         assert output_path.exists(), "Output file should be created"
 

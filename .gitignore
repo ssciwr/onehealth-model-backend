@@ -144,3 +144,4 @@ data/*
 .Rhistory
 
 .vscode
+resources/
