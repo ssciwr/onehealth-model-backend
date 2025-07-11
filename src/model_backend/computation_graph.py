@@ -114,6 +114,7 @@ class ComputationGraph:
                 functions = {
                     name: func
                     for name, func in inspect.getmembers(module, inspect.isfunction)
+                    if name[0] != "_"  # Exclude private functions
                 }
                 module_functions[module_name] = functions
             except Exception as e:
