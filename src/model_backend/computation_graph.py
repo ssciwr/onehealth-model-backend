@@ -1,5 +1,5 @@
 """
-This module defines the ComputationGraph class. This class represents a model as a directed acyclic graph (DAG) that executes a series of interdependent tasks which together represent the run of a given oneHealth model and manages the setup and execution of such a graph. 
+This module defines the ComputationGraph class. This class represents a model as a directed acyclic graph (DAG) that executes a series of interdependent tasks which together represent the run of a given oneHealth model and manages the setup and execution of such a graph.
 """
 
 # dask needed for parallel execution and lazy evaluation
@@ -39,7 +39,7 @@ class ComputationGraph:
 
     def __init__(self, config: dict[str, Any]):
         """Initialize the computation graph from the given configuration.
-        This method verifies the configuration, loads the necessary modules, retrieves the functions from the modules, builds the computational graph, and sets the Dask scheduler. 
+        This method verifies the configuration, loads the necessary modules, retrieves the functions from the modules, builds the computational graph, and sets the Dask scheduler.
 
         Args:
             config (dict[str, Any]): The configuration dictionary.
@@ -178,16 +178,15 @@ class ComputationGraph:
             tuple[dict[str, dask.delayed.Delayed], dask.delayed.Delayed]: A tuple containing the Dask computational graph and the sink node.
 
         """
-        # TODO: function isn't particularly elegant or tasetful. Streamline and make simpler. 
+        # TODO: function isn't particularly elegant or tasetful. Streamline and make simpler.
 
         # building the graph consists of three steps:
-        # 1. find the name of the sink node. There must only be one or we cannot guarantee that the graph will be executed completely. 
-        # 2. create a temporary dict that holds the dask.delayed objects for each computation node 
-        # 3. create the actual dask.delayed tasks with their inputs and parameters and respect their interdependencies. 
+        # 1. find the name of the sink node. There must only be one or we cannot guarantee that the graph will be executed completely.
+        # 2. create a temporary dict that holds the dask.delayed objects for each computation node
+        # 3. create the actual dask.delayed tasks with their inputs and parameters and respect their interdependencies.
 
         # 1) find sink node
         sink_node_name = self._find_sink_node(config)
-
 
         # 2) create a temporary dict that holds the dask.delayed objects for each computation node
         tmp_delayed = {}
@@ -219,8 +218,7 @@ class ComputationGraph:
         # development
         delayed_tasks = {}
         for current_node, node_info in config["graph"].items():
-
-            # get all the stuff the task needs first 
+            # get all the stuff the task needs first
             task = tmp_delayed[current_node]
             input_nodes = node_info["input"]
             args = node_info["args"] if node_info["args"] is not None else []
@@ -238,7 +236,7 @@ class ComputationGraph:
 
         return delayed_tasks, delayed_tasks[sink_node_name]
 
-    def _verify_config(self, config: dict[str, Any]) -> bool, str:
+    def _verify_config(self, config: dict[str, Any]) -> tuple[bool, str]:
         """Verify the configuration dictionary.
 
         Args:
@@ -272,9 +270,8 @@ class ComputationGraph:
                 f"Unsupported scheduler: {config['execution']['scheduler']}. Supported schedulers are 'synchronous', 'multithreaded', 'multiprocessing'.",
             )
 
-        # verify the computation structure. 
+        # verify the computation structure.
         for node, value in config["graph"].items():
-
             # verify that the node is a dict
             if value is None or not isinstance(value, dict):
                 return False, f"Node {node} is not a dict."
@@ -299,7 +296,7 @@ class ComputationGraph:
                     f"Module {value['module']['name']} does not have a path defined and is not a known default module.",
                 )
 
-            # the input nodes must be explicitly specified and must be present # in the graph somewhere, otherwhise we cannot resolve them. 
+            # the input nodes must be explicitly specified and must be present # in the graph somewhere, otherwhise we cannot resolve them.
             for input_node in value["input"]:
                 if input_node not in config["graph"]:
                     return (
@@ -310,7 +307,7 @@ class ComputationGraph:
             # the input nodes must be a list of names of other nodes
             if not isinstance(value["input"], list):
                 return False, f"input nodes for node {node} must be a list"
-            
+
             # the positional arguments and keyword arguments must be a list and a dict, respectively, or None
             if not isinstance(value["args"], list) and value["args"] is not None:
                 return False, f"arguments for node {node} must be a list"
