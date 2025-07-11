@@ -52,10 +52,10 @@ def setup_modeldata(
         )
 
     # set data paths and get r0 data
-    if input is  None:
+    if input is None:
         raise ValueError("Input data path must be provided in the configuration.")
 
-    if output is  None:
+    if output is None:
         raise ValueError("Output data path must be provided in the configuration.")
 
     # read R0 data from the given path
@@ -210,7 +210,7 @@ def read_input_data(model_data: JModelData) -> xr.Dataset:
         return data
 
 
-def run(
+def run_model(
     model_data: JModelData, data: xr.Dataset | pd.DataFrame
 ) -> xr.Dataset | pd.DataFrame:
     """Runs the JModel with the provided input data. Applies the R0 interpolation based on temperature values from the stored R0 data and returns a new dataset or dataframe with the R0 data.
@@ -239,4 +239,4 @@ def run(
 
 def store_output_data(model_data: JModelData, data: xr.Dataset | pd.DataFrame) -> None:
     data.to_netcdf(model_data.output)
-
+    data.close()  # Close the dataset to free resources
