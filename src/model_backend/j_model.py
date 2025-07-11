@@ -220,11 +220,13 @@ def run_model(
         xr.Dataset | pd.DataFrame: A dataset or dataframe with the incoming R0 data interpolated based on the temperature values at each grid point.
     """
     r0_map = xr.apply_ufunc(
-        _interpolate_r0,
+        lambda t: _interpolate_r0(
+            t,
+            model_data.r0_data,
+            model_data.min_temp,
+            model_data.max_temp,
+        ),
         data[model_data.temp_colname],
-        model_data.r0_data,
-        model_data.min_temp,
-        model_data.max_temp,
         input_core_dims=[[]],
         output_core_dims=[[]],
         dask=model_data.run_mode,
@@ -234,6 +236,8 @@ def run_model(
     return r0_map
 
 
-def store_output_data(model_data: JModelData, data: xr.Dataset | pd.DataFrame) -> None:
+def store_output_data(
+    model_data: JModelData, data: xr.Dataset | xr.DataArray | pd.DataFrame
+) -> None:
     data.to_netcdf(model_data.output)
     data.close()  # Close the dataset to free resources
