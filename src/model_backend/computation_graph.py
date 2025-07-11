@@ -4,8 +4,10 @@ This module defines the ComputationGraph class. This class represents a model as
 
 # dask needed for parallel execution and lazy evaluation
 import dask
+from dask.delayed import Delayed
 
 # stdlib imports
+import distributed
 import json
 from typing import Callable, Any
 from pathlib import Path
@@ -13,7 +15,7 @@ import importlib
 import inspect
 
 # internals
-from . import JModel
+from . import j_model
 from . import utils
 
 
@@ -24,18 +26,16 @@ class ComputationGraph:
     Attributes:
         modules (dict[str, Any]): A dictionary of modules, where each module is a module object imported from a given path.
         module_functions (dict[str, dict[str, Callable]]): A dictionary mapping module names to dictionaries of function names and their corresponding callable objects.
-        task_graph (dict[str, dask.delayed.Delayed]): A dictionary representing the Dask computational graph, where each node is a dask.delayed object.
+        task_graph (dict[str, Delayed]): A dictionary representing the Dask computational graph, where each node is a dask.delayed object.
         config (dict[str, Any]): A configuration dictionary for the computation, the computational graph structure.
-        sink_node (dask.delayed.Delayed | None): The sink node of the computational graph, which is the final node that triggers the execution of the entire computation.
+        sink_node (Delayed | None): The sink node of the computational graph, which is the final node that triggers the execution of the entire computation.
     """
 
     modules: dict[str, Any] = {}
     module_functions: dict[str, dict[str, Callable]] = {}
     config: dict[str, Any] = None  # Configuration for the computation
-    sink_node: dask.delayed.Delayed | None = (
-        None  # The sink node of the computational graph
-    )
-    task_graph: dict[str, dask.delayed.Delayed] | None = None
+    sink_node: Delayed | None = None  # The sink node of the computational graph
+    task_graph: dict[str, Delayed] | None = None
 
     def __init__(self, config: dict[str, Any]):
         """Initialize the computation graph from the given configuration.
@@ -65,7 +65,7 @@ class ComputationGraph:
         dask.config.set(scheduler=config["execution"]["scheduler"])
 
     def _load_modules(self, config: dict[str, Any]) -> dict[str, Any]:
-        """Load modules specified in the configuration. It additionally imports the internal default modules (JModel, utilities), which are always available.
+        """Load modules specified in the configuration. It additionally imports the internal default modules (j_model, utilities), which are always available.
 
         Args:
             config (dict[str, Any]): The configuration dictionary.
@@ -76,7 +76,7 @@ class ComputationGraph:
         Returns:
             dict[str, Any]: A dictionary mapping module names to module objects.
         """
-        modules = {"JModel": JModel, "utilities": utils}
+        modules = {"j_model": j_model, "utilities": utils}
 
         for module_name, module_info in config["modules"].items():
             module_path = module_info["path"]
@@ -156,9 +156,7 @@ class ComputationGraph:
             raise ValueError("No sink node found in the computational graph.")
         return sink_node
 
-    def _build_dag(
-        self, config: dict[str, Any]
-    ) -> tuple[dict[str, dask.delayed.Delayed], dask.delayed.Delayed]:
+    def _build_dag(self, config: dict[str, Any]) -> tuple[dict[str, Delayed], Delayed]:
         """Build the Dask computational graph from the configuration.
             The returned executable graph is a dictionary mapping node names to Dask delayed objects, and the returned sink node is the final node in the graph that triggers the execution of the entire computation. There must only be one sink node in the graph.
             If there are multiple sink nodes, an error is raised.
@@ -176,7 +174,7 @@ class ComputationGraph:
             ValueError:  A function is not found in the module.
 
         Returns:
-            tuple[dict[str, dask.delayed.Delayed], dask.delayed.Delayed]: A tuple containing the Dask computational graph and the sink node.
+            tuple[dict[str, Delayed], Delayed]: A tuple containing the Dask computational graph and the sink node.
 
         """
         # TODO: function isn't particularly elegant or tasteful. Streamline and make simpler.
@@ -295,7 +293,7 @@ class ComputationGraph:
                 )
 
             if "path" not in value["module"] and value["module"]["name"] not in [
-                "JModel",
+                "j_model",
                 "utilities",
             ]:
                 return (
@@ -324,11 +322,11 @@ class ComputationGraph:
 
         return True, "Configuration is valid."
 
-    def execute(self, client: dask.distributed.Client = None):
+    def execute(self, client: distributed.client.Client = None):
         """Executes the computational graph.
 
         Args:
-            client (dask.distributed.Client, optional): The Dask client to use for execution if the computation should be executed on a cluster. If None, will use the local machine. Defaults to None. For more on the Dask client, see https://distributed.dask.org/en/stable/client.html.
+            client (distributed.client.Client, optional): The client to use for execution if the computation should be executed on a cluster. If None, will use the local machine. Defaults to None. For more on how to use the client, see https://distributed.dask.org/en/stable/client.html.
 
         Raises:
             ValueError: If the sink node is not defined.
@@ -352,7 +350,7 @@ class ComputationGraph:
             ValueError: If the sink node is not defined.
 
         Returns:
-            Any: The visualization of the sink node as returned by the dask.delayed.Delayed.visualize method.
+            Any: The visualization of the sink node as returned by the Delayed.visualize method.
         """
         if self.sink_node is None:
             raise ValueError("Sink node is not defined. Cannot visualize the graph.")
