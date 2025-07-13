@@ -266,7 +266,7 @@ class ComputationGraph:
         ]:
             return (
                 False,
-                f"Unsupported scheduler: {config['execution']['scheduler']}. Supported schedulers are 'synchronous', 'multithreaded', 'multiprocessing'.",
+                f"Unsupported scheduler: {config['execution']['scheduler']}. Supported schedulers are 'synchronous', 'multithreaded', 'multiprocessing', or 'distributed'.",
             )
 
         # verify the computation structure.
