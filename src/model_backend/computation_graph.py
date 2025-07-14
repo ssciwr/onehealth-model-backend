@@ -2,6 +2,9 @@
 This module defines the ComputationGraph class. This class represents a model as a directed acyclic graph (DAG) that executes a series of interdependent tasks which together represent the run of a given oneHealth model and manages the setup and execution of such a graph.
 """
 
+# compatability with python 3.10+
+from __future__ import annotations
+
 # dask needed for parallel execution and lazy evaluation
 import dask
 from dask.delayed import Delayed
@@ -88,7 +91,14 @@ class ComputationGraph:
             module_path = Path(spec["module"]).resolve().absolute()
             module_name = module_path.stem
             function_name = spec["function"]
-            print("Loading function:", function_name, "from module:", module_name, "module_path:", module_path)
+            print(
+                "Loading function:",
+                function_name,
+                "from module:",
+                module_name,
+                "module_path:",
+                module_path,
+            )
             try:
                 func = utils.load_name_from_module(
                     module_name=module_name,
