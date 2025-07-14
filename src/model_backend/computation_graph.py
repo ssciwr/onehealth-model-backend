@@ -11,12 +11,12 @@ import distributed
 import json
 from typing import Callable, Any
 from pathlib import Path
-import importlib
 import inspect
 
 # internals
 from . import j_model
 from . import utils
+import logging
 
 
 class ComputationGraph:
@@ -31,11 +31,12 @@ class ComputationGraph:
         sink_node (Delayed | None): The sink node of the computational graph, which is the final node that triggers the execution of the entire computation.
     """
 
-    modules: dict[str, Any] = {}
     module_functions: dict[str, dict[str, Callable]] = {}
     config: dict[str, Any] = None  # Configuration for the computation
     sink_node: Delayed | None = None  # The sink node of the computational graph
     task_graph: dict[str, Delayed] | None = None
+    sink_node_name: str | None = None
+    scheduler: str | None = None  # The Dask scheduler to use for execution
 
     def __init__(self, config: dict[str, Any]):
         """Initialize the computation graph from the given configuration.
@@ -54,73 +55,69 @@ class ComputationGraph:
 
         self.config = config
 
-        # load needed code
-        self.modules = self._load_modules(config)
-        self.module_functions = self._get_functions_from_module(self.modules)
+        self.logger = logging.getLogger("ComputationGraph")
+        self.logger.setLevel(
+            logging.DEBUG
+            if "log_level" not in config["execution"]
+            else config["execution"]["log_level"]
+        )
+        # load needed code.
+        self.module_functions = self._get_functions_from_module(config)
 
         # build the computational graph and find the sink node which we use to execute the graph
-        self.task_graph, self.sink_node = self._build_dag(config)
+        self.sink_node_name = self._find_sink_node(config)
+        self.task_graph = self._build_dag(config)
+        self.sink_node = self.task_graph[self.sink_node_name]
 
         # set the dask scheduler
-        dask.config.set(scheduler=config["execution"]["scheduler"])
-
-    def _load_modules(self, config: dict[str, Any]) -> dict[str, Any]:
-        """Load modules specified in the configuration. It additionally imports the internal default modules (j_model, utilities), which are always available.
-
-        Args:
-            config (dict[str, Any]): The configuration dictionary.
-
-        Raises:
-            ImportError: If a module cannot be imported.
-
-        Returns:
-            dict[str, Any]: A dictionary mapping module names to module objects.
-        """
-        modules = {"j_model": j_model, "utilities": utils}
-
-        for module_name, module_info in config["modules"].items():
-            module_path = module_info["path"]
-            try:
-                mod = importlib.import_module(module_path)
-                modules[module_name] = mod
-            except ImportError as e:
-                raise ImportError(f"Could not import module {module_name}: {e}")
-        return modules
+        self.scheduler = config["execution"]["scheduler"]
 
     def _get_functions_from_module(
-        self, modules: dict[str, Any]
+        self, config: dict[str, Any]
     ) -> dict[str, dict[str, Callable]]:
         """Find all functions in the given modules and return a dictionary mapping module names to dictionaries of function names and their corresponding callable objects.
 
         Args:
-            modules (dict[str, Any]): A dictionary of module names to module objects.
-
-        Raises:
-            ValueError: If a module does not have a __dict__ attribute.
-            ValueError: If functions cannot be retrieved from a module.
+            config (dict[str, Any]): A configuration dictionary containing the computational graph structure in which function names and modules they live in are defined.
 
         Returns:
             dict[str, dict[str, Callable]]: A dictionary mapping module names to dictionaries of function names and their corresponding callable objects.
         """
         module_functions = {}
-
-        for module_name, module in modules.items():
-            if not hasattr(module, "__dict__"):
-                raise ValueError(
-                    f"Module {module_name} does not have a __dict__ attribute."
-                )
+        for name, spec in config["graph"].items():
+            module_path = Path(spec["module"]).resolve().absolute()
+            module_name = module_path.stem
+            function_name = spec["function"]
 
             try:
-                functions = {
-                    name: func
-                    for name, func in inspect.getmembers(module, inspect.isfunction)
-                    if name[0] != "_"  # Exclude private functions
-                }
-                module_functions[module_name] = functions
-            except Exception as e:
-                raise ValueError(
-                    f"Could not retrieve functions from module {module_name}: {e}"
+                func = utils.load_name_from_module(
+                    module_name=module_name,
+                    file_path=module_path,
+                    name=function_name,
                 )
+            except AttributeError as e:
+                raise AttributeError(
+                    f"module '{module_name}' has no attribute '{function_name}'"
+                ) from e
+            except Exception as e:
+                raise RuntimeError(
+                    f"Failed to load function '{function_name}' from module '{module_name}': {e}"
+                ) from e
+            if module_name not in module_functions:
+                module_functions[module_name] = {}
+            module_functions[module_name][function_name] = func
+
+        # add the default modules and utility functions needed
+        # README: this needs to be generalized later when we have a more stable
+        # way of handling model code
+        module_functions["j_model"] = {}
+        module_functions["utils"] = {}
+
+        for module in [utils, j_model]:
+            for name, obj in inspect.getmembers(module, inspect.isfunction):
+                if obj.__module__ == module.__name__ and name[0] != "_":
+                    module_functions[module.__name__.split(".")[-1]][name] = obj
+
         return module_functions
 
     def _find_sink_node(self, config: dict[str, Any]) -> str:
@@ -154,6 +151,8 @@ class ComputationGraph:
 
         if sink_node is None:
             raise ValueError("No sink node found in the computational graph.")
+
+        self.logger.debug(f"Sink node found: {sink_node}")
         return sink_node
 
     def _build_dag(self, config: dict[str, Any]) -> tuple[dict[str, Delayed], Delayed]:
@@ -177,63 +176,48 @@ class ComputationGraph:
             tuple[dict[str, Delayed], Delayed]: A tuple containing the Dask computational graph and the sink node.
 
         """
-        # TODO: function isn't particularly elegant or tasteful. Streamline and make simpler.
 
-        # building the graph consists of three steps:
-        # 1. find the name of the sink node. There must only be one or we cannot guarantee that the graph will be executed completely.
-        # 2. create a temporary dict that holds the dask.delayed objects for each computation node
-        # 3. create the actual dask.delayed tasks with their inputs and parameters and respect their interdependencies.
+        # recursive function that progressively works it's way up the computational graph from the sink node until it reaches the source node that has no dependencies, and then down again to build the computation tasks in the graph from source to sink.
+        def build_node(node_name, delayed_tasks):
+            """Build a single node in the Dask computational graph."""
+            self.logger.debug(f" Building input node: {node_name}")
 
-        # 1) find sink node
-        sink_node_name = self._find_sink_node(config)
+            if node_name in delayed_tasks:
+                self.logger.debug(f" Node already defined: {node_name}")
+                return
 
-        # 2) create a temporary dict that holds the dask.delayed objects for each computation node
-        tmp_delayed = {}
+            node_spec = config["graph"][node_name]
+            input_nodes = node_spec["input"]
+            args = node_spec["args"] if node_spec["args"] is not None else []
+            kwargs = node_spec["kwargs"] if node_spec["kwargs"] is not None else {}
 
-        # forward pass through the dict -> build up all the dask.delayed objects
-        for current_node in config["graph"].keys():
-            task_func_name = config["graph"][current_node]["function"]
-            task_func_module = config["graph"][current_node]["module"]
+            # move up the DAG to build the input nodes first. Since none are defined initially, this will eventually reach the source node.
+            for input_node in input_nodes:
+                build_node(input_node, delayed_tasks)
 
-            if task_func_module not in self.module_functions:
-                raise ValueError(
-                    f"Module {task_func_module} not found in registered modules."
+            # when the input nodes are all defined, we can create the task
+            # for the source node there are no input nodes, so we can create the task immediately
+            # Check if all input nodes are already defined
+            if (
+                all(input_node in delayed_tasks for input_node in input_nodes)
+                or len(input_nodes) == 0
+            ):
+                self.logger.debug(f" Creating task for node: {node_name}")
+                # All input nodes are already defined, so we can create the task
+                module_name = str(Path(node_spec["module"]).stem)
+                func = self.module_functions[module_name][node_spec["function"]]
+                delayed_tasks[node_name] = dask.delayed(func)(
+                    *[delayed_tasks[input_node] for input_node in input_nodes],
+                    *args,
+                    **kwargs,
                 )
-
-            if task_func_name not in self.module_functions[task_func_module]:
-                raise ValueError(
-                    f"Function {task_func_name} not found in module {task_func_module}."
-                )
-
-            task_func = self.module_functions[task_func_module][task_func_name]
-
-            task = dask.delayed(task_func)
-            tmp_delayed[current_node] = task
-
-        # 3) create the delayed tasks with their inputs and parameters and respect their interdependencies. This builds up the actual computational
-        # graph. We later use the sink node to trigger the execution of the
-        # entire graph. The dask graph is saved as a class attribute for later
-        # use, which might come in handy for debugging, visualization or
-        # development
-        delayed_tasks = {}
-        for current_node, node_info in config["graph"].items():
-            # get all the stuff the task needs first
-            task = tmp_delayed[current_node]
-            input_nodes = node_info["input"]
-            args = node_info["args"] if node_info["args"] is not None else []
-            kwargs = node_info["kwargs"] if node_info["kwargs"] is not None else {}
-
-            # resolve input nodes using the tmp_delayed dict that was build earlier
-            resolved_inputs = [tmp_delayed[input_node] for input_node in input_nodes]
-
-            # create the task with the resolved inputs
-            if len(resolved_inputs) > 0:
-                task = task(*resolved_inputs, *args, **kwargs)
             else:
-                task = task(*args, **kwargs)
-            delayed_tasks[current_node] = task
+                pass  # do nothing
 
-        return delayed_tasks, delayed_tasks[sink_node_name]
+        delayed_tasks = {}
+        build_node(self.sink_node_name, delayed_tasks)
+        self.logger.debug(f"build_graph: {delayed_tasks.keys()}")
+        return delayed_tasks
 
     def _verify_config(self, config: dict[str, Any]) -> tuple[bool, str]:
         """Verify the configuration dictionary.
@@ -245,6 +229,8 @@ class ComputationGraph:
             bool, str: A tuple containing a boolean indicating whether the configuration is valid and an error message if it is not.
         """
 
+        # verify the structure of the configuration file. Checks that all needed nodes are present and of the right type and within allowed parameters
+
         # verify the high-level structure of the configuration
         needed_high_level_keys = ["graph", "execution"]
         if not all(key in config for key in needed_high_level_keys):
@@ -253,20 +239,20 @@ class ComputationGraph:
                 f"Configuration is missing required keys. Required keys are {needed_high_level_keys}.",
             )
 
-        # we need to have a dask scheduler defined in the execution section
+        # we need to have a dask scheduler defined in the execution section...
         if "scheduler" not in config["execution"]:
             return False, "Execution configuration is missing 'scheduler' key."
 
-        # ... and it must be one of the supported schedulers
+        # ... and it must be one of those that are supported by dask
         if config["execution"]["scheduler"] not in [
             "synchronous",
-            "multithreaded",
+            "threads",
             "multiprocessing",
             "distributed",
         ]:
             return (
                 False,
-                f"Unsupported scheduler: {config['execution']['scheduler']}. Supported schedulers are 'synchronous', 'multithreaded', 'multiprocessing', or 'distributed'.",
+                f"Unsupported scheduler: {config['execution']['scheduler']}. Supported schedulers are 'synchronous', 'threads', 'multiprocessing', or 'distributed'.",
             )
 
         # verify the computation structure.
@@ -275,7 +261,7 @@ class ComputationGraph:
             if value is None or not isinstance(value, dict):
                 return False, f"Node {node} is not a dict."
 
-            # all nodes that define a computation node must have the name of the function to call, a list of nodes that need to run before this one and that are used as inputs, as well as additional arguments and keyword arguments that are passed to the function. The latter two can be empty or None, but the keys must be persent ot make this choice explicit.
+            # all nodes that define a computation node must have the name of the function to call, a list of nodes that need to run before this one and that are used as inputs, as well as additional arguments and keyword arguments that are passed to the function. The latter two can be empty or None, but the keys must be present to make this choice explicit and distinguish it from having forgotten to specify them.
             if any(
                 key not in value
                 for key in ["function", "input", "args", "kwargs", "module"]
@@ -285,33 +271,24 @@ class ComputationGraph:
                     f"Node {node} is missing required keys. Required keys are 'function', 'input', 'args', 'kwargs', and 'module'.",
                 )
 
-            # the module specifications must have paths if they are not one of the default modules, sucht that we know where to find the module.
-            if "name" not in value["module"]:
+            # check that the module path exists and is a valid file
+            if not Path.exists(Path(value["module"]).resolve().absolute()):
                 return (
                     False,
-                    f"Module {value['module']} does not have a name defined.",
+                    f"Module {value["module"]} for node {node} does not exist.",
                 )
 
-            if "path" not in value["module"] and value["module"]["name"] not in [
-                "j_model",
-                "utilities",
-            ]:
-                return (
-                    False,
-                    f"Module {value['module']['name']} does not have a path defined and is not a known default module.",
-                )
+            # the input nodes must be a list of names of other nodes
+            if not isinstance(value["input"], list):
+                return False, f"input nodes for node {node} must be a list"
 
-            # the input nodes must be explicitly specified and must be present # in the graph somewhere, otherwhise we cannot resolve them.
+            # the input nodes must be explicitly specified and must be present # in the graph somewhere, otherwise we cannot resolve them.
             for input_node in value["input"]:
                 if input_node not in config["graph"]:
                     return (
                         False,
                         f"input node {input_node} of node {node} not found in graph",
                     )
-
-            # the input nodes must be a list of names of other nodes
-            if not isinstance(value["input"], list):
-                return False, f"input nodes for node {node} must be a list"
 
             # the positional arguments and keyword arguments must be a list and a dict, respectively, or None
             if not isinstance(value["args"], list) and value["args"] is not None:
@@ -338,12 +315,19 @@ class ComputationGraph:
         if self.sink_node is None:
             raise ValueError("Sink node is not defined. Cannot execute the graph.")
 
-        if self.scheduler is None:
-            raise ValueError("Scheduler is not defined. Cannot execute the graph.")
+        if self.scheduler is None or self.scheduler not in [
+            "synchronous",
+            "threads",
+            "multiprocessing",
+            "distributed",
+        ]:
+            raise ValueError(
+                "Scheduler is not defined. Cannot execute the graph. Must be one of 'synchronous', 'threads', 'multiprocessing', or 'distributed'."
+            )
 
         return self.sink_node.compute(scheduler=self.scheduler, client=client)
 
-    def visualize(self):
+    def visualize(self, filename: str):
         """Visualizes the computational graph.
 
         Raises:
@@ -354,20 +338,11 @@ class ComputationGraph:
         """
         if self.sink_node is None:
             raise ValueError("Sink node is not defined. Cannot visualize the graph.")
-        return self.sink_node.visualize()
-
-    @property
-    def known_modules(self) -> dict[str, Any]:
-        """Returns the known modules dictionary."""
-        return list(self.modules.keys())
-
-    @property
-    def known_functions(self) -> dict[str, list[str]]:
-        """Returns the known functions dictionary."""
-        return {
-            module_name: list(functions.keys())
-            for module_name, functions in self.module_functions.items()
-        }
+        return self.sink_node.visualize(
+            filename=str(filename),
+            optimize_graph=False,  # Shows the full graph structure
+            rankdir="TB",  # Top to bottom layout
+        )
 
     @classmethod
     def from_config(cls, path_to_config: str | Path) -> "ComputationGraph":

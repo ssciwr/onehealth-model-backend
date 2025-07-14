@@ -1,3 +1,6 @@
+from pathlib import Path
+
+
 def add(x, y):
     return x + y
 
@@ -15,19 +18,20 @@ def affine(x, a=1, b=0):
 
 
 def load_data(file_path):
+    print(f"Loading data from {file_path}, abs: {Path(file_path).resolve().absolute()}")
     import pandas as pd
 
     try:
-        data = pd.read_csv(file_path)
-        return data
+        data = pd.read_csv(Path(file_path).resolve().absolute())
+        return data["value"]  # return numpy array
     except FileNotFoundError:
         raise ValueError(f"File not found: {file_path}")
     except Exception as e:
         raise ValueError(f"An error occurred while loading data: {e}")
 
 
-def save_data(file_path, data):
+def save_data(data, file_path):
     try:
-        data.to_csv(file_path, index=False)
+        data.to_csv(file_path, index=True)
     except Exception as e:
         raise ValueError(f"An error occurred while saving data: {e}")

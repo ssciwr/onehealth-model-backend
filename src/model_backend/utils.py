@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import geopandas as gpd
 import xarray as xr
+import importlib
 
 
 def detect_csr(data: xr.Dataset) -> xr.Dataset:
@@ -42,7 +43,10 @@ def read_geodata(
     year: int = 2024,
     resolution: str = "10M",
     base_url: str = "https://gisco-services.ec.europa.eu/distribution/v2/nuts",
-    url: callable = lambda base_url, resolution, year, nuts_level: f"{base_url}/geojson/NUTS_RG_{resolution}_{year}_4326_LEVL_{nuts_level}.geojson",
+    url: callable = lambda base_url,
+    resolution,
+    year,
+    nuts_level: f"{base_url}/geojson/NUTS_RG_{resolution}_{year}_4326_LEVL_{nuts_level}.geojson",
 ):
     """load Eurostat NUTS geospatial data from the Eurostat service.
 
@@ -71,3 +75,39 @@ def read_geodata(
         return nuts_data
     except Exception as e:
         raise RuntimeError(f"Failed to download from {url_str}: {e}")
+
+
+# helpers for loading code
+def load_module(module_name: str, file_path: str):
+    """
+    load_module Load a python module from 'path' with alias 'alias'
+
+    Args:
+        module_name (str): module alias.
+        file_path (str): Path to load the module from
+
+    Returns:
+        module: Python module that has been loaded
+    """
+    try:
+        spec = importlib.util.spec_from_file_location(module_name, file_path)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+    except Exception as e:
+        raise RuntimeError(f"Error in loading module {file_path}") from e
+    return module
+
+
+def load_name_from_module(module_name: str, file_path: str, name: str):
+    """
+    load_name_from_module Load a python module from 'path' with alias 'alias'
+
+    Args:
+        module_name (str): module alias.
+        file_path (str): Path to load the module from
+        name (str): name to import
+    Returns:
+        module: Python module that has been loaded
+    """
+    module = load_module(module_name, file_path)
+    return getattr(module, name)
