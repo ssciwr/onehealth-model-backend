@@ -153,7 +153,7 @@ class ComputationGraph:
             if node_name not in all_inputs:
                 if sink_node is not None:
                     raise ValueError(
-                        "Multiple sink nodes found in the computational graph."
+                        f"Multiple sink nodes found in the computational graph: {sink_node}, {node_name}."
                     )
                 sink_node = node_name
 
@@ -336,18 +336,6 @@ class ComputationGraph:
         Returns:
             Any: The result of the computation.
         """
-        if self.sink_node is None:
-            raise ValueError("Sink node is not defined. Cannot execute the graph.")
-
-        if self.scheduler is None or self.scheduler not in [
-            "synchronous",
-            "threads",
-            "multiprocessing",
-            "distributed",
-        ]:
-            raise ValueError(
-                "Scheduler is not defined. Cannot execute the graph. Must be one of 'synchronous', 'threads', 'multiprocessing', or 'distributed'."
-            )
 
         return self.sink_node.compute(scheduler=self.scheduler, client=client)
 

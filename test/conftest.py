@@ -142,6 +142,7 @@ def computation_graph_multiple_sink_nodes():
             "load_data": {
                 "function": "load_data",
                 "module": "./test/computation_module.py",
+                "input": [],
                 "args": ["./data.csv"],
                 "kwargs": {},
             },
