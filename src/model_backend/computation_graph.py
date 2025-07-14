@@ -97,14 +97,6 @@ class ComputationGraph:
             if module_name in self.default_modules:
                 continue
             function_name = spec["function"]
-            print(
-                "Loading function:",
-                function_name,
-                "from module:",
-                module_name,
-                "module_path:",
-                module_path,
-            )
             try:
                 func = utils.load_name_from_module(
                     module_name=module_name,
@@ -261,16 +253,14 @@ class ComputationGraph:
                 )
 
             # check that the module path exists and is a valid file
-            if str(
-                Path(value["module"]).stem
-            ) not in self.default_modules and Path.exists(
-                Path(value["module"]).resolve().absolute()
+            if (
+                str(Path(value["module"]).stem) not in self.default_modules
+                and Path.exists(Path(value["module"]).resolve().absolute()) is False
             ):
-                print("module path: ", Path(value["module"]).resolve().absolute())
                 module_name = value["module"]
                 return (
                     False,
-                    f"Module {module_name} for node {node} does not exist.",
+                    f"Module {module_name} for node {node} at path {Path(value['module']).resolve().absolute()} does not exist.",
                 )
 
             # the input nodes must be a list of names of other nodes
