@@ -28,7 +28,7 @@ def test_computation_graph_invalid_config(computation_graph_invalid_highlevel):
 def test_computation_graph_invalid_modules(computation_graph_invalid_modules):
     with pytest.raises(
         ValueError,
-        match="Configuration verification failed: Module ./non_existent_module for node invalid_module does not exist.",
+        match=f"Configuration verification failed: Module ./non_existent_module for node invalid_module at path {Path('./non_existent_module').resolve().absolute()} does not exist.",
     ):
         cg.ComputationGraph(computation_graph_invalid_modules)
 
