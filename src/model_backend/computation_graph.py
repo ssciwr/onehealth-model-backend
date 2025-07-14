@@ -88,7 +88,14 @@ class ComputationGraph:
             module_path = Path(spec["module"]).resolve().absolute()
             module_name = module_path.stem
             function_name = spec["function"]
-            print("Loading function:", function_name, "from module:", module_name, "module_path:", module_path)
+            print(
+                "Loading function:",
+                function_name,
+                "from module:",
+                module_name,
+                "module_path:",
+                module_path,
+            )
             try:
                 func = utils.load_name_from_module(
                     module_name=module_name,
