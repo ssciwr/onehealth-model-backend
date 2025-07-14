@@ -35,8 +35,8 @@ def test_computation_graph_invalid_modules(computation_graph_invalid_modules):
 
 def test_computation_graph_invalid_functions(computation_graph_invalid_func):
     with pytest.raises(
-        AttributeError,
-        match="module 'computation_module' has no attribute 'non_existent_function'",
+        RuntimeError,
+        match="Failed to load function 'non_existent_function' from module 'computation_module': module 'computation_module' has no attribute 'non_existent_function'",
     ):
         cg.ComputationGraph(computation_graph_invalid_func)
 
@@ -57,6 +57,23 @@ def test_computation_misc_config_errors(computation_graph_working):
     with pytest.raises(
         ValueError,
         match="Configuration verification failed: Execution configuration is missing 'scheduler' key.",
+    ):
+        cg.ComputationGraph(computation_graph_working)
+
+    computation_graph_working["execution"]["scheduler"] = "wrong_scheduler"
+    with pytest.raises(
+        ValueError,
+        match="Configuration verification failed: Unsupported scheduler: wrong_scheduler. Supported schedulers are 'synchronous', 'threads', 'multiprocessing', or 'distributed'.",
+    ):
+        cg.ComputationGraph(computation_graph_working)
+
+    # undo last change
+    computation_graph_working["execution"]["scheduler"] = "synchronous"
+    del computation_graph_working["graph"]["load_data"]["input"]
+
+    with pytest.raises(
+        ValueError,
+        match="Configuration verification failed: Node load_data is missing required keys. Required keys are 'function', 'input', 'args', 'kwargs', and 'module'.",
     ):
         cg.ComputationGraph(computation_graph_working)
 
