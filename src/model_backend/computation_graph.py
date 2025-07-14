@@ -103,14 +103,11 @@ class ComputationGraph:
                     file_path=module_path,
                     name=function_name,
                 )
-            except AttributeError as e:
-                raise AttributeError(
-                    f"module '{module_name}' has no attribute '{function_name}'"
-                ) from e
             except Exception as e:
                 raise RuntimeError(
                     f"Failed to load function '{function_name}' from module '{module_name}': {e}"
                 ) from e
+
             if module_name not in module_functions:
                 module_functions[module_name] = {}
             module_functions[module_name][function_name] = func
@@ -219,8 +216,7 @@ class ComputationGraph:
                     *args,
                     **kwargs,
                 )
-            else:
-                pass  # do nothing
+            # no else because on the way down the graph we will never encounter this case.
 
         delayed_tasks = {}
         build_node(self.sink_node_name, delayed_tasks)
