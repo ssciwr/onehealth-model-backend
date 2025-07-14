@@ -88,7 +88,7 @@ class ComputationGraph:
             module_path = Path(spec["module"]).resolve().absolute()
             module_name = module_path.stem
             function_name = spec["function"]
-
+            print("Loading function:", function_name, "from module:", module_name, "module_path:", module_path)
             try:
                 func = utils.load_name_from_module(
                     module_name=module_name,
@@ -229,7 +229,7 @@ class ComputationGraph:
             bool, str: A tuple containing a boolean indicating whether the configuration is valid and an error message if it is not.
         """
         # verify the computation structure.
-        for node, value in config["graph"].items():
+        for node, value in config.items():
             # verify that the node is a dict
             if value is None or not isinstance(value, dict):
                 return False, f"Node {node} is not a dict."
@@ -258,7 +258,7 @@ class ComputationGraph:
 
             # the input nodes must be explicitly specified and must be present # in the graph somewhere, otherwise we cannot resolve them.
             for input_node in value["input"]:
-                if input_node not in config["graph"]:
+                if input_node not in config:
                     return (
                         False,
                         f"input node {input_node} of node {node} not found in graph",
@@ -270,6 +270,8 @@ class ComputationGraph:
 
             if not isinstance(value["kwargs"], dict) and value["kwargs"] is not None:
                 return False, f"keyword arguments for node {node} must be a dict"
+
+        return True, "Configuration is valid."
 
     def _verify_config(self, config: dict[str, Any]) -> tuple[bool, str]:
         """Verify the configuration dictionary.
