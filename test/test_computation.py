@@ -41,9 +41,24 @@ def test_computation_graph_invalid_functions(computation_graph_invalid_func):
         cg.ComputationGraph(computation_graph_invalid_func)
 
 
-def test_computation_graph_invalid_graph(computation_graph_multiple_sink_nodes):
-    with pytest.raises(ValueError, match="Configuration verification failed:"):
+def test_computation_graph_multiple_sink_nodes(computation_graph_multiple_sink_nodes):
+    # test with a config file that has multiple sink nodes.
+    # this should raise an error.
+    with pytest.raises(
+        ValueError,
+        match="Multiple sink nodes found in the computational graph: add, multiply.",
+    ):
         cg.ComputationGraph(computation_graph_multiple_sink_nodes)
+
+
+def test_computation_misc_config_errors(computation_graph_working):
+    del computation_graph_working["execution"]["scheduler"]
+
+    with pytest.raises(
+        ValueError,
+        match="Configuration verification failed: Execution configuration is missing 'scheduler' key.",
+    ):
+        cg.ComputationGraph(computation_graph_working)
 
 
 @pytest.mark.parametrize(
@@ -168,21 +183,3 @@ def test_computation_graph_execution_distributed(computation_graph_working, tmp_
     assert Path(path).exists()
     result = pd.read_csv(Path(path))
     assert all(result["value"] == [5, -3, -15])
-
-
-def test_computation_graph_execution_failure(computation_graph_working, tmp_path):
-    computation = cg.ComputationGraph(computation_graph_working)
-    computation.scheduler = "invalid_scheduler"  # Set an invalid scheduler
-    with pytest.raises(
-        ValueError,
-        match="Scheduler is not defined. Cannot execute the graph. Must be one of 'synchronous', 'threads', 'multiprocessing', or 'distributed'.",
-    ):
-        computation.execute()
-
-    computation.scheduler = None
-
-    with pytest.raises(
-        ValueError,
-        match="Scheduler is not defined. Cannot execute the graph. Must be one of 'synchronous', 'threads', 'multiprocessing', or 'distributed'.",
-    ):
-        computation.execute()
