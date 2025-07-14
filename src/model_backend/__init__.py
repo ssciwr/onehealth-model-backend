@@ -1,6 +1,6 @@
 from . import computation_graph
 from . import utils
-from . import j_model
+from . import Jmodel
 
 # Optional: Define what gets imported with "from model_backend import *"
-__all__ = ["j_model", "utils", "computation_graph"]
+__all__ = ["Jmodel", "utils", "computation_graph"]

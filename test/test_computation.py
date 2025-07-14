@@ -106,8 +106,8 @@ def test_computation_graph_working_initialization(
     )
     assert Path(tmp_path / "output.csv").exists()
 
-    # 6) knows about the j_model and the utils modules
-    assert "j_model" in computation.module_functions
+    # 6) knows about the Jmodel and the utils modules
+    assert "Jmodel" in computation.module_functions
     assert "utils" in computation.module_functions
 
     # 7) knows about the utils functions
@@ -116,11 +116,11 @@ def test_computation_graph_working_initialization(
     assert "load_module" in computation.module_functions["utils"]
     assert "load_name_from_module" in computation.module_functions["utils"]
 
-    # 8) knows about the j_model functions
-    assert "setup_modeldata" in computation.module_functions["j_model"]
-    assert "read_input_data" in computation.module_functions["j_model"]
-    assert "run_model" in computation.module_functions["j_model"]
-    assert "store_output_data" in computation.module_functions["j_model"]
+    # 8) knows about the Jmodel functions
+    assert "setup_modeldata" in computation.module_functions["Jmodel"]
+    assert "read_input_data" in computation.module_functions["Jmodel"]
+    assert "run_model" in computation.module_functions["Jmodel"]
+    assert "store_output_data" in computation.module_functions["Jmodel"]
 
 
 def test_computation_graph_visualization(computation_graph_working, tmp_path):

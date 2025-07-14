@@ -1,4 +1,4 @@
-from model_backend import j_model as jm
+from model_backend import Jmodel as jm
 import xarray as xr
 from pathlib import Path
 import pandas as pd

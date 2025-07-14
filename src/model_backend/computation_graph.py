@@ -14,7 +14,7 @@ from pathlib import Path
 import inspect
 
 # internals
-from . import j_model
+from . import Jmodel
 from . import utils
 import logging
 
@@ -110,10 +110,10 @@ class ComputationGraph:
         # add the default modules and utility functions needed
         # README: this needs to be generalized later when we have a more stable
         # way of handling model code
-        module_functions["j_model"] = {}
+        module_functions["Jmodel"] = {}
         module_functions["utils"] = {}
 
-        for module in [utils, j_model]:
+        for module in [utils, Jmodel]:
             for name, obj in inspect.getmembers(module, inspect.isfunction):
                 if obj.__module__ == module.__name__ and name[0] != "_":
                     module_functions[module.__name__.split(".")[-1]][name] = obj
@@ -250,9 +250,10 @@ class ComputationGraph:
             "multiprocessing",
             "distributed",
         ]:
+            scheduler = config["execution"]["scheduler"]
             return (
                 False,
-                f"Unsupported scheduler: {config['execution']['scheduler']}. Supported schedulers are 'synchronous', 'threads', 'multiprocessing', or 'distributed'.",
+                f"Unsupported scheduler: {scheduler}. Supported schedulers are 'synchronous', 'threads', 'multiprocessing', or 'distributed'.",
             )
 
         # verify the computation structure.
@@ -273,9 +274,10 @@ class ComputationGraph:
 
             # check that the module path exists and is a valid file
             if not Path.exists(Path(value["module"]).resolve().absolute()):
+                module_name = value["module"]
                 return (
                     False,
-                    f"Module {value["module"]} for node {node} does not exist.",
+                    f"Module {module_name} for node {node} does not exist.",
                 )
 
             # the input nodes must be a list of names of other nodes
