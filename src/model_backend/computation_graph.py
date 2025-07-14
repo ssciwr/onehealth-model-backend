@@ -155,7 +155,7 @@ class ComputationGraph:
         self.logger.debug(f"Sink node found: {sink_node}")
         return sink_node
 
-    def _build_dag(self, config: dict[str, Any]) -> tuple[dict[str, Delayed], Delayed]:
+    def _build_dag(self, config: dict[str, Any]) -> dict[str, Delayed]:
         """Build the Dask computational graph from the configuration.
             The returned executable graph is a dictionary mapping node names to Dask delayed objects, and the returned sink node is the final node in the graph that triggers the execution of the entire computation. There must only be one sink node in the graph.
             If there are multiple sink nodes, an error is raised.
@@ -219,8 +219,8 @@ class ComputationGraph:
         self.logger.debug(f"build_graph: {delayed_tasks.keys()}")
         return delayed_tasks
 
-    def _verify_config(self, config: dict[str, Any]) -> tuple[bool, str]:
-        """Verify the configuration dictionary.
+    def _verify_computation_config(self, config: dict[str, Any]) -> tuple[bool, str]:
+        """Verify the configuration of the computational graph.
 
         Args:
             config (dict[str, Any]): The configuration dictionary.
@@ -228,34 +228,6 @@ class ComputationGraph:
         Returns:
             bool, str: A tuple containing a boolean indicating whether the configuration is valid and an error message if it is not.
         """
-
-        # verify the structure of the configuration file. Checks that all needed nodes are present and of the right type and within allowed parameters
-
-        # verify the high-level structure of the configuration
-        needed_high_level_keys = ["graph", "execution"]
-        if not all(key in config for key in needed_high_level_keys):
-            return (
-                False,
-                f"Configuration is missing required keys. Required keys are {needed_high_level_keys}.",
-            )
-
-        # we need to have a dask scheduler defined in the execution section...
-        if "scheduler" not in config["execution"]:
-            return False, "Execution configuration is missing 'scheduler' key."
-
-        # ... and it must be one of those that are supported by dask
-        if config["execution"]["scheduler"] not in [
-            "synchronous",
-            "threads",
-            "multiprocessing",
-            "distributed",
-        ]:
-            scheduler = config["execution"]["scheduler"]
-            return (
-                False,
-                f"Unsupported scheduler: {scheduler}. Supported schedulers are 'synchronous', 'threads', 'multiprocessing', or 'distributed'.",
-            )
-
         # verify the computation structure.
         for node, value in config["graph"].items():
             # verify that the node is a dict
@@ -299,7 +271,44 @@ class ComputationGraph:
             if not isinstance(value["kwargs"], dict) and value["kwargs"] is not None:
                 return False, f"keyword arguments for node {node} must be a dict"
 
-        return True, "Configuration is valid."
+    def _verify_config(self, config: dict[str, Any]) -> tuple[bool, str]:
+        """Verify the configuration dictionary.
+
+        Args:
+            config (dict[str, Any]): The configuration dictionary.
+
+        Returns:
+            bool, str: A tuple containing a boolean indicating whether the configuration is valid and an error message if it is not.
+        """
+
+        # verify the structure of the configuration file. Checks that all needed nodes are present and of the right type and within allowed parameters
+
+        # verify the high-level structure of the configuration
+        needed_high_level_keys = ["graph", "execution"]
+        if not all(key in config for key in needed_high_level_keys):
+            return (
+                False,
+                f"Configuration is missing required keys. Required keys are {needed_high_level_keys}.",
+            )
+
+        # we need to have a dask scheduler defined in the execution section...
+        if "scheduler" not in config["execution"]:
+            return False, "Execution configuration is missing 'scheduler' key."
+
+        # ... and it must be one of those that are supported by dask
+        if config["execution"]["scheduler"] not in [
+            "synchronous",
+            "threads",
+            "multiprocessing",
+            "distributed",
+        ]:
+            scheduler = config["execution"]["scheduler"]
+            return (
+                False,
+                f"Unsupported scheduler: {scheduler}. Supported schedulers are 'synchronous', 'threads', 'multiprocessing', or 'distributed'.",
+            )
+
+        return self._verify_computation_config(config["graph"])
 
     def execute(self, client: distributed.client.Client = None):
         """Executes the computational graph.
