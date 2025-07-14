@@ -1,9 +1,9 @@
 from model_backend import computation_graph as cg
 from pathlib import Path
 import pytest
-import numpy as np
 import pandas as pd
 import json
+from dask.distributed import Client
 
 
 def test_computation_graph_invalid_config(computation_graph_invalid_highlevel):
@@ -13,27 +13,221 @@ def test_computation_graph_invalid_config(computation_graph_invalid_highlevel):
 
 
 def test_computation_graph_invalid_modules(computation_graph_invalid_modules):
-    assert 3 == 7
+    with pytest.raises(
+        ValueError,
+        match="Configuration verification failed: Module ./non_existent_module for node invalid_module does not exist.",
+    ):
+        cg.ComputationGraph(computation_graph_invalid_modules)
 
 
 def test_computation_graph_invalid_functions(computation_graph_invalid_func):
-    assert 3 == 7
+    with pytest.raises(
+        AttributeError,
+        match="module 'computation_module' has no attribute 'non_existent_function'",
+    ):
+        cg.ComputationGraph(computation_graph_invalid_func)
 
 
 def test_computation_graph_invalid_graph(computation_graph_multiple_sink_nodes):
-    assert 3 == 7
+    with pytest.raises(ValueError, match="Configuration verification failed:"):
+        cg.ComputationGraph(computation_graph_multiple_sink_nodes)
 
 
-def test_computation_graph_working_initialization(computation_graph_config):
-    assert 3 == 7
+def test_computation_graph_working_initialization(computation_graph_working, tmp_path):
+    computation = cg.ComputationGraph(computation_graph_working)
+
+    # check the properties of the computation graph
+
+    # 1) has the correct sink node and nodes in general
+    assert len(computation.task_graph) == 6
+    assert computation.sink_node_name == "save"
+    assert "load_data" in computation.task_graph
+    assert "add" in computation.task_graph
+    assert "multiply" in computation.task_graph
+    assert "subtract" in computation.task_graph
+    assert "affine" in computation.task_graph
+    assert "save" in computation.task_graph
+
+    # 2) knows about the correct module
+    assert "computation_module" in computation.module_functions
+
+    # 3) has known functions specified in the config
+    assert "load_data" in computation.module_functions["computation_module"]
+    assert "add" in computation.module_functions["computation_module"]
+    assert "multiply" in computation.module_functions["computation_module"]
+    assert "subtract" in computation.module_functions["computation_module"]
+    assert "affine" in computation.module_functions["computation_module"]
+    assert "save_data" in computation.module_functions["computation_module"]
+
+    # 4) the task graph has the correct nodes and edges
+    assert "load_data" in computation.task_graph
+    assert "add" in computation.task_graph
+    assert "multiply" in computation.task_graph
+    assert "subtract" in computation.task_graph
+    assert "affine" in computation.task_graph
+    assert "save" in computation.task_graph
+
+    # 5) loaded functions are callable
+    f_dict = computation.module_functions["computation_module"]
+    assert f_dict["add"](3, 5) == 8
+    assert f_dict["multiply"](2, 4) == 8
+    assert f_dict["subtract"](10, 2) == 8
+    assert f_dict["affine"](8, b=5, a=2) == 21
+
+    loaded_data = f_dict["load_data"](Path("./test") / "computation_test_data.csv")
+    assert all(loaded_data == [1, 2, 3])
+
+    f_dict["save_data"](
+        pd.DataFrame({"idx": [0, 1, 2], "value": [1, 2, 3]}),
+        Path(tmp_path / "output.csv"),
+    )
+    assert Path(tmp_path / "output.csv").exists()
+
+    # 6) knows about the j_model and the utils modules
+    assert "j_model" in computation.module_functions
+    assert "utils" in computation.module_functions
+
+    # 7) knows about the utils functions
+    assert "detect_csr" in computation.module_functions["utils"]
+    assert "read_geodata" in computation.module_functions["utils"]
+    assert "load_module" in computation.module_functions["utils"]
+    assert "load_name_from_module" in computation.module_functions["utils"]
+
+    # 8) knows about the j_model functions
+    assert "setup_modeldata" in computation.module_functions["j_model"]
+    assert "read_input_data" in computation.module_functions["j_model"]
+    assert "run_model" in computation.module_functions["j_model"]
+    assert "store_output_data" in computation.module_functions["j_model"]
 
 
-def test_computation_graph_properties(computation_graph_config):
-    assert 3 == 7
+def test_computation_graph_visualization(computation_graph_working, tmp_path):
+    computation = cg.ComputationGraph(computation_graph_working)
+    computation.visualize(tmp_path / "computation_graph.svg")
+    assert (tmp_path / "computation_graph.svg").exists()
+
+    computation.sink_node = None
+
+    with pytest.raises(
+        ValueError, match="Sink node is not defined. Cannot visualize the graph."
+    ):
+        computation.visualize(tmp_path / "computation_graph.svg")
 
 
-@pytest.mark.parameterize(
-    "scheduler", ["synchronous", "multithreaded", "multiprocessing", "distributed"]
+@pytest.mark.parametrize(
+    "scheduler",
+    [
+        "synchronous",
+        "threads",
+        "multiprocessing",
+    ],
 )
-def test_computation_graph_execution_schedulers(scheduler):
-    assert 3 == 7
+def test_computation_graph_execution_schedulers(
+    scheduler, computation_graph_working, tmp_path
+):
+    computation_graph_working["execution"]["scheduler"] = scheduler
+    computation = cg.ComputationGraph(computation_graph_working)
+    computation.execute()
+    path = computation_graph_working["graph"]["save"]["args"][0]
+    assert Path(path).exists()
+    result = pd.read_csv(Path(path))
+    assert all(result["value"] == [5, -3, -15])
+
+
+def test_computation_graph_execution_distributed(computation_graph_working, tmp_path):
+    computation_graph_working["execution"]["scheduler"] = "distributed"
+    computation_graph_working["graph"]["save"]["args"] = [
+        str(tmp_path / "output_distributed.csv"),
+    ]
+    client = Client(n_workers=2)
+    computation = cg.ComputationGraph(computation_graph_working)
+    computation.execute(client=client)
+    path = computation_graph_working["graph"]["save"]["args"][0]
+    assert Path(path).exists()
+    result = pd.read_csv(Path(path))
+    assert all(result["value"] == [5, -3, -15])
+
+
+def test_computation_graph_execution_failure(computation_graph_working, tmp_path):
+    computation = cg.ComputationGraph(computation_graph_working)
+    computation.scheduler = "invalid_scheduler"  # Set an invalid scheduler
+    with pytest.raises(
+        ValueError,
+        match="Scheduler is not defined. Cannot execute the graph. Must be one of 'synchronous', 'threads', 'multiprocessing', or 'distributed'.",
+    ):
+        computation.execute()
+
+    computation.scheduler = None
+
+    with pytest.raises(
+        ValueError,
+        match="Scheduler is not defined. Cannot execute the graph. Must be one of 'synchronous', 'threads', 'multiprocessing', or 'distributed'.",
+    ):
+        computation.execute()
+
+
+def test_computation_graph_construct_from_file(tmp_path, computation_graph_working):
+    with open(tmp_path / "computation_graph.json", "w") as f:
+        json.dump(computation_graph_working, f)
+
+    computation = cg.ComputationGraph.from_config(tmp_path / "computation_graph.json")
+
+    # 1) has the correct sink node and nodes in general
+    assert len(computation.task_graph) == 6
+    assert computation.sink_node_name == "save"
+    assert "load_data" in computation.task_graph
+    assert "add" in computation.task_graph
+    assert "multiply" in computation.task_graph
+    assert "subtract" in computation.task_graph
+    assert "affine" in computation.task_graph
+    assert "save" in computation.task_graph
+
+    # 2) knows about the correct module
+    assert "computation_module" in computation.module_functions
+
+    # 3) has known functions specified in the config
+    assert "load_data" in computation.module_functions["computation_module"]
+    assert "add" in computation.module_functions["computation_module"]
+    assert "multiply" in computation.module_functions["computation_module"]
+    assert "subtract" in computation.module_functions["computation_module"]
+    assert "affine" in computation.module_functions["computation_module"]
+    assert "save_data" in computation.module_functions["computation_module"]
+
+    # 4) the task graph has the correct nodes and edges
+    assert "load_data" in computation.task_graph
+    assert "add" in computation.task_graph
+    assert "multiply" in computation.task_graph
+    assert "subtract" in computation.task_graph
+    assert "affine" in computation.task_graph
+    assert "save" in computation.task_graph
+
+    # 5) loaded functions are callable
+    f_dict = computation.module_functions["computation_module"]
+    assert f_dict["add"](3, 5) == 8
+    assert f_dict["multiply"](2, 4) == 8
+    assert f_dict["subtract"](10, 2) == 8
+    assert f_dict["affine"](8, b=5, a=2) == 21
+
+    loaded_data = f_dict["load_data"](Path("./test") / "computation_test_data.csv")
+    assert all(loaded_data == [1, 2, 3])
+
+    f_dict["save_data"](
+        pd.DataFrame({"idx": [0, 1, 2], "value": [1, 2, 3]}),
+        Path(tmp_path / "output.csv"),
+    )
+    assert Path(tmp_path / "output.csv").exists()
+
+    # 6) knows about the j_model and the utils modules
+    assert "j_model" in computation.module_functions
+    assert "utils" in computation.module_functions
+
+    # 7) knows about the utils functions
+    assert "detect_csr" in computation.module_functions["utils"]
+    assert "read_geodata" in computation.module_functions["utils"]
+    assert "load_module" in computation.module_functions["utils"]
+    assert "load_name_from_module" in computation.module_functions["utils"]
+
+    # 8) knows about the j_model functions
+    assert "setup_modeldata" in computation.module_functions["j_model"]
+    assert "read_input_data" in computation.module_functions["j_model"]
+    assert "run_model" in computation.module_functions["j_model"]
+    assert "store_output_data" in computation.module_functions["j_model"]

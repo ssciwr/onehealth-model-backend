@@ -26,6 +26,7 @@ dependencies = [
   "matplotlib", 
   "numpy", 
   "dask",
+  "graphviz",
 ]
 
 [project.optional-dependencies]
