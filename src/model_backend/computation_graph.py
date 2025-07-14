@@ -40,6 +40,10 @@ class ComputationGraph:
     task_graph: dict[str, Delayed] | None = None
     sink_node_name: str | None = None
     scheduler: str | None = None  # The Dask scheduler to use for execution
+    default_modules: set[str] = {
+        "utils",
+        "Jmodel",
+    }  # README: we need a better way to manage default modules
 
     def __init__(self, config: dict[str, Any]):
         """Initialize the computation graph from the given configuration.
@@ -90,6 +94,8 @@ class ComputationGraph:
         for name, spec in config["graph"].items():
             module_path = Path(spec["module"]).resolve().absolute()
             module_name = module_path.stem
+            if module_name in self.default_modules:
+                continue
             function_name = spec["function"]
             print(
                 "Loading function:",
@@ -255,7 +261,12 @@ class ComputationGraph:
                 )
 
             # check that the module path exists and is a valid file
-            if not Path.exists(Path(value["module"]).resolve().absolute()):
+            if str(
+                Path(value["module"]).stem
+            ) not in self.default_modules and Path.exists(
+                Path(value["module"]).resolve().absolute()
+            ):
+                print("module path: ", Path(value["module"]).resolve().absolute())
                 module_name = value["module"]
                 return (
                     False,
