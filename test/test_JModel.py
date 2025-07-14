@@ -1,10 +1,12 @@
 from model_backend import Jmodel as jm
+from model_backend import computation_graph as cg
 import xarray as xr
 from pathlib import Path
 import pandas as pd
 import pytest
 import math
 import numpy as np
+import json
 
 
 def test_jmodel_initialization():
@@ -191,3 +193,47 @@ def test_model_run(make_test_data, tmp_path):
                 and output_data.longitude.max() <= 90.2
             ), "Latitude values should be within the expected range for EPSG:4326"
             assert not np.isnan(output_data.r0.values).all()
+
+
+def test_computation_with_default_config(tmp_path, make_test_data):
+    with make_test_data as _:  # only the written file is needed here
+        with open(
+            Path.cwd() / "src" / "model_backend" / "config_Jmodel.json", "r"
+        ) as file:
+            cfg = json.load(file)
+            cfg["graph"]["setup_modeldata"]["kwargs"]["input"] = str(
+                tmp_path / "test_data.nc",
+            )
+            cfg["graph"]["setup_modeldata"]["kwargs"]["output"] = str(
+                tmp_path / "output_data2.nc"
+            )
+            cfg["graph"]["setup_modeldata"]["kwargs"]["r0_path"] = str(
+                Path.cwd() / "test" / "test_r0.csv"
+            )
+        cgraph = cg.ComputationGraph(cfg)
+        assert cgraph.config == cfg, "Config should be set correctly"
+
+        cgraph.execute()
+
+        output_path = tmp_path / "output_data2.nc"
+        assert output_path.exists(), "Output file should be created"
+
+        with xr.open_dataset(output_path) as data:
+            output_data = data.compute()
+            print(output_data)
+            assert isinstance(output_data, xr.Dataset)
+            assert "R0" in output_data.data_vars
+            assert output_data.R0.shape == (
+                13,
+                9,
+            ), "Output data shape should match input data shape"
+            assert output_data.rio.crs == "EPSG:4326", "CRS should be set to EPSG:4326"
+            assert (
+                output_data.latitude.min() >= -180.2
+                and output_data.latitude.max() <= 180.2
+            ), "Longitude values should be within the expected range for EPSG:4326"
+            assert (
+                output_data.longitude.min() >= -90.1
+                and output_data.longitude.max() <= 90.2
+            ), "Latitude values should be within the expected range for EPSG:4326"
+            assert not np.isnan(output_data.R0.values).all()
