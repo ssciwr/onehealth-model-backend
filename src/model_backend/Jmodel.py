@@ -7,6 +7,7 @@ from pathlib import Path
 from .utils import read_geodata, detect_csr
 import numpy as np
 from dataclasses import dataclass
+import json
 
 
 @dataclass
@@ -14,7 +15,7 @@ class JModelData:
     name: str
     input: str | Path | None = None  # Placeholder for input data, to be
     output: str | Path | None = None  # Placeholder for output data, to be defined later
-    run_mode: str = "forbidden"
+    run_mode: str = "forbidden"  # dask run mode used by xarray
     r0_data: pd.DataFrame | None = None  # Placeholder for R0 data
     min_temp: np.float64 = 0.0  # Minimum temperature for interpolation
     max_temp: np.float64 = 45.0  # Maximum temperature for interpolation
@@ -25,6 +26,18 @@ class JModelData:
     nuts_level: int | None = None  # NUTS level for the model, default is 0
     resolution: str | None = None  # Resolution for the nuts data
     year: int | None = None  # Year for the model
+
+
+def read_default_config() -> dict[str, str | int | None]:
+    """Reads the default configuration for the JModel from a JSON file.
+
+    Returns:
+        dict[str, str | int | None]: A dictionary containing the default configuration.
+    """
+    config_path = Path(__file__).parent / "config_Jmodel.json"
+    with open(config_path, "r") as f:
+        config = json.load(f)
+    return config
 
 
 def setup_modeldata(

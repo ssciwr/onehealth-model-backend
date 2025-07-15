@@ -84,6 +84,22 @@ def test_jmodel_initialization():
         )
 
 
+def test_read_default_config():
+    # Test reading the default configuration file
+    config = jm.read_default_config()
+    assert isinstance(config, dict), "Config should be a dictionary"
+    assert "graph" in config, "Config should contain 'graph' key"
+    assert (
+        "setup_modeldata" in config["graph"]
+    ), "Graph should contain 'setup_modeldata' key"
+    assert (
+        "kwargs" in config["graph"]["setup_modeldata"]
+    ), "Setup model data should have 'kwargs' key"
+    assert (
+        "input" in config["graph"]["setup_modeldata"]["kwargs"]
+    ), "Input path should be specified in the config"
+
+
 def test_model_read_input_data(make_test_data, tmp_path):
     with make_test_data as data:
         model = jm.setup_modeldata(
