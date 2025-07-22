@@ -22,12 +22,13 @@ dependencies = [
   "xarray[parallel]",
   "rioxarray",
   "netcdf4",
-  "geopandas[all]", 
-  "matplotlib", 
-  "numpy", 
+  "geopandas[all]",
+  "matplotlib",
+  "numpy",
   "dask",
-  "scipy", 
-  "numba"
+  "scipy",
+  "numba",
+  "cftime>=1.6.4.post1",
 ]
 
 [project.optional-dependencies]

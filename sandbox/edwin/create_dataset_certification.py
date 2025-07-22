@@ -1,9 +1,105 @@
-from pathlib import Path
+import numpy as np
 import xarray as xr
 
-PATH_PRECIPITATION = Path(
-    "data/in/Pratik_datalake/ERA5land_global_tp_daily_0.5_2024.nc"
+# ---------------------------------------------------
+# ------------------   pr dataset   -----------------
+# ---------------------------------------------------
+# Five longitudes
+lon1 = np.array([-180.0, -179.5, -179.0, -178.5, -178.0])
+# Four latitudes
+lat1 = np.array([-89.5, -89.0, -88.5, -88.0])
+# Two timestamps
+time1 = np.array(["2024-01-01", "2024-01-02"], dtype="datetime64[ns]")
+
+# shape (2, 5, 4) --> dimensions [time, latitude, longitude]
+pr_data = np.array(
+    [
+        [
+            [1, 2, 3, 4, 5],
+            [6, 7, 8, 9, 10],
+            [11, 12, 13, 14, 15],
+            [16, 17, 18, 19, 20],
+        ],
+        [
+            [21, 22, 23, 24, 25],
+            [26, 27, 28, 29, 30],
+            [31, 32, 33, 34, 35],
+            [36, 37, 38, 39, 40],
+        ],
+    ]
 )
-PATH_POPULATION = Path(
-    "data/in/Pratik_datalake/population_histsoc_30arcmin_annual_1901_2021.nc"
+pr = xr.Dataset(
+    {"tp": (["time", "latitude", "longitude"], pr_data)},
+    coords={"longitude": lon1, "latitude": lat1, "time": time1},
 )
+
+# Example [time, latitude, longitude]
+pr_slice = pr.tp[0, :, :]
+print(pr_slice.values)
+
+# Write to netcdf file
+pr.to_netcdf("pr_dummy.nc")
+
+# ---------------------------------------------------
+# ----------------   dense dataset   ----------------
+# ---------------------------------------------------
+# Five longitudes
+lon2 = np.array([-179.75, -179.25, -178.75, -178.25, -177.75])
+# Four latitudes
+lat2 = np.array([-89.75, -89.25, -88.75, -88.25])
+# One timestamp
+time2 = np.array(["2024-01-01"], dtype="datetime64[ns]")
+dens_data = np.array(
+    [
+        [
+            [-1, -2, -3, -4, -5],
+            [-6, -7, -8, -9, -10],
+            [-11, -12, -13, -14, -15],
+            [-16, -17, -18, -19, -20],
+        ],
+    ]
+)
+dens = xr.Dataset(
+    {"dens": (["time", "latitude", "longitude"], dens_data)},
+    coords={"longitude": lon2, "latitude": lat2, "time": time2},
+)
+
+# Example
+# dens_slice = dens.dens[0, :, :]
+# print(dens_slice.values)
+
+
+# Write to netcdf file
+dens.to_netcdf("dense_dummy.nc")
+
+
+# Example for operations
+# result = pr_slice + dens_slice
+
+# print(result.compute())
+
+# Interpolate dens to pr's grid
+print("Result aligned")
+dens_aligned = dens.interp(
+    longitude=pr.tp.longitude,
+    latitude=pr.tp.latitude,
+    method="linear",  # or "linear" for smoother interpolation
+)
+
+print(dens_aligned.dens.values)
+
+# Now you can sum
+# print("RESULT")
+# result = pr_slice + dens_aligned
+# print(result.compute())
+
+# print("pr coords:", pr.coords)
+# print("dens coords:", dens.coords)
+
+# # Printing longitudes
+# print(f"pr longitudes:\t\t{pr.longitude.values}")
+# print(f"dens longitudes:\t{dens.lon.values}")
+
+# # Printing latitudes
+# print(f"pr latitudes:\t\t{pr.latitude.values}")
+# print(f"dens latitudes:\t\t{dens.lat.values}")

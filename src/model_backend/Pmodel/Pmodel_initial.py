@@ -22,32 +22,25 @@ import numpy as np
 PATH_DATASET_TEMPERATURE = Path(
     "data/in/Pratik_datalake/ERA5land_global_t2m_daily_0.5_2024.nc"
 )
-PATH_DATASET_RAINFALL = Path(
-    "data/in/Pratik_datalake/ERA5land_global_tp_daily_0.5_2024.nc"
-)
-PATH_DATASET_POPULATION = Path("data/in/Pratik_datalake/pop_dens_2024_global_0.5.nc")
+# PATH_DATASET_RAINFALL = Path(
+#    "data/in/Pratik_datalake/ERA5land_global_tp_daily_0.5_2024.nc"
+# )
+# PATH_DATASET_POPULATION = Path("data/in/Pratik_datalake/pop_dens_2024_global_0.5.nc")
+
+PATH_DATASET_RAINFALL = Path("data/in/Pratik_datalake/pr_dummy.nc")
+PATH_DATASET_POPULATION = Path("data/in/Pratik_datalake/dense_dummy.nc")
+
 
 K1 = 625
 K2 = 100
 VARIABLES = ["eggs", "ed", "juv", "imm", "adults"]
 
+CHUNKING_SCHEME = {"longitude": 90, "latitude": 45, "time": 10}
+COORDINATES = ("longitude", "latitude", "time")
+
 
 @dataclass
 class PmodelInitial:
-    """Data container for model input variables.
-
-    Stores the essential environmental and demographic data needed for the model.
-    All xarray variables maintain their original dimensions and lazy loading capabilities.
-
-    Attributes:
-        temperature: Temperature data from ERA5Land.
-        temperature_mean: Mean temperature data from ERA5Land.
-        rainfall: Precipitation data from ERA5Land.
-        latitude: Latitude values from the dataset.
-        population_density: Human population density data.
-        initial_conditions: Vector of initial conditions for model variables.
-    """
-
     temperature: xr.DataArray
     temperature_mean: xr.DataArray
     rainfall: xr.DataArray
@@ -105,30 +98,35 @@ def load_dataset(
     variable_name: str = None,
     dimension_order: tuple = None,
     decode_times: bool = True,
+    chunks: Optional[dict] = None,
+    new_names: Optional[dict] = None,
     **kwargs,
 ) -> xr.Dataset | xr.DataArray:
-    """Generic function to load data from a NetCDF dataset.
+    """Generic function to load data from a NetCDF dataset in chunks.
 
     Args:
         path_dataset: Path to the dataset file.
         variable_name: Name of the variable to extract. If None, returns the full dataset.
         dimension_order: Optional tuple of dimensions to transpose the dataset to.
         decode_times: Whether to decode times in the NetCDF file.
+        chunks: Optional dict for Dask chunk sizes (e.g., {'time': 10, 'latitude': 100, 'longitude': 100}).
         **kwargs: Additional arguments to pass to xr.open_dataset.
 
     Returns:
         Either the full dataset (xr.Dataset) or a specific variable (xr.DataArray).
     """
-    # Open the dataset (lazily)
     dataset = xr.open_dataset(
-        filename_or_obj=path_dataset, decode_times=decode_times, **kwargs
+        filename_or_obj=path_dataset,
+        decode_times=decode_times,
+        **kwargs,
     )
 
-    # Transpose dimensions if specified (also lazy)
+    dataset = dataset.rename(new_names)
+    dataset = dataset.chunk(chunks)
+
     if dimension_order is not None:
         dataset = dataset.transpose(*dimension_order)
 
-    # Return either the whole dataset or just the requested variable
     if variable_name is not None:
         return dataset[variable_name]
 
@@ -138,6 +136,7 @@ def load_dataset(
 def load_human_population_density(
     path_population_dataset: Path | str,
     variable_name: str = "total-population",
+    chunks: Optional[dict] = None,
 ) -> xr.DataArray:
     """Loads population density data from a NetCDF file.
 
@@ -152,11 +151,9 @@ def load_human_population_density(
         path_dataset=path_population_dataset,
         variable_name=variable_name,
         decode_times=True,
-        dimension_order=("lon", "lat", "time"),
-    )
-
-    rainfall_dataset_renamed = rainfall_dataset.rename(
-        {"lon": "longitude", "lat": "latitude", "time": "time"}
+        dimension_order=("longitude", "latitude", "time"),
+        chunks=chunks,
+        new_names={"lon": "longitude", "lat": "latitude", "time": "time"},
     )
 
     return rainfall_dataset
@@ -199,9 +196,7 @@ def load_initial(filepath_previous: Path | str, sizes: tuple[int, int]) -> np.nd
     return v0
 
 
-def load_latitude(
-    path_latitude_dataset: Path | str, variable_name: str
-) -> xr.DataArray:
+def load_latitude(path_latitude_dataset: Path | str, variable_name: str) -> xr.DataArray:
     """Loads latitude data from a NetCDF file (typically from ERA5 Land).
 
     Args:
@@ -214,11 +209,13 @@ def load_latitude(
     return load_dataset(
         path_dataset=path_latitude_dataset,
         variable_name=variable_name,
+        chunks=CHUNKING_SCHEME,
+        new_names={"valid_time": "time"},
     )
 
 
 def load_rainfall(
-    path_rainfall_dataset: Path | str, variable_name: str
+    path_rainfall_dataset: Path | str, variable_name: str, chunks: Optional[dict] = None
 ) -> xr.DataArray:
     """Loads rainfall data from a NetCDF file and transposes to standard dimension order.
 
@@ -233,11 +230,15 @@ def load_rainfall(
         path_dataset=path_rainfall_dataset,
         variable_name=variable_name,
         dimension_order=("longitude", "latitude", "time"),
+        chunks=chunks,
     )
 
 
 def load_temperature(
-    path_temperature_dataset: Path | str, variable_name: str, time_step: int
+    path_temperature_dataset: Path | str,
+    variable_name: str,
+    time_step: int,
+    chunks: Optional[dict] = None,
 ) -> tuple[np.ndarray, xr.DataArray]:
     """Loads temperature data from a NetCDF file and prepares arrays for processing.
 
@@ -251,13 +252,15 @@ def load_temperature(
             - var_Temperature: A numpy array for storing processed temperature data
               with dimensions (longitude, latitude, time*time_step).
             - var_Temperature_mean: The original temperature data as a DataArray
-              with dimensions (longitude, latitude, valid_time).
+              with dimensions (longitude, latitude, time).
     """
     # Load and transpose the dataset
     var_Temperature_mean = load_dataset(
         path_dataset=path_temperature_dataset,
         variable_name=variable_name,
-        dimension_order=("longitude", "latitude", "valid_time"),
+        dimension_order=("longitude", "latitude", "time"),
+        new_names={"valid_time": "time"},
+        chunks=CHUNKING_SCHEME,
     )
 
     size_longitudes, size_latitudes, size_time = var_Temperature_mean.shape
@@ -292,16 +295,20 @@ def load_data(
     Returns:
         A PmodelInitial object containing all required data.
     """
+
     # Load temperature data
     var_temperature, var_temperature_mean = load_temperature(
         path_temperature_dataset=path_temperature,
         variable_name="t2m",
         time_step=time_step,
+        chunks=CHUNKING_SCHEME,
     )
 
     # Load rainfall data
     var_rainfall = load_rainfall(
-        path_rainfall_dataset=path_rainfall, variable_name="tp"
+        path_rainfall_dataset=path_rainfall,
+        variable_name="tp",
+        chunks=CHUNKING_SCHEME,
     )
 
     # Load latitude data
@@ -311,7 +318,9 @@ def load_data(
 
     # Load population density data
     var_population = load_human_population_density(
-        path_population_dataset=path_population, variable_name="dens"
+        path_population_dataset=path_population,
+        variable_name="dens",
+        chunks=CHUNKING_SCHEME,
     )
 
     # Create model data container
@@ -334,9 +343,23 @@ def load_data(
 
 
 if __name__ == "__main__":
-    print("============= Loading Model Data =============")
 
-    # Load all data using the unified function
+    # Load lazily without chunks
+
+    # dataset = load_dataset(
+    #     path_dataset=PATH_DATASET_RAINFALL,
+    #     variable_name="tp",
+    #     dimension_order=("longitude", "latitude", "time"),
+    #     decode_times=True,
+    #     chunks=CHUNKING_SCHEME,
+    # )
+
+    # dens = dataset
+
+    # print(dens)
+    # print("\nDask chunking info:")
+    # print(dens.data)
+
     model_data = load_data(
         time_step=10,
         # Uncomment to test with initial conditions
