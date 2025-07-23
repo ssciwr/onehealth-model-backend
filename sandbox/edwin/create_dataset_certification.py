@@ -81,25 +81,9 @@ dens.to_netcdf("dense_dummy.nc")
 # Interpolate dens to pr's grid
 print("Result aligned")
 dens_aligned = dens.interp(
-    longitude=pr.tp.longitude,
-    latitude=pr.tp.latitude,
+    longitude=pr.longitude,
+    latitude=pr.latitude,
     method="linear",  # or "linear" for smoother interpolation
 )
 
 print(dens_aligned.dens.values)
-
-# Now you can sum
-# print("RESULT")
-# result = pr_slice + dens_aligned
-# print(result.compute())
-
-# print("pr coords:", pr.coords)
-# print("dens coords:", dens.coords)
-
-# # Printing longitudes
-# print(f"pr longitudes:\t\t{pr.longitude.values}")
-# print(f"dens longitudes:\t{dens.lon.values}")
-
-# # Printing latitudes
-# print(f"pr latitudes:\t\t{pr.latitude.values}")
-# print(f"dens latitudes:\t\t{dens.lat.values}")
