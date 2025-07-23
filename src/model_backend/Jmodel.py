@@ -23,16 +23,16 @@ class JModelData:
     temp_colname: str = "t2m"
     out_colname: str = "R0"
     grid_data_baseurl: str | None = None
-    nuts_level: int | None = None  # NUTS level for the model, default is 0
+    nuts_level: np.int64 | None = None  # NUTS level for the model, default is 0
     resolution: str | None = None  # Resolution for the nuts data
-    year: int | None = None  # Year for the model
+    year: np.int64 | None = None  # Year for the model
 
 
-def read_default_config() -> dict[str, str | int | None]:
+def read_default_config() -> dict[str, str | np.int64 | None]:
     """Reads the default configuration for the JModel from a JSON file.
 
     Returns:
-        dict[str, str | int | None]: A dictionary containing the default configuration.
+        dict[str, str | np.int64 | None]: A dictionary containing the default configuration.
     """
     config_path = Path(__file__).parent / "config_Jmodel.json"
     with open(config_path, "r") as f:
@@ -46,9 +46,9 @@ def setup_modeldata(
     r0_path: str | None = None,
     run_mode: str = "forbidden",
     grid_data_baseurl: str | None = None,
-    nuts_level: int | None = None,
+    nuts_level: np.int64 | None = None,
     resolution: str | None = None,
-    year: int | None = None,
+    year: np.int64 | None = None,
     temp_colname: str = "t2m",
     out_colname: str = "R0",
 ) -> JModelData:
