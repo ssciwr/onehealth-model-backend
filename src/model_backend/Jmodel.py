@@ -17,15 +17,15 @@ class JModelData:
     output: str | Path | None = None  # Placeholder for output data, to be defined later
     run_mode: str = "forbidden"  # dask run mode used by xarray
     r0_data: pd.DataFrame | None = None  # Placeholder for R0 data
-    min_temp: np.float64 = 0.0  # Minimum temperature for interpolation
-    max_temp: np.float64 = 45.0  # Maximum temperature for interpolation
-    step: np.float64 = 0.1  # Step size for temperature interpolation
+    min_temp: np.float64 = np.float64(0.0)  # Minimum temperature for interpolation
+    max_temp: np.float64 = np.float64(45.0)  # Maximum temperature for interpolation
+    step: np.float64 = np.float64(0.1)  # Step size for temperature interpolation
     temp_colname: str = "t2m"
     out_colname: str = "R0"
     grid_data_baseurl: str | None = None
-    nuts_level: np.int64 | None = None  # NUTS level for the model, default is 0
+    nuts_level: int | None = None  # NUTS level for the model, default is 0
     resolution: str | None = None  # Resolution for the nuts data
-    year: np.int64 | None = None  # Year for the model
+    year: int | None = None  # Year for the model
 
 
 def read_default_config() -> dict[str, str | np.int64 | None]:
@@ -46,9 +46,9 @@ def setup_modeldata(
     r0_path: str | None = None,
     run_mode: str = "forbidden",
     grid_data_baseurl: str | None = None,
-    nuts_level: np.int64 | None = None,
+    nuts_level: int | None = None,
     resolution: str | None = None,
-    year: np.int64 | None = None,
+    year: int | None = None,
     temp_colname: str = "t2m",
     out_colname: str = "R0",
 ) -> JModelData:
@@ -110,8 +110,8 @@ def setup_modeldata(
         output=output,
         run_mode=run_mode,
         r0_data=r0_data,
-        min_temp=min_temp,
-        max_temp=max_temp,
+        min_temp=np.float64(min_temp),
+        max_temp=np.float64(max_temp),
         step=step_temp,
         temp_colname=temp_colname,
         out_colname=out_colname,

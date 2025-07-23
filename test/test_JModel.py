@@ -208,7 +208,9 @@ def test_model_run(make_test_data, tmp_path):
                 output_data.longitude.min() >= -90.1
                 and output_data.longitude.max() <= 90.2
             ), "Latitude values should be within the expected range for EPSG:4326"
-            assert not np.isnan(output_data.r0.values).all()
+            assert not np.isnan(
+                output_data.r0.values
+            ).all()  # TODO: this generates NaNs on occassion?!
 
 
 def test_computation_with_default_config(tmp_path, make_test_data):

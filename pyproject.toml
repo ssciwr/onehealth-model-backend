@@ -26,14 +26,17 @@ dependencies = [
   "matplotlib", 
   "numpy", 
   "dask",
-  "graphviz",
 ]
 
 [project.optional-dependencies]
+viz = [
+    "graphviz",
+]
 dev = [
     "pre-commit",
     "pytest",
     "pytest-cov",
+    "graphviz" # we need this for the viz tests
 ]
 
 [project.urls]
