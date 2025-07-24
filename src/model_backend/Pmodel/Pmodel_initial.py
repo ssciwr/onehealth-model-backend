@@ -159,7 +159,9 @@ def load_human_population_density(
     return rainfall_dataset
 
 
-def load_initial(filepath_previous: Path | str, sizes: tuple[int, int]) -> np.ndarray:
+def load_initial_conditions(
+    filepath_previous: Path | str, sizes: tuple[int, int]
+) -> np.ndarray:
     """Load initial conditions for the model from a NetCDF file or create default values.
 
     Args:
@@ -323,19 +325,31 @@ def load_data(
         chunks=CHUNKING_SCHEME,
     )
 
+    # TODO: remove for production code.
+    var_population_aligned = var_population.interp(
+        longitude=var_rainfall.longitude,
+        latitude=var_rainfall.latitude,
+        method="linear",
+    )
+    # var_population_aligned, var_rainfall = xr.align(
+    #     var_population,
+    #     var_rainfall,
+    #     join="outer",  # or "inner", "outer", "left", "right" depending on your use case
+    # )
+
     # Create model data container
     model_data = PmodelInitial(
         temperature_mean=var_temperature_mean,
         temperature=var_temperature,
         rainfall=var_rainfall,
         latitude=var_latitude,
-        population_density=var_population,
+        population_density=var_population_aligned,
     )
 
     # Load initial conditions if provided
     if filepath_previous:
         sizes = model_data.get_dimensions()
-        model_data.initial_conditions = load_initial(
+        model_data.initial_conditions = load_initial_conditions(
             filepath_previous=filepath_previous, sizes=sizes
         )
 
@@ -389,5 +403,5 @@ if __name__ == "__main__":
 
     print("\nData loading complete.")
 
-    print(model_data.population_density)
-    print(model_data.rainfall)
+    print(model_data.population_density.values.shape)
+    print(model_data.rainfall.values.shape)

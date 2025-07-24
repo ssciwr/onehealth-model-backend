@@ -3,23 +3,20 @@ from pathlib import Path
 import numpy as np
 import xarray as xr
 
-from Pmodel_params import (
-    ALPHA_DENS,
-    ALPHA_RAIN,
-    GAMMA,
-    LAMBDA,
-)
+import Pmodel_params
 
 
-def capacity(pr: xr.DataArray, dens: xr.DataArray) -> xr.DataArray:
+def capacity(pr: xr.DataArray, dens: xr.DataArray, **kwargs) -> xr.DataArray:
 
     # Constants
-    ALPHA = 0.001
-    BETA = 0.00001
-    GAMMA = 0.9
-    LAMBDA = 1e6 * 625 * 100
+    ALPHA = kwargs.get("ALPHA", Pmodel_params.ALPHA_RAIN)
+    BETA = kwargs.get("BETA", Pmodel_params.ALPHA_DENS)
+    GAMMA = kwargs.get("GAMMA", Pmodel_params.GAMMA)
+    LAMBDA = kwargs.get("LAMBDA", Pmodel_params.LAMBDA)
 
-    pr_new = pr.copy(deep=True)
+    # TODO: Remove the following section for production
+
+    pr_new = pr.copy(deep=True)  # Keep
     print(f"pr dims: {pr.dims}")
     print(f"dens dims: {dens.dims}")
     print(pr.coords)
@@ -27,34 +24,42 @@ def capacity(pr: xr.DataArray, dens: xr.DataArray) -> xr.DataArray:
 
     # Select first time slice
     pr_slice = pr.isel(time=0)
-    print(pr_slice.values)
+    print("pr values: \n{}".format(pr_slice.values))
 
-    # dens_slice = dens.isel(time=0)
+    # Select first time slice in dens
+    dens_slice = dens.isel(time=0)
+    print("dens values: \n{}".format(dens_slice.values))
 
-    # SUPER REALLY ULTRA IMPORTANT
-    # Reindex dens to match pr's longitude and latitude
-    # dens_aligned = dens_slice.interp(
-    #     longitude=pr_slice.longitude,
-    #     latitude=pr_slice.latitude,
-    #     method="nearest",  # or "linear" for interpolation
-    # )
+    # Now sum
+    # result = pr_slice + dens_slice
 
-    # # Now sum
-    # result = pr_slice + dens_aligned
+    # print(result.shape)
+    # print("Result of sum pr + dense: {}".format(result.compute().values))
 
-    # print(result.compute().shape)
-    # print(result)
+    # Get time length
+    time = pr.coords["time"]
+    ntime = len(time)
 
-    # print(result.values[0, 0])
-    # Data usage
-    # print(pr.data.shape)
-    # print(pr_new.data.shape)
-    # print(dens.data.shape)
-    # print(a.compute().shape)
-    # print(pr_new.isel(time=0).shape)
-    # print(dens.isel(time=0).shape)
+    # Initialize A(t)
+    pr_new.loc[dict(time=time[0])] = ALPHA * pr_new.sel(time=time[0]) + BETA * dens.sel(
+        time=time[0]
+    )
 
-    return None
+    # Apply recursive formula for A(t)
+    for k in range(1, ntime):
+        prev = pr_new.sel(time=time[k - 1])
+        curr_pr = pr.sel(time=time[k])
+        curr_dens = dens.sel(time=time[0])
+
+        pr_new.loc[dict(time=time[k])] = GAMMA * prev + ALPHA * curr_pr + BETA * curr_dens
+
+    # Apply scaling factor to compute K(t)
+    for k in range(1, ntime):
+        factor = (1 - GAMMA) / (1 - GAMMA ** (k + 1))
+        pr_new.loc[dict(time=time[k])] = factor * pr_new.sel(time=time[k])
+
+    # Final scaling
+    return pr_new * LAMBDA
 
 
 if __name__ == "__main__":
@@ -63,22 +68,20 @@ if __name__ == "__main__":
     model_data = load_data(time_step=10)
     model_data.print_attributes()
 
-    capacity(pr=model_data.rainfall, dens=model_data.population_density)
+    constants_capacity = {
+        "ALPHA": 10,  # 1e-3
+        "BETA": 10,  # 1e-5
+        "GAMMA": 10,  # 9e-1
+        "LAMBDA": 10,  # 1e6 * 625 * 100
+    }
 
-    # Approach 2. Using pure functions
-    # PATH_DATASET_TEMPERATURE = Path(
-    #     "data/in/Pratik_datalake/ERA5land_global_t2m_daily_0.5_2024.nc"
-    # )
-    # PATH_DATASET_RAINFALL = Path(
-    #     "data/in/Pratik_datalake/ERA5land_global_tp_daily_0.5_2024.nc"
-    # )
-    # PATH_DATASET_POPULATION = Path("data/in/Pratik_datalake/pop_dens_2024_global_0.5.nc")
+    CC = capacity(
+        pr=model_data.rainfall,
+        dens=model_data.population_density,
+        **constants_capacity,
+    )
 
-    # pr = load_rainfall(path_rainfall_dataset=PATH_DATASET_RAINFALL, variable_name="tp")
-    # dens = load_human_population_density(
-    #     path_population_dataset=PATH_DATASET_POPULATION, variable_name="dens"
-    # )
-
-    # capacity = capacity(pr=pr, dens=dens)
-
-    # print(capacity.shape)
+    for i in range(3):  # for indices 0, 1, 2
+        print(f"Slice at time index {i}:")
+        print(CC.isel(time=i).values)
+        print()  # Blank line for readability
