@@ -125,8 +125,8 @@ def setup_modeldata(
 def _interpolate_r0(
     temp: np.ndarray | da.core.Array,
     r0_data: pd.DataFrame,
-    min_temp: np.float64,
-    max_temp: np.float64,
+    min_temp: float,
+    max_temp: float,
 ) -> np.ndarray | da.core.Array:
     """Interpolates R0 values based on temperature using the stored R0 data.
     Args:
