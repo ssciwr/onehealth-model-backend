@@ -182,7 +182,7 @@ class ComputationGraph:
 
         """
 
-        # recursive function that progressively works it's way up the computational graph from the sink node until it reaches the source node that has no dependencies, and then down again to build the computation tasks in the graph from source to sink.
+        # recursive function that progressively works it's way up the computational graph from the sink node until it reaches source nodes that have no dependencies, and then down again to build the computation tasks in the graph from sources to sink.
         def build_node(node_name, delayed_tasks):
             """Build a single node in the Dask computational graph."""
             self.logger.debug(f" Building input node: {node_name}")
