@@ -17,9 +17,9 @@ class JModelData:
     output: str | Path | None = None  # Placeholder for output data, to be defined later
     run_mode: str = "forbidden"  # dask run mode used by xarray
     r0_data: pd.DataFrame | None = None  # Placeholder for R0 data
-    min_temp: np.float64 = np.float64(0.0)  # Minimum temperature for interpolation
-    max_temp: np.float64 = np.float64(45.0)  # Maximum temperature for interpolation
-    step: np.float64 = np.float64(0.1)  # Step size for temperature interpolation
+    min_temp: float = 0.0  # Minimum temperature for interpolation
+    max_temp: float = 45.0  # Maximum temperature for interpolation
+    step: float = 0.1  # Step size for temperature interpolation
     temp_colname: str = "t2m"
     out_colname: str = "R0"
     grid_data_baseurl: str | None = None
@@ -110,8 +110,8 @@ def setup_modeldata(
         output=output,
         run_mode=run_mode,
         r0_data=r0_data,
-        min_temp=np.float64(min_temp),
-        max_temp=np.float64(max_temp),
+        min_temp=min_temp,
+        max_temp=max_temp,
         step=step_temp,
         temp_colname=temp_colname,
         out_colname=out_colname,
