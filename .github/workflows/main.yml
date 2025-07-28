@@ -27,12 +27,16 @@ jobs:
       uses: actions/setup-python@v5
       with:
         python-version: ${{ matrix.python-version }}
+    - name: install graphviz 
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y graphviz
     - name: Getting repository
       uses: actions/checkout@v4
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install -e .
+        pip install -e .[viz]
         pip install pytest pytest-cov
     - name: Run pytest
       if: ${{ matrix.python-version != '3.13' }}
