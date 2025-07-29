@@ -5,37 +5,38 @@ import xarray as xr
 # ------------------   pr dataset   -----------------
 # ---------------------------------------------------
 # Five longitudes
-lon1 = np.array([-180.0, -179.5, -179.0, -178.5, -178.0])
+lon1 = np.array([-180.0, -179.5, -179.0, -178.5, -178.0], dtype=np.float64)
 # Four latitudes
-lat1 = np.array([-89.5, -89.0, -88.5, -88.0])
+lat1 = np.array([-89.5, -89.0, -88.5, -88.0], dtype=np.float64)
 # Two timestamps
 time1 = np.array(["2024-01-01", "2024-01-02", "2024-01-03"], dtype="datetime64[ns]")
 
 # shape (3, 4, 5) --> dimensions [time, latitude, longitude]
-# pr_data = np.array(
-#     [
-#         [
-#             [1, 2, 3, 4, 5],
-#             [6, 7, 8, 9, 10],
-#             [11, 12, 13, 14, 15],
-#             [16, 17, 18, 19, 20],
-#         ],
-#         [
-#             [21, 22, 23, 24, 25],
-#             [26, 27, 28, 29, 30],
-#             [31, 32, 33, 34, 35],
-#             [36, 37, 38, 39, 40],
-#         ],
-#         [
-#             [41, 42, 43, 44, 45],
-#             [46, 47, 48, 49, 50],
-#             [51, 52, 53, 54, 55],
-#             [56, 57, 58, 59, 60],
-#         ],
-#     ]
-# )
+pr_data = np.array(
+    [
+        [
+            [1, 2, 3, 4, 5],
+            [6, 7, 8, 9, 10],
+            [11, 12, 13, 14, 15],
+            [16, 17, 18, 19, 20],
+        ],
+        [
+            [21, 22, 23, 24, 25],
+            [26, 27, 28, 29, 30],
+            [31, 32, 33, 34, 35],
+            [36, 37, 38, 39, 40],
+        ],
+        [
+            [41, 42, 43, 44, 45],
+            [46, 47, 48, 49, 50],
+            [51, 52, 53, 54, 55],
+            [56, 57, 58, 59, 60],
+        ],
+    ],
+    dtype=np.float64,
+)
 
-pr_data = np.random.randint(1, 61, size=(3, 4, 5))
+# pr_data = np.random.randint(1, 61, size=(3, 4, 5))
 
 pr = xr.Dataset(
     data_vars={
@@ -54,7 +55,7 @@ print(pr_slice.values)
 
 # Write to netcdf file
 pr.to_netcdf("data/in/Pratik_datalake/pr_dummy.nc")
-print(pr)
+
 
 # ---------------------------------------------------
 # ----------------   dense dataset   ----------------
@@ -62,26 +63,27 @@ print(pr)
 
 # Five longitudes
 # lon2 = np.array([-179.75, -179.25, -178.75, -178.25, -177.75])
-lon2 = np.array([-180.0, -179.5, -179.0, -178.5, -178.0])
+lon2 = np.array([-180.0, -179.5, -179.0, -178.5, -178.0], dtype=np.float64)
 
 # Four latitudes
 # lat2 = np.array([-89.75, -89.25, -88.75, -88.25])
-lat2 = np.array([-89.5, -89.0, -88.5, -88.0])
+lat2 = np.array([-89.5, -89.0, -88.5, -88.0], dtype=np.float64)
 
 # One timestamp
 time2 = np.array(["2024-01-01"], dtype="datetime64[ns]")
-# dens_data = np.array(
-#     [
-#         [
-#             [-1, -2, -3, -4, -5],
-#             [-6, -7, -8, -9, -10],
-#             [-11, -12, -13, -14, -15],
-#             [-16, -17, -18, -19, -20],
-#         ],
-#     ]
-# )
+dens_data = np.array(
+    [
+        [
+            [-1, -2, -3, -4, -5],
+            [-6, -7, -8, -9, -10],
+            [-11, -12, -13, -14, -15],
+            [-16, -17, -18, -19, -20],
+        ],
+    ],
+    dtype=np.float64,
+)
 
-dens_data = np.random.randint(1, 61, size=(1, 4, 5))
+# dens_data = np.random.randint(1, 61, size=(1, 4, 5))
 dens = xr.Dataset(
     data_vars={
         "dens": (["time", "lat", "lon"], dens_data),
@@ -94,13 +96,12 @@ dens = xr.Dataset(
 )
 
 # Example
-# dens_slice = dens.dens[0, :, :]
-# print(dens_slice.values)
+dens_slice = dens.dens[0, :, :]
+print(dens_slice.values)
 
 
 # Write to netcdf file
 dens.to_netcdf("data/in/Pratik_datalake/dense_dummy.nc")
-print(dens)
 
 
 # Example for operations
@@ -115,5 +116,3 @@ print(dens)
 #    latitude=pr.latitude,
 #    method="linear",  # or "linear" for smoother interpolation
 # )
-
-print(pr.tp.shape)
