@@ -13,7 +13,7 @@ containing all necessary data for the model.
 
 from pathlib import Path
 from dataclasses import dataclass
-from typing import Union, Tuple, Optional
+from typing import Optional
 
 import xarray as xr
 import numpy as np
@@ -160,7 +160,7 @@ def load_human_population_density(
 
 
 def load_initial_conditions(
-    filepath_previous: Path | str, sizes: tuple[int, int]
+    filepath_previous: Path | str | None = None, *, sizes: tuple[int, int]
 ) -> np.ndarray:
     """Load initial conditions for the model from a NetCDF file or create default values.
 
@@ -182,23 +182,25 @@ def load_initial_conditions(
 
     # Create an initial matrix full of zeros
     # Ref. Dimensions [latitude, longitude, model_variable]
-    v0 = np.zeros((size_latitude, size_longitude, number_variables), dtype=np.float64)
+    v0 = np.zeros((size_longitude, size_latitude, number_variables), dtype=np.float64)
 
-    if Path(filepath_previous).exists():
+    if filepath_previous is None or not Path(filepath_previous).exists():
+        # If no previous file exists, initialize eggs_dia (ed) with 625*100
+        v0[:, :, 1] = K1 * K2 * np.ones((size_longitude, size_latitude))
+    else:
         # Open NetCDF file containing initial conditions
         initial_conditions = load_dataset(filepath_previous)
 
         # Extract the last time step for each variable
         for i, var in enumerate(VARIABLES):
             v0[:, :, i] = initial_conditions[var].isel(time=-1).values
-    else:
-        # If no previous file exists, initialize eggs_dia (ed) with 625*100
-        v0[:, :, 1] = K1 * K2 * np.ones((size_latitude, size_longitude))
 
     return v0
 
 
-def load_latitude(path_latitude_dataset: Path | str, variable_name: str) -> xr.DataArray:
+def load_latitude(
+    path_latitude_dataset: Path | str, variable_name: str
+) -> xr.DataArray:
     """Loads latitude data from a NetCDF file (typically from ERA5 Land).
 
     Args:
@@ -347,11 +349,11 @@ def load_data(
     )
 
     # Load initial conditions if provided
-    if filepath_previous:
-        sizes = model_data.get_dimensions()
-        model_data.initial_conditions = load_initial_conditions(
-            filepath_previous=filepath_previous, sizes=sizes
-        )
+
+    sizes = model_data.get_dimensions()
+    model_data.initial_conditions = load_initial_conditions(
+        filepath_previous=filepath_previous, sizes=sizes
+    )
 
     return model_data
 
