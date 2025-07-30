@@ -18,15 +18,16 @@ from typing import Optional
 import xarray as xr
 import numpy as np
 
-
-PATH_DATASET_TEMPERATURE = Path(
-    "data/in/Pratik_datalake/ERA5land_global_t2m_daily_0.5_2024.nc"
-)
+# ---- Original Paths
+# PATH_DATASET_TEMPERATURE = Path(
+#     "data/in/Pratik_datalake/ERA5land_global_t2m_daily_0.5_2024.nc"
+# )
 # PATH_DATASET_RAINFALL = Path(
 #    "data/in/Pratik_datalake/ERA5land_global_tp_daily_0.5_2024.nc"
 # )
 # PATH_DATASET_POPULATION = Path("data/in/Pratik_datalake/pop_dens_2024_global_0.5.nc")
 
+PATH_DATASET_TEMPERATURE = Path("data/in/Pratik_datalake/temperature_dummy.nc")
 PATH_DATASET_RAINFALL = Path("data/in/Pratik_datalake/pr_dummy.nc")
 PATH_DATASET_POPULATION = Path("data/in/Pratik_datalake/dense_dummy.nc")
 
@@ -198,9 +199,7 @@ def load_initial_conditions(
     return v0
 
 
-def load_latitude(
-    path_latitude_dataset: Path | str, variable_name: str
-) -> xr.DataArray:
+def load_latitude(path_latitude_dataset: Path | str, variable_name: str) -> xr.DataArray:
     """Loads latitude data from a NetCDF file (typically from ERA5 Land).
 
     Args:
@@ -214,7 +213,8 @@ def load_latitude(
         path_dataset=path_latitude_dataset,
         variable_name=variable_name,
         chunks=CHUNKING_SCHEME,
-        new_names={"valid_time": "time"},
+        # new_names={"valid_time": "time"},
+        new_names={"time": "time"},
     )
 
 
@@ -263,7 +263,8 @@ def load_temperature(
         path_dataset=path_temperature_dataset,
         variable_name=variable_name,
         dimension_order=("longitude", "latitude", "time"),
-        new_names={"valid_time": "time"},
+        # new_names={"valid_time": "time"},
+        new_names={"time": "time"},
         chunks=CHUNKING_SCHEME,
     )
 

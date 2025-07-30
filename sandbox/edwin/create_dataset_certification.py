@@ -116,3 +116,51 @@ dens.to_netcdf("data/in/Pratik_datalake/dense_dummy.nc")
 #    latitude=pr.latitude,
 #    method="linear",  # or "linear" for smoother interpolation
 # )
+
+# ------------------------------------------------------------
+# ------------------   temperature dataset   -----------------
+# ------------------------------------------------------------
+# shape (3, 4, 5) --> dimensions [time, latitude, longitude]
+temperature_data = np.array(
+    [
+        [
+            [2, 4, 6, 8, 10],
+            [12, 14, 16, 18, 20],
+            [22, 24, 26, 28, 30],
+            [32, 34, 36, 38, 40],
+        ],
+        [
+            [-2, -4, -6, -8, -10],
+            [-12, -14, -16, -18, -20],
+            [-22, -24, -26, -28, -30],
+            [-32, -34, -36, -38, -40],
+        ],
+        [
+            [1.5, 2, 2.5, 3, 3.5],
+            [4, 4.5, 5, 5.5, 6],
+            [6.5, 7, 7.5, 8, 8.5],
+            [9, 9.5, 10, 10.5, 11],
+        ],
+    ],
+    dtype=np.float64,
+)
+
+# temperature_data = np.random.randint(-30, 30, size=(3, 4, 5))
+
+temperature = xr.Dataset(
+    data_vars={
+        "t2m": (["time", "latitude", "longitude"], temperature_data),
+    },
+    coords={
+        "longitude": lon1,
+        "latitude": lat1,
+        "time": time1,
+    },
+)
+
+# Example [time, latitude, longitude]
+temperature_slice = temperature.t2m[0, :, :]
+print(temperature_slice.values)
+
+# Write to netcdf file
+temperature.to_netcdf("data/in/Pratik_datalake/temperature_dummy.nc")
