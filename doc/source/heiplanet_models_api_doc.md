@@ -1,5 +1,5 @@
 heiplanet_models package
-================
+=========================
 
 Submodules
 ----------

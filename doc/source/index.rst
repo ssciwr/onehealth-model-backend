@@ -4,7 +4,7 @@
    contain the root `toctree` directive.
 
 Welcome to heiplanet_models' documentation!
-========================================
+============================================
 
 .. toctree::
    :maxdepth: 2
@@ -12,6 +12,5 @@ Welcome to heiplanet_models' documentation!
 
    getting_started
    basic_design
-   using_configuration_files
    heiplanet_models_api_doc
    license_link
