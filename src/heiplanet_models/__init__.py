@@ -7,9 +7,9 @@ from . import Jmodel
 try:
     from importlib.metadata import version
 
-    __version__ = version("heiplanet-models")
+    __version__ = version("heiplanet_models")
 except ImportError:
     __version__ = "unknown"
 
-# Optional: Define what gets imported with "from model_backend import *"
+# Optional: Define what gets imported with "from heiplanet_models import *"
 __all__ = ["Jmodel", "utils", "computation_graph", "__version__"]
