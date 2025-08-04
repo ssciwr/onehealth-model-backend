@@ -5,7 +5,7 @@ on:
     # trigger on tagged push to master branch
     push:
         branches:
-          - main
+          - "**"
         tags:
           - "v*.*.*" # semantic versioning tags
 
