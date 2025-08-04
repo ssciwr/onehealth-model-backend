@@ -66,8 +66,8 @@ jobs:
 
       - name: Test import
         run: |
-          python -c "import oneHealthModels"
-          python -c "from oneHealthModels import JModel, computation_graph, utils, __version__"
+          python -c "import heiplanet-models"
+          python -c "from heiplanet-models import JModel, computation_graph, utils, __version__"
 
     publish-to-pypi:
       name: Publish python distribution to pypi 
@@ -76,7 +76,7 @@ jobs:
       runs-on: ubuntu-latest
       environment:
         name: pypi_release
-        url: https://pypi.org/p/oneHealthModels
+        url: https://pypi.org/p/heiplanet-models
       permissions: 
         id-token: write 
 

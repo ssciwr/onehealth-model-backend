@@ -7,7 +7,7 @@ from . import Jmodel
 try:
     from importlib.metadata import version
 
-    __version__ = version("oneHealthModels")
+    __version__ = version("heiplanet-models")
 except ImportError:
     __version__ = "unknown"
 
