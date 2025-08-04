@@ -58,6 +58,10 @@ tag-pattern = "v(?P<version>.+)"
 [tool.coverage.run]
 branch = true
 source = ["./src/heiplanet_models"]
+omit = [
+    "src/heiplanet_models/__init__.py",
+    "src/heiplanet_models/*/__init__.py"
+]
 
 [tool.coverage.report]
 # Regexes for lines to exclude from consideration
@@ -71,8 +75,6 @@ exclude_also = [
 
     # Don't complain about abstract methods, they aren't run:
     "@(abc\\.)?abstractmethod",
-
-    # Don't complain about code that is run in the __init__ module:
-    "if __name__ == .__init__.py$",
     ]
+
 fail_under = 80
