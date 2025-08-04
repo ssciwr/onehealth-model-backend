@@ -1,12 +1,13 @@
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling", "hatch-vcs"]
 build-backend = "hatchling.build"
 
 [project]
 name = "oneHealthModels"
 license = {text = "MIT License"}
+license-files = ["LICEN[CS]E*"]
 readme = "README.md"
-description = "Model backend for OneHealth project"
+description = "Model backend for the OneHealth project"
 requires-python = ">=3.9"
 classifiers = [
     "Programming Language :: Python :: 3",
@@ -16,7 +17,7 @@ classifiers = [
 authors = [
   { name="Scientific Software Center", email="ssc@uni-heidelberg.de" },
 ]
-version = "0.0.1"
+dynamic = ["version"]
 
 dependencies = [
   "xarray[parallel]",
@@ -36,9 +37,19 @@ dev = [
     "pre-commit",
     "pytest",
     "pytest-cov",
-    "graphviz" # we need this for the viz tests
+    "graphviz", # we need this for the viz tests
 ]
 
 [project.urls]
 Homepage = "https://github.com/ssciwr/onehealth-model-backend"
 Issues = "https://github.com/ssciwr/onehealth-model-backend/issues"
+
+# tool-specific configurations
+[tool.hatch.build.targets.wheel]
+packages = ["src/model_backend"]
+
+
+[tool.hatch.version]
+source = "vcs"
+tag-pattern = "v(?P<version>.+)"
+
