@@ -5,9 +5,9 @@ on:
     # trigger on tagged push to master branch
     push:
         branches:
-          - master
+          - "**"
         tags:
-          - "*.*.*"
+          - "v*.*.*" # semantic versioning tags
 
     # only run when the tests pass 
     workflow_run:
@@ -31,7 +31,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: "3.12"
+          python-version: "3.13"
 
       - name: Install pypa/build
         run: python3 -m pip install build --user
@@ -45,7 +45,7 @@ jobs:
           name: python-package-distributions
           path: dist/
 
-    test_build:
+    test-if-build-works:
       name: Test distribution
       needs: build_for_pypi
       runs-on: ubuntu-latest
@@ -59,7 +59,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: "3.12"
+          python-version: "3.13"
 
       - name: Install package
         run: python3 -m pip install dist/*.tar.gz
@@ -67,12 +67,12 @@ jobs:
       - name: Test import
         run: |
           python -c "import oneHealthModels"
-          python -c "from oneHealthModels import JModel, computation_graph, utils"
+          python -c "from oneHealthModels import JModel, computation_graph, utils, __version__"
 
     publish-to-pypi:
       name: Publish python distribution to pypi 
-      needs: test_build
-      if: startsWith(github.ref, 'refs/tags/')
+      needs: test-if-build-works
+      if: startsWith(github.ref, 'refs/tags/v')
       runs-on: ubuntu-latest
       environment:
         name: pypi_release
@@ -92,7 +92,7 @@ jobs:
 
     github-release:
       name: sign and upload
-      if: startsWith(github.ref, 'refs/tags/')
+      if: startsWith(github.ref, 'refs/tags/v')
       needs:
       - publish-to-pypi
       runs-on: ubuntu-latest
