@@ -67,7 +67,7 @@ jobs:
       - name: Test import
         run: |
           python -c "import heiplanet_models"
-          python -c "from heiplanet_models import JModel, computation_graph, utils, __version__"
+          python -c "from heiplanet_models import Jmodel, computation_graph, utils, __version__"
 
     publish-to-pypi:
       name: Publish python distribution to pypi 
