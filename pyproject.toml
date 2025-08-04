@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "model_backend"
+name = "oneHealthModels"
 license = {text = "MIT License"}
 readme = "README.md"
 description = "Model backend for OneHealth project"
