@@ -1,5 +1,5 @@
 """
-This module defines the ComputationGraph class. This class represents a model as a directed acyclic graph (DAG) that executes a series of interdependent tasks which together represent the run of a given oneHealth model and manages the setup and execution of such a graph.
+This module defines the ComputationGraph class. This class represents a model as a directed acyclic graph (DAG) that executes a series of interdependent tasks which together represent the run of a given heiplanet model and manages the setup and execution of such a graph.
 """
 
 # compatability with python 3.10+
@@ -23,7 +23,7 @@ import logging
 
 
 class ComputationGraph:
-    """A class to represent a computation DAG that executes a series of tasks which together represent the run of a given oneHealth model. These models are defined as combinations of functions known to the class.
+    """A class to represent a computation DAG that executes a series of tasks which together represent the run of a given heiplanet model. These models are defined as combinations of functions known to the class.
     Modules are a loose collection of functions that are registered with the class and combined into a computational graph to create a functional system. Therefore, functions are registered as either part of a module or as utility functions, e.g., if they are used by multiple modules. The computational graph is built from these functions and executed in via dask tasks to allow for parallel, lazy execution and efficient resource management. Computations can be combined freely from the functions registered with different modules.
 
     Attributes:

@@ -46,7 +46,7 @@ Issues = "https://github.com/ssciwr/onehealth-model-backend/issues"
 
 # tool-specific configurations
 [tool.hatch.build.targets.wheel]
-packages = ["src/model_backend"]
+packages = ["src/heiplanet_models"]
 
 
 [tool.hatch.version]
