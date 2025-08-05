@@ -4,17 +4,17 @@ build-backend = "hatchling.build"
 
 [project]
 name = "model_backend"
-license = {text = "MIT License"}
+license = { text = "MIT License" }
 readme = "README.md"
 description = "Model backend for OneHealth project"
 requires-python = ">=3.9"
 classifiers = [
-    "Programming Language :: Python :: 3",
-    "License :: OSI Approved :: MIT License",
-    "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
 ]
 authors = [
-  { name="Scientific Software Center", email="ssc@uni-heidelberg.de" },
+  { name = "Scientific Software Center", email = "ssc@uni-heidelberg.de" },
 ]
 version = "0.0.1"
 
@@ -22,21 +22,30 @@ dependencies = [
   "xarray[parallel]",
   "rioxarray",
   "netcdf4",
-  "geopandas[all]", 
-  "matplotlib", 
-  "numpy", 
+  "geopandas[all]",
+  "matplotlib",
+  "numpy",
   "dask",
 ]
 
 [project.optional-dependencies]
-viz = [
-    "graphviz",
-]
+viz = ["graphviz"]
 dev = [
-    "pre-commit",
-    "pytest",
-    "pytest-cov",
-    "graphviz" # we need this for the viz tests
+  "pre-commit",
+  "pytest",
+  "pytest-cov",
+  "graphviz",   # we need this for the viz tests
+]
+docs = [
+  "mkdocs-material",
+  "mkdocs-include-markdown-plugin",
+  "mkdocs-glightbox",
+  "mkdocs-jupyter",
+  "mkdocs-gen-files",
+  "mkdocs-literate-nav",
+  "mkdocs-section-index",
+  "mkdocs-minify-plugin",
+  "mkdocstrings-python",
 ]
 
 [project.urls]

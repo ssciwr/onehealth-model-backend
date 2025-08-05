@@ -145,3 +145,7 @@ data/*
 
 .vscode
 resources/
+
+
+# mkdocs 
+site
