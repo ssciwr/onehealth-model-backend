@@ -8,6 +8,8 @@ nav:
   - Existing Models:
     - jmodel.md
     - pmodel.md
+  - Notebooks: 
+    - Example of how to use an existing model: ./sources/model_jmodel_python.ipynb
 theme:
   name: material
   #logo: path/to/file.png
@@ -29,3 +31,7 @@ theme:
   icon:
     admonition:
       note: material/pencil-circle
+
+plugins:
+    - mkdocs-jupyter: 
+        ignore_h1_titles: True

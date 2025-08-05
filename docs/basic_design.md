@@ -6,7 +6,7 @@ There are two basic design principles on which all models in this package are bu
 
 - **Separation of parameterization and functionality**: This means that you write the model code in the form of a collection of functions, and parameterize it in accordance with th real world system you want to model. But instead of supplying the parameters and control flow in the code directly, you write a configuration file that defines and provides them. This helps us in multiple ways: 
     - Separation of concerns: Code is for model functionality, config files are for definition of a certain model instance. You can run a model without any changes to the code by just changing the parameters in the supplied config file. This also allows us to easily build different versions of the same model by providing multiple configuration files which define a different composition of the functions that make up the model. 
-    - Documentation and reproducibility: The configuration file used to run a model is stored alongside the data it produces, so it's automatically documented which parameters produced which results, and what functional composition was utilized. 
+    - Documentation and reproducibility: The configuration file used to run a model can be stored alongside the data it produces, so it's automatically documented which parameters produced which results, and what functional composition was utilized. 
 
 ## Directed acyclic graphs for model composition from functions 
 Each model is implemented as a collection of functions, which within the python files are not connected into a running model. They can, however, be made up of calls to other functions. 
