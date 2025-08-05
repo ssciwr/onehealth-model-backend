@@ -1,0 +1,31 @@
+site_name: heiplanet-models
+nav:
+  - Home: index.md
+  - Getting Started: getting_started.md
+  - Basic Design: basic_design.md
+  - Using existing models: using_existing_models.md
+  - Customizing or creating models: customize_or_create_models.md
+  - Existing Models:
+    - jmodel.md
+    - pmodel.md
+theme:
+  name: material
+  #logo: path/to/file.png
+  features:
+    - announce.dismiss
+    - content.code.annotate
+    - content.code.copy
+    - content.code.select
+    - content.tooltips
+    - navigation.footer
+    - navigation.path
+    - navigation.sections
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.top
+    - search.highlight
+    - search.suggest
+    - toc.follow
+  icon:
+    admonition:
+      note: material/pencil-circle
