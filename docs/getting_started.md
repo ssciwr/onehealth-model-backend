@@ -58,3 +58,17 @@ pip install ".[viz]"
 ```
 Graphviz itself has additional dependencies it needs to install. For more details, see [here](https://github.com/xflr6/graphviz?tab=readme-ov-file#installation). 
 
+
+## Building the documentation 
+If you want to build the documentation locally, you need to clone the repostiroy as explained above and have to install the package with the `docs` option. Then, from the root directory of the repository, execute 
+```bash 
+mkdocs serve 
+```
+
+the output should contain a line similar to this: 
+
+```bash 
+INFO    -  [12:51:53] Browser connected: http://127.0.0.1:8000/api/
+```
+
+which is a local URL under which the documentation can be viewed in your browser. 
