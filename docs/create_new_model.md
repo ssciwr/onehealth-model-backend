@@ -189,7 +189,18 @@ computation.visualize()
 
 Which should result in the following graph:
 
-![visualization of created toy model](./sources/creation_example.png)
+```mermaid
+graph TB
+    nodeA([load_data]) --> nodeC([multiply])
+    nodeA([load_data]) --> nodeB([add])
+    
+    nodeB([add]) --> nodeC([multiply])
+    nodeB([add]) --> nodeD([substract])
+    nodeC([multiply]) --> nodeD([substract])
+    nodeD([substract]) --> nodeE([affine])
+    nodeE([affine]) --> nodeF([save])
+
+```
 
 We can use this visualization to check if the data flow actually corresponds to our theoretical design from above. 
 

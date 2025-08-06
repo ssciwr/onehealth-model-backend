@@ -33,7 +33,19 @@ For example, this could look like this:
 This set of interdependencies creates a graph in which each node is a function and each edge tells us on which other functions it depends. For clarity, we usually turn these edges around and interpret them as telling us to what other functions data flows from any given function. 
 Consider the image below to see a visualization of this system: 
 
-![visualization of example model](./sources/basic_usage_example.png)
+```mermaid
+graph TB
+    nodeA([read_data]) --> nodeB([project_data_to_map])
+    nodeC([initialize_parameters]) --> nodeB([project_data_to_map])
+
+    nodeB([project_data_to_map]) --> nodeD([compute_temperature_data]) & nodeE([compute_humidity_data])
+    
+    nodeD([compute_temperature_data]) --> nodeF([compute_r0])
+    nodeE([compute_humidity_data]) --> nodeF([compute_r0])
+
+    nodeF([compute_r0]) --> nodeG([save_data])
+
+```
 
 As can be seen, there are multiple `levels` in this system. The functions within a level are independent *from each other* (but can have the same or overlapping dependencies). This means that the functions on the same level can be run in parallel. 
 This system can be serialized into a dictionary-like datastructure: 
