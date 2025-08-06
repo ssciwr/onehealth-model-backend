@@ -30,7 +30,7 @@ python -m pip install heiplanet-models
 This will pull in the package and all its basic dependencies. 
 
 
-## Installation as a developer
+## Installation for development
 The steps for creating and activating a virtual environment stay the same. Execute those first. Then: 
 
 - Download the repository 

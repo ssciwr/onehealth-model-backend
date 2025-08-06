@@ -1,6 +1,6 @@
 # Welcome to heiplanet_models' documentation!
 
-If you're in a hurry and know what you are doing, go to the ['Getting started' section](getting_started.md) directly for installation instructions. Alternatively, you can first read up on [what the package is all about](about.md) and the [basic design philosophy](basic_design.md), and then go to ['Getting started' part](getting_started.md). 
+If you're in a hurry and know what you are doing, go to the ['Getting started' section](getting_started.md) directly for installation instructions. Alternatively, you can first read up on the [basic design philosophy](basic_design.md), and then go to ['Getting started' part](getting_started.md) afterwards.
 
 After that, learn how to use the provided models in the ['Using existing models' section](using_existing_models.md) and how to customize them or build new ones in the ['Customize or create models' part](customize_or_create_models.md).
 
