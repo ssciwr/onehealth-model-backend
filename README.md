@@ -26,7 +26,7 @@ pip install heiplanet-models[viz]
 Note that if you are using zsh (default on macos), you need to add quotes
 
 ```bash
-pip install ".[viz]"
+pip install "heiplanet-models[viz]"
 ```
 Graphviz itself has additional dependencies it needs to install. For more details, see [here](https://github.com/xflr6/graphviz?tab=readme-ov-file#installation). 
 
