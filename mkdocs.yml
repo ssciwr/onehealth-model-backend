@@ -4,7 +4,7 @@ nav:
   - Getting Started: getting_started.md
   - Basic Design: basic_design.md
   - Using existing models: using_existing_models.md
-  - Customizing or creating models: customize_or_create_models.md
+  - Creating new models: create_new_model.md
   - Existing Models:
     - jmodel.md
     - pmodel.md
