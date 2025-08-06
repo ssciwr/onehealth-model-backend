@@ -21,7 +21,7 @@ pip install heiplanet-models
 In order to be able to visualize the computational graphs of the models you use or build, you need to install the package with the `viz` option. This will install the graphviz python package which will take care of the visualization. 
 
 ```bash
-pip install .[viz]
+pip install heiplanet-models[viz]
 ```
 Note that if you are using zsh (default on macos), you need to add quotes
 
