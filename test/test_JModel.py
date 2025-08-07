@@ -1,5 +1,5 @@
-from model_backend import Jmodel as jm
-from model_backend import computation_graph as cg
+from heiplanet_models import Jmodel as jm
+from heiplanet_models import computation_graph as cg
 import xarray as xr
 from pathlib import Path
 import pandas as pd
@@ -216,7 +216,7 @@ def test_model_run(make_test_data, tmp_path):
 def test_computation_with_default_config(tmp_path, make_test_data):
     with make_test_data as _:  # only the written file is needed here
         with open(
-            Path.cwd() / "src" / "model_backend" / "config_Jmodel.json", "r"
+            Path.cwd() / "src" / "heiplanet_models" / "config_Jmodel.json", "r"
         ) as file:
             cfg = json.load(file)
             cfg["graph"]["setup_modeldata"]["kwargs"]["input"] = str(

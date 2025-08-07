@@ -1,4 +1,4 @@
-from model_backend import computation_graph as cg
+from heiplanet_models import computation_graph as cg
 from pathlib import Path
 import pytest
 import pandas as pd

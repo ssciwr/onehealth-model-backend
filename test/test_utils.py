@@ -1,4 +1,4 @@
-from model_backend.utils import (
+from heiplanet_models.utils import (
     read_geodata,
     detect_csr,
     load_module,
