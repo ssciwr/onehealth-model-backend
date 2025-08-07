@@ -1,8 +1,8 @@
-# Using an exisiting model 
+# Using an existing model 
 This section covers how to use an existing model, in `heiplanet-models`. 
 If you haven't already, please first go back and read [the 'Basic design' section](./basic_design.md). 
 
-To use an exiting model involves three steps: 
+To use an existing model involves three steps: 
 
 - Decide on the parameters and function arguments you want to modify in your run from the defaults. 
 - Copy the default configuration file and replace the parameters in the copy with the ones you want to have. You can also give them as a dictionary in python directly and pass them to the constructor, but this is not recommended. Rather, follow the principle of separation of concerns and make use of separate configuration files.

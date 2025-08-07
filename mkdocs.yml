@@ -35,7 +35,14 @@ theme:
       note: material/pencil-circle
 
 plugins:
-    - mkdocs-jupyter: 
-        ignore_h1_titles: True
-    - mkdocstrings:
-        default_handler: python
+  - mkdocs-jupyter: 
+      ignore_h1_titles: True
+  - mkdocstrings:
+      default_handler: python
+
+markdown_extensions:
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
