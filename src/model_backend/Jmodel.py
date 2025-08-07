@@ -55,7 +55,17 @@ def setup_modeldata(
     """Initializes the JModel with the given configuration.
 
     Args:
-        config (Dict[str, Any]): Configuration dictionary for the model.
+        input (str | None): Path to the input data file.
+        output (str | None): Path to the output data file.
+        r0_path (str | None): Path to the R0 data file.
+        run_mode (str): Dask run mode used by xarray, default is "forbidden".
+        grid_data_baseurl (str | None): Base URL for the grid data.
+        nuts_level (int | None): NUTS level for the model, default is None
+        resolution (str | None): Resolution for the NUTS data, default is None.
+        year (int | None): Year for the model, default is None.
+        temp_colname (str): Name of the temperature column in the input data, default is "t2m".
+        out_colname (str): Name of the output column for R0 data, default is "R0".
+
     """
 
     # set up plumbing for the model
