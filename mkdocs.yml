@@ -1,0 +1,48 @@
+site_name: heiplanet-models
+nav:
+  - Home: index.md
+  - Getting Started: getting_started.md
+  - Basic Design: basic_design.md
+  - Using existing models: using_existing_models.md
+  - Creating new models: create_new_model.md
+  - Existing Models:
+    - jmodel.md
+    - pmodel.md
+  - Notebooks: 
+    - Example of how to use an existing model: ./sources/model_jmodel_python.ipynb
+  - API Reference: api.md
+  - Licence: license.md 
+theme:
+  name: material
+  #logo: path/to/file.png
+  features:
+    - announce.dismiss
+    - content.code.annotate
+    - content.code.copy
+    - content.code.select
+    - content.tooltips
+    - navigation.footer
+    - navigation.path
+    - navigation.sections
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.top
+    - search.highlight
+    - search.suggest
+    - toc.follow
+  icon:
+    admonition:
+      note: material/pencil-circle
+
+plugins:
+  - mkdocs-jupyter: 
+      ignore_h1_titles: True
+  - mkdocstrings:
+      default_handler: python
+
+markdown_extensions:
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
