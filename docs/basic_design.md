@@ -30,7 +30,7 @@ For example, this could look like this:
 - `compute_r0` depends on humidity and temperature at any given grid point, so it depends on both `compute_humidity_data` and `compute_temperature_data`. 
 - finally, `save_data` depends on `compute_r0`. No further function depends on `save_data`, so it is a `sink` for the produced data.
 
-This set of interdependencies creates a graph in which each node is a function and each edge tells us on which other functions it depends. For clarity, we usually turn these edges around and interpret them as telling us to what other functions data flows from any given function. 
+This set of interdependencies creates a graph in which each node is a function and each edge tells us on which other functions it depends. For clarity, we usually turn these edges around. They then tell us about the data flow in the graph, instead of the function dependencies.
 Consider the image below to see a visualization of this system: 
 
 ![visualization of example model](./sources/basic_usage_example.png)
@@ -153,7 +153,7 @@ To see a real world example of a configuration file, have a look at the document
 In addition to the structure of the computational graph of the model and the fixed args and kwargs of each function, we also need to tell the package how to execute the graph, and possibly the amount of logging output we want. 
 This is done not in the `graph` definition, but in a separate configuration node called `execution`: 
 ```json 
-"exectution": {
+"execution": {
     "scheduler": "scheduler_definition",
     "log_level": "info"
 }
