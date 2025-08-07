@@ -1,8 +1,8 @@
 name: PyPI_release
 
-# run only when a push into master occurs on a tag that specifies a semantic version
+# run only when a push into main occurs on a tag that specifies a semantic version
 on:
-    # trigger on tagged push to master branch
+    # trigger on tagged push to main branch
     push:
         branches:
           - main
@@ -14,7 +14,7 @@ on:
       workflows: 
         - CI
       branches: 
-        - master
+        - main
       types:
         - completed
 
