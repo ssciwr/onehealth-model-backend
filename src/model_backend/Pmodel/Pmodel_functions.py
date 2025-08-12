@@ -3,7 +3,7 @@ import logging
 import numpy as np
 import xarray as xr
 
-from model_backend.Pmodel.Pmodel_params import (
+from Pmodel_params import (
     CONSTANTS_CARRYING_CAPACITY,
     CONSTANTS_WATER_HATCHING,
 )
@@ -132,9 +132,7 @@ def water_hatching(
             time=rainfall_hatch.coords["time"]
         )
     except Exception as e:
-        raise RuntimeError(
-            "Error broadcasting population density adjustment: " + str(e)
-        )
+        raise RuntimeError("Error broadcasting population density adjustment: " + str(e))
 
     # Weighted combination (element-wise)
     result = ((1 - E_RAT) * rainfall_hatch) + (E_RAT * population_hatch_broadcasted)

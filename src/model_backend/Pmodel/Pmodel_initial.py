@@ -15,6 +15,7 @@ from pathlib import Path
 from dataclasses import dataclass
 from typing import Optional
 
+from matplotlib.pyplot import step
 import xarray as xr
 import numpy as np
 
@@ -273,6 +274,10 @@ def load_temperature(
     var_Temperature = np.zeros(
         (size_longitudes, size_latitudes, size_time * time_step), dtype=np.float64
     )
+
+    for t in range(size_time * time_step):
+        td = int(np.ceil((t + 1) / time_step)) - 1
+        var_Temperature[:, :, t] = var_Temperature_mean.values[:, :, td]
 
     return (var_Temperature, var_Temperature_mean)
 
