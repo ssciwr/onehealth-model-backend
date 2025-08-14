@@ -345,73 +345,6 @@ def mosq_dev_e(T: np.ndarray) -> np.ndarray:
     return T_out
 
 
-def for_cycle_equation(v, Temp, Tmean, LAT, CC, egg_activate, step_t):
-    diapause_lay = mosq_dia_lay(Tmean, LAT)
-    diapause_hatch = mosq_dia_hatch(Tmean, LAT)
-    ed_survival = mosq_surv_ed(Temp, step_t)
-
-    shape_output = (
-        v.shape[0],
-        v.shape[1],
-        5,
-        int(Temp.shape[2] / step_t),
-    )
-    v_out = np.zeros(shape=shape_output)
-
-    for t in range(Temp.shape[2]):
-        T = Temp[:, :, t]
-        birth = mosq_birth(T)
-        dev_j = mosq_dev_j(T)
-        dev_i = mosq_dev_i(T)
-        dev_e = 1.0 / 7.1  # original model
-
-        # Octave: ceil(t/step_t), Python: int(np.ceil((t+1)/step_t)) - 1
-        idx_time = int(np.ceil((t + 1) / step_t)) - 1
-
-        dia_lay = diapause_lay.values[:, :, idx_time]
-        dia_hatch = diapause_hatch.values[:, :, idx_time]
-        ed_surv = ed_survival[:, :, t]
-        water_hatch = egg_activate.values[:, :, idx_time]
-        mort_e = mosq_mort_e(T)
-        mort_j = mosq_mort_j(T)
-        Tmean_slice = Tmean.values[:, :, idx_time]
-        mort_a = mosq_mort_a(Tmean_slice)
-
-        vars_tuple = (
-            idx_time + 1,  # Octave uses 1-based, so pass idx_time+1
-            step_t,
-            Temp,
-            CC,
-            birth,
-            dia_lay,
-            dia_hatch,
-            mort_e,
-            mort_j,
-            mort_a,
-            ed_surv,
-            dev_j,
-            dev_i,
-            dev_e,
-            water_hatch,
-        )
-
-        va = rk4_step(eqsys, eqsys_log, v, vars_tuple, step_t)
-        break
-
-        # # Zero compartment 2 (Python index 1) if needed
-        # if (t / step_t) % 365 == 200:
-        #     v[..., 1] = 0
-
-        # # Store output every step_t
-        # if t % step_t == 0:
-        #     if ((idx_time + 1) % 30) == 0:
-        #         print(f"MOY: {(idx_time + 1) / 30}")
-        #     for j in range(5):
-        #         v_out[..., j, idx_time] = np.maximum(v[..., j], 0)
-
-    return va
-
-
 def mosq_mort_e(T: np.ndarray) -> np.ndarray:
     """
     Python implementation of the Octave mosq_mort_e function.
@@ -442,7 +375,7 @@ def mosq_mort_j(T: np.ndarray) -> np.ndarray:
     # TODO: Status --> it works
 
     T_out = 0.977 * np.exp(-0.5 * ((T - 21.8) / 16.6) ** 6)
-    T_out = np.where(T_out > 0, T_out, 1e-12)
+    # T_out = np.where(T_out > 0, T_out, 1e-12)
     T_out = -np.log(T_out)
     return T_out
 
@@ -470,7 +403,7 @@ def mosq_mort_a(T: np.ndarray) -> np.ndarray:
     )
     # For T <= 0
     T_out[mask_zero] = 0.677 * np.exp(-0.5 * ((T_out[mask_zero] - 20.9) / 13.2) ** 6)
-    T_out = np.where(T_out > 0, T_out, 1e-12)
+    # T_out = np.where(T_out > 0, T_out, 1e-12)
     T_out = -np.log(T_out)
     return T_out
 
@@ -556,18 +489,28 @@ def eqsys_log(v, vars):
     ) = vars
 
     FT = np.zeros_like(v)
+    # Revisited
     FT[..., 0] = v[..., 4] * birth * (1 - dia_lay) / v[..., 0] - (
         mort_e + water_hatch * dev_e
     )
+
+    # Revisited
     FT[..., 1] = v[..., 4] * birth * dia_lay / v[..., 1] - water_hatch * dia_hatch
+
+    # Revisited
     FT[..., 2] = (
         water_hatch * dev_e * v[..., 0] / v[..., 2]
         + water_hatch * dia_hatch * ed_surv * v[..., 1] / v[..., 2]
         - (mort_j + dev_j)
         - v[..., 2] / CC[..., t_idx - 1]
     )
+
+    # Revisited
     FT[..., 3] = 0.5 * dev_j * v[..., 2] / v[..., 3] - (mort_a + dev_i)
+
+    # Revisited
     FT[..., 4] = dev_i * v[..., 3] / v[..., 4] - mort_a
+
     FT[np.isnan(-FT)] = -v[np.isnan(-FT)] * step_t
     return FT
 
@@ -578,7 +521,7 @@ def rk4_step(f, flog, v, vars, step_t):
     k2 = f(v + 0.5 * k1 / step_t, vars)
     k3 = f(v + 0.5 * k2 / step_t, vars)
     k4 = f(v + k3 / step_t, vars)
-    v1 = v + (k1 + 2 * k2 + 2 * k3 + k4) / (step_t * 6)
+    v1 = v + (k1 + 2 * k2 + 2 * k3 + k4) / (step_t * 6.0)
 
     # Check for negative values in all RK4 steps
     neg_mask = (
@@ -589,12 +532,102 @@ def rk4_step(f, flog, v, vars, step_t):
     )
 
     if np.any(neg_mask):
-        v2 = np.log(np.clip(v, 1e-12, None))  # avoid log(0)
+        # v2 = np.log(np.clip(v, 1e-26, None))  # avoid log(0)
+        v2 = np.log(v)  # avoid log(0)
         FT2 = flog(v2, vars)
         v2 = v2 + FT2 / step_t
         v1[neg_mask] = np.exp(v2[neg_mask])
 
     return v1
+
+
+def print_slices(dataset, value):
+    for i in range(value):  # for indices 0, 1, 2
+        print(f"Slice at time index {i}:")
+        print(dataset.isel(time=i).values)
+        print()  # Blank line for readability
+
+
+def print_slices_numpy(arr):
+    """
+    Print each slice along the last axis of a 3D numpy array.
+    """
+    for i in range(arr.shape[2]):
+        print(f"Slice at index {i}:")
+        print(arr[:, :, i])
+        print()  # Blank line for readability
+
+
+def for_cycle_equation(v, Temp, Tmean, LAT, CC, egg_activate, step_t):
+    diapause_lay = mosq_dia_lay(Tmean, LAT)
+    diapause_hatch = mosq_dia_hatch(Tmean, LAT)
+    ed_survival = mosq_surv_ed(Temp, step_t)
+
+    shape_output = (
+        v.shape[0],
+        v.shape[1],
+        5,
+        int(Temp.shape[2] / step_t),
+    )
+    v_out = np.zeros(shape=shape_output)
+    print(f"Shape v_out:{v_out.shape}")
+
+    for t in range(Temp.shape[2]):
+        # if t == 1:
+        #    break
+
+        T = Temp[:, :, t]
+        birth = mosq_birth(T)
+        dev_j = mosq_dev_j(T)
+        dev_i = mosq_dev_i(T)
+        dev_e = 1.0 / 7.1  # original model
+
+        # Octave: ceil(t/step_t), Python: int(np.ceil((t+1)/step_t)) - 1
+        idx_time = int(np.ceil((t + 1) / step_t)) - 1
+
+        dia_lay = diapause_lay.values[:, :, idx_time]
+        dia_hatch = diapause_hatch.values[:, :, idx_time]
+        ed_surv = ed_survival[:, :, t]
+        water_hatch = egg_activate.values[:, :, idx_time]
+        mort_e = mosq_mort_e(T)
+        mort_j = mosq_mort_j(T)
+        Tmean_slice = Tmean.values[:, :, idx_time]
+        mort_a = mosq_mort_a(Tmean_slice)
+
+        vars_tuple = (
+            idx_time + 1,  # Octave uses 1-based, so pass idx_time+1
+            step_t,
+            Temp,
+            CC,
+            birth,
+            dia_lay,
+            dia_hatch,
+            mort_e,
+            mort_j,
+            mort_a,
+            ed_surv,
+            dev_j,
+            dev_i,
+            dev_e,
+            water_hatch,
+        )
+
+        v = rk4_step(eqsys, eqsys_log, v, vars_tuple, step_t)
+        print(f"Time step: {t}")
+        # print_slices_numpy(v)
+
+        # # Zero compartment 2 (Python index 1) if needed
+        if (t / step_t) % 365 == 200:
+            v[..., 1] = 0
+
+        # Store output every step_t
+        if (t + 1) % step_t == 0:
+            if ((idx_time + 1) % 30) == 0:
+                print(f"MOY: {(idx_time + 1) / 30}")
+            for j in range(5):
+                v_out[..., j, idx_time] = np.maximum(v[..., j], 0)
+
+    return v_out
 
 
 if __name__ == "__main__":
@@ -605,21 +638,6 @@ if __name__ == "__main__":
 
     model_data = load_data(time_step=10)
     model_data.print_attributes()
-
-    def print_slices(dataset, value):
-        for i in range(value):  # for indices 0, 1, 2
-            print(f"Slice at time index {i}:")
-            print(dataset.isel(time=i).values)
-            print()  # Blank line for readability
-
-    def print_slices_numpy(arr):
-        """
-        Print each slice along the last axis of a 3D numpy array.
-        """
-        for i in range(arr.shape[2]):
-            print(f"Slice at index {i}:")
-            print(arr[:, :, i])
-            print()  # Blank line for readability
 
     # diapause_lay = mosq_dia_lay(
     #     T=model_data.temperature_mean,
@@ -670,6 +688,19 @@ if __name__ == "__main__":
         rainfall_data=model_data.rainfall, population_data=model_data.population_density
     )
 
+    print("-----  Initial conditions -------------")
+    print_slices_numpy(model_data.initial_conditions)
+    print("-----  CC -------------")
+    print_slices(CC, 3)
+    print("-----  egg active -------------")
+    print_slices(egg_activate, 3)
+    print("-----  Temp -------------")
+    print_slices_numpy(model_data.temperature)
+    print("-----  Tmean -------------")
+    print_slices(model_data.temperature_mean, 3)
+
+    print("====== For loop  ")
+
     va = for_cycle_equation(
         v=model_data.initial_conditions,
         Temp=model_data.temperature,
@@ -680,7 +711,9 @@ if __name__ == "__main__":
         step_t=10,
     )
 
-    print_slices_numpy(va)
-    print(va[:, :, 0])
+    print("-----  VA -------------")
+    print(f"Shape va: {va.shape}")
 
-    print_slices_numpy(model_data.initial_conditions)
+    for slice in range(5):
+        print(f"Slice: {slice}")
+        print_slices_numpy(va[:, :, slice, :])

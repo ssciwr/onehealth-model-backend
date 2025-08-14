@@ -3,10 +3,13 @@ import logging
 import numpy as np
 import xarray as xr
 
-from Pmodel_params import (
+from model_backend.Pmodel.Pmodel_initial import load_data
+
+from model_backend.Pmodel.Pmodel_params import (
     CONSTANTS_CARRYING_CAPACITY,
     CONSTANTS_WATER_HATCHING,
 )
+
 
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
@@ -144,12 +147,22 @@ def water_hatching(
 if __name__ == "__main__":
     # Configure logging
     logging.basicConfig(level=logging.INFO)
-    from Pmodel_initial import load_data
 
     model_data = load_data(time_step=10)
     model_data.print_attributes()
 
+    def print_slices_numpy_here(arr):
+        """
+        Print each slice along the last axis of a 3D numpy array.
+        """
+
+        for i in range(arr.shape[2]):
+            print(f"Slice at index {i}:")
+            print(arr[:, :, i])
+            print()  # Blank line for readability
+
     def print_slices(dataset, value):
+
         for i in range(value):  # for indices 0, 1, 2
             print(f"Slice at time index {i}:")
             print(dataset.isel(time=i).values)
@@ -167,6 +180,7 @@ if __name__ == "__main__":
         population_data=model_data.population_density,
         constants=constants_dummy_cc,
     )
+    print("---- CC ")
     print_slices(CC, 3)
 
     constants_dummy_hatch = {
@@ -183,6 +197,14 @@ if __name__ == "__main__":
         population_data=model_data.population_density,
         constants=constants_dummy_hatch,
     )
+    print("---- HATCH")
     print_slices(hatch, value=3)
 
-    print(model_data.initial_conditions)
+    print("--- Initiail conditions ")
+    print_slices_numpy_here(model_data.initial_conditions)
+
+    print("--- Rainfall ")
+    print_slices(model_data.rainfall, 3)
+
+    print("--- Population density")
+    print_slices_numpy_here(model_data.population_density.values)
