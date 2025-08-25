@@ -1,6 +1,4 @@
-def birth_rate():
-    pass
+import logging
 
-
-def survival_rate():
-    pass
+import numpy as np
+import xarray as xr

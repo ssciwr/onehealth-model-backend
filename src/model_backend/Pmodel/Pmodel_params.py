@@ -2,7 +2,7 @@ CONSTANTS_CARRYING_CAPACITY = {
     "ALPHA_RAIN": 1e-3,
     "ALPHA_DENS": 1e-5,
     "GAMMA": 9e-1,
-    "LAMBDA": 1e6 * 625 * 100,
+    "LAMBDA": 1e6 * 625.0 * 100.0,
 }
 
 CONSTANTS_WATER_HATCHING = {

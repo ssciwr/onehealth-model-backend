@@ -1,16 +1,3 @@
-"""Module for loading and managing initial conditions and input data for the Pratik model.
-
-This module provides functions and data structures for loading, processing, and
-organizing the input data required by the Pratik epidemiological model, including:
-- Temperature and rainfall data from ERA5Land
-- Population density data
-- Initial conditions for model variables
-- Utility functions for data loading and preparation
-
-The main entry point is the load_data function, which returns a PmodelInitial object
-containing all necessary data for the model.
-"""
-
 from pathlib import Path
 from dataclasses import dataclass
 from typing import Optional
@@ -19,18 +6,12 @@ from matplotlib.pyplot import step
 import xarray as xr
 import numpy as np
 
-# ---- Original Paths
-# PATH_DATASET_TEMPERATURE = Path(
-#     "data/in/Pratik_datalake/ERA5land_global_t2m_daily_0.5_2024.nc"
-# )
-# PATH_DATASET_RAINFALL = Path(
-#    "data/in/Pratik_datalake/ERA5land_global_tp_daily_0.5_2024.nc"
-# )
-# PATH_DATASET_POPULATION = Path("data/in/Pratik_datalake/pop_dens_2024_global_0.5.nc")
+from config import PATH_DATASETS_SANDBOX
 
-PATH_DATASET_TEMPERATURE = Path("data/in/Pratik_datalake/temperature_dummy.nc")
-PATH_DATASET_RAINFALL = Path("data/in/Pratik_datalake/pr_dummy.nc")
-PATH_DATASET_POPULATION = Path("data/in/Pratik_datalake/dense_dummy.nc")
+
+PATH_DATASET_TEMPERATURE = PATH_DATASETS_SANDBOX["TEMPERATURE"]
+PATH_DATASET_RAINFALL = PATH_DATASETS_SANDBOX["RAINFALL"]
+PATH_DATASET_POPULATION = PATH_DATASETS_SANDBOX["HUMAN_POPULATION"]
 
 
 K1 = 625

@@ -35,11 +35,6 @@ def revolution_angle(days):
         CONST_2 * np.tan(CONST_3 * ((days % CONST_4) - CONST_5))
     )
 
-    # TODO: Remove theta function with hardcoded constants after testing.
-    # theta = 0.2163108 + 2 * np.arctan(
-    #    0.9671396 * np.tan(0.0086 * ((days % 367) - 186))
-    # )
-
     return theta
 
 
