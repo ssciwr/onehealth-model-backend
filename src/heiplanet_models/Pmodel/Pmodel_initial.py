@@ -10,7 +10,7 @@ Typical usage example:
 
 import logging
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional, Union
 
 import xarray as xr
 import numpy as np
@@ -33,14 +33,14 @@ logger.addHandler(logging.NullHandler())
 
 
 def load_dataset(
-    path_dataset: Path | str,
+    path_dataset: Union[Path, str],
     decode_times: bool = True,
-    names_dimensions: dict[str, str] | None = None,
-    chunks: dict[str, int] | None = None,
-    dimension_order: tuple[str, ...] | None = None,
-    variable_name: str | None = None,
+    names_dimensions: Optional[dict[str, str]] = None,
+    chunks: Optional[dict[str, int]] = None,
+    dimension_order: Optional[tuple[str, ...]] = None,
+    variable_name: Optional[str] = None,
     **kwargs: Any,
-) -> xr.Dataset | xr.DataArray:
+) -> Union[xr.Dataset, xr.DataArray]:
     """Load an xarray dataset with optional renaming, chunking, and variable extraction.
 
     Args:
@@ -96,7 +96,7 @@ def load_dataset(
 
 
 def load_initial_conditions(
-    filepath_previous: Path | str | None = None,
+    filepath_previous: Optional[Union[Path, str]] = None,
     sizes: tuple[int, int] = (0, 0),
 ) -> np.ndarray:
     """Load or initialize the model state variables.
@@ -148,7 +148,7 @@ def load_initial_conditions(
 
 
 def load_temperature(
-    path_dataset: Path | str,
+    path_dataset: Union[Path, str],
     time_step: int = 1,
     **kwargs: Any,
 ) -> tuple[np.ndarray, xr.DataArray]:
@@ -210,10 +210,10 @@ def align_xarray_datasets(
 
 
 def load_data(
-    path_temperature: Path | str = PATH_DATASETS_SANDBOX["TEMPERATURE"],
-    path_rainfall: Path | str = PATH_DATASETS_SANDBOX["RAINFALL"],
-    path_population: Path | str = PATH_DATASETS_SANDBOX["HUMAN_POPULATION"],
-    filepath_previous: Path | str | None = None,
+    path_temperature: Union[Path, str] = PATH_DATASETS_SANDBOX["TEMPERATURE"],
+    path_rainfall: Union[Path, str] = PATH_DATASETS_SANDBOX["RAINFALL"],
+    path_population: Union[Path, str] = PATH_DATASETS_SANDBOX["HUMAN_POPULATION"],
+    filepath_previous: Optional[Union[Path, str]] = None,
     time_step: int = TIME_STEP,
 ) -> PmodelInput:
     """Load all input datasets into a unified model input structure.
