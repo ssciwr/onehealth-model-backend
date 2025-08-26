@@ -4,6 +4,7 @@ from pathlib import Path
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 
+# ---- Paths to files
 PATH_DATASETS_SANDBOX = {
     "TEMPERATURE": Path("data/in/Pratik_datalake/temperature_dummy.nc"),
     "RAINFALL": Path("data/in/Pratik_datalake/pr_dummy.nc"),
@@ -15,3 +16,15 @@ PATH_DATASETS_PRODUCTION = {
     "RAINFALL": Path("data/in/Pratik_datalake/ERA5land_global_tp_daily_0.5_2024.nc"),
     "HUMAN_POPULATION": Path("data/in/Pratik_datalake/pop_dens_2024_global_0.5.nc"),
 }
+
+# ---- Configuration load data
+CHUNKING_SCHEME = {
+    "longitude": 90,
+    "latitude": 45,
+    "time": 10,
+}
+COORDINATES_ORDER = ("longitude", "latitude", "time")
+
+# ---- ODE
+MODEL_VARIABLES = ["eggs", "ed", "juv", "imm", "adults"]
+TIME_STEP = 10

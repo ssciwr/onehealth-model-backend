@@ -6,7 +6,7 @@ from matplotlib.pyplot import step
 import xarray as xr
 import numpy as np
 
-from config import PATH_DATASETS_SANDBOX
+from src.model_backend.Pmodel.config import PATH_DATASETS_SANDBOX
 
 
 PATH_DATASET_TEMPERATURE = PATH_DATASETS_SANDBOX["TEMPERATURE"]
@@ -24,12 +24,12 @@ COORDINATES = ("longitude", "latitude", "time")
 
 @dataclass
 class PmodelInitial:
-    temperature: xr.DataArray
-    temperature_mean: xr.DataArray
-    rainfall: xr.DataArray
+    initial_conditions: np.ndarray = None
     latitude: xr.DataArray
     population_density: xr.DataArray
-    initial_conditions: np.ndarray = None
+    rainfall: xr.DataArray
+    temperature: xr.DataArray
+    temperature_mean: xr.DataArray
 
     def get_dimensions(self) -> tuple[int, int]:
         """Returns the longitude and latitude dimensions of the temperature data.
