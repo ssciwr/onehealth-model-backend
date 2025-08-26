@@ -19,7 +19,7 @@ class PmodelInput:
         This method dynamically lists all attributes in the instance,
         making it useful when the class is updated with new attributes.
         """
-        print("PmodelInitial Attributes:")
+        print("PmodelInput Attributes:")
 
         # Get all instance variables using __annotations__ to include type hints
         attributes = self.__annotations__ if hasattr(self, "__annotations__") else {}
