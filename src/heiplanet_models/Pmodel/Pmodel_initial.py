@@ -259,10 +259,11 @@ def load_data(
             variable_name="t2m",
             time_step=time_step,
         )
-        sizes = var_temperature_mean.shape[:2]
+        # Extract longitude and latitude dimensions from temperature mean shape
+        n_longitude, n_latitude = var_temperature_mean.shape[:2]
         initial_conditions = load_initial_conditions(
             filepath_previous=filepath_previous,
-            sizes=sizes,
+            sizes=(n_longitude, n_latitude),
         )
         var_population_aligned = align_xarray_datasets(var_population, var_rainfall)
     except Exception as e:
