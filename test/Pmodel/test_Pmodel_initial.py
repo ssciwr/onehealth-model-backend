@@ -13,6 +13,7 @@ import xarray as xr
 from pathlib import Path
 
 from src.heiplanet_models.Pmodel import Pmodel_initial
+from src.heiplanet_models.Pmodel.config import CONST_K1, CONST_K2
 
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
@@ -99,7 +100,7 @@ def test_load_initial_conditions_default():
     assert isinstance(arr, np.ndarray)
     assert arr.shape == (5, 5, len(Pmodel_initial.MODEL_VARIABLES))
     # Check that only the second variable is initialized
-    assert np.all(arr[:, :, 1] == Pmodel_initial.K1 * Pmodel_initial.K2)
+    assert np.all(arr[:, :, 1] == CONST_K1 * CONST_K2)
 
 
 # ---- load_temperature()

@@ -22,6 +22,8 @@ from src.heiplanet_models.Pmodel.config import (
     MODEL_VARIABLES,
     PATH_DATASETS_SANDBOX,
     TIME_STEP,
+    CONST_K1,
+    CONST_K2,
 )
 from src.heiplanet_models.Pmodel.Pmodel_input import PmodelInput
 
@@ -110,14 +112,13 @@ def load_initial_conditions(
         Exception: If loading or extracting previous conditions fails.
         KeyError: If a required variable is missing in previous conditions.
     """
-    K1 = 625
-    K2 = 100
+
     n_longitude, n_latitude = sizes
     n_vars = len(MODEL_VARIABLES)
     v0 = np.zeros((n_longitude, n_latitude, n_vars), dtype=np.float64)
 
     if filepath_previous is None or not Path(filepath_previous).exists():
-        v0[:, :, 1] = K1 * K2
+        v0[:, :, 1] = CONST_K1 * CONST_K2
         logger.info("Initialized initial conditions with default values.")
     else:
         try:
