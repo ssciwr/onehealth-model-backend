@@ -19,7 +19,7 @@ PATH_DATASETS_PRODUCTION = {
     "HUMAN_POPULATION": Path("data/in/Pratik_datalake/pop_dens_2024_global_0.5.nc"),
 }
 
-# ---- Condifguration initial conditions
+# ---- Configuration initial conditions
 CONST_K1 = 625
 CONST_K2 = 100
 
