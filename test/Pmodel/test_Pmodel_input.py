@@ -9,7 +9,7 @@ from src.heiplanet_models.Pmodel.Pmodel_input import PmodelInput
 def dummy_pmodel_input():
     """Fixture for a fully populated PmodelInput instance."""
     initial_conditions = np.zeros((2, 2, 3))
-    latitude = xr.DataArray(np.linspace(-10, 10, 2), dims="longitude")
+    latitude = xr.DataArray(np.linspace(-10, 10, 2), dims="latitude")
     population_density = xr.DataArray(np.ones((2, 2)), dims=("longitude", "latitude"))
     rainfall = xr.DataArray(np.zeros((2, 2)), dims=("longitude", "latitude"))
     temperature = xr.DataArray(
