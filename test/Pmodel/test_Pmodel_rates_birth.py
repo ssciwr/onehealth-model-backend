@@ -8,8 +8,12 @@ from heiplanet_models.Pmodel.Pmodel_rates_birth import (
     revolution_angle,
     declination_angle,
     daylight_forsythe,
+    mosq_birth,
 )
-from heiplanet_models.Pmodel.Pmodel_params import CONSTANT_DECLINATION_ANGLE
+from heiplanet_models.Pmodel.Pmodel_params import (
+    CONSTANT_DECLINATION_ANGLE,
+    CONSTANTS_MOSQUITO_BIRTH,
+)
 
 
 # ---- revolution_angle()
@@ -178,3 +182,104 @@ def test_daylight_forsythe_none_input_raises():
         daylight_forsythe(
             latitude=None, declination_angle=0.0, daylight_coefficient=0.0
         )
+
+
+# ---- mosq_birth()
+def test_mosq_birth_temp_above_threshold():
+    """Test birth rate is zero when temperature is above the threshold."""
+    const_1 = CONSTANTS_MOSQUITO_BIRTH["CONST_1"]
+    temperature = np.array([const_1 + 1, const_1 + 10, 40])
+    expected = np.array([0.0, 0.0, 0.0])
+    result = mosq_birth(temperature)
+    np.testing.assert_allclose(result, expected, atol=1e-9)
+
+
+def test_mosq_birth_temp_at_threshold():
+    """Test birth rate is zero when temperature is exactly at the threshold."""
+    const_1 = CONSTANTS_MOSQUITO_BIRTH["CONST_1"]
+    temperature = np.array([const_1])
+    expected = np.array([0.0])
+    result = mosq_birth(temperature)
+    np.testing.assert_allclose(result, expected, atol=1e-9)
+
+
+def test_mosq_birth_temp_below_threshold():
+    """Test birth rate is calculated correctly for a temperature below the threshold."""
+    C = CONSTANTS_MOSQUITO_BIRTH
+    temp = 20.0  # A value known to be below the typical threshold
+    temperature = np.array([temp])
+    # Manual calculation based on the formula in the function
+    expected_value = (
+        C["CONST_2"]
+        * np.exp(C["CONST_3"] * ((temp - C["CONST_4"]) / C["CONST_5"]) ** 2)
+        * (C["CONST_1"] - temp) ** C["CONST_6"]
+    )
+    expected = np.array([expected_value])
+    result = mosq_birth(temperature)
+    np.testing.assert_allclose(result, expected, rtol=1e-7)
+
+
+def test_mosq_birth_mixed_temperatures():
+    """Test birth rate with a mix of temperatures above, at, and below the threshold."""
+    C = CONSTANTS_MOSQUITO_BIRTH
+    const_1 = C["CONST_1"]
+    temp_below = 15.0
+    temperature = np.array([temp_below, const_1, const_1 + 5])
+
+    expected_below = (
+        C["CONST_2"]
+        * np.exp(C["CONST_3"] * ((temp_below - C["CONST_4"]) / C["CONST_5"]) ** 2)
+        * (C["CONST_1"] - temp_below) ** C["CONST_6"]
+    )
+    expected = np.array([expected_below, 0.0, 0.0])
+    result = mosq_birth(temperature)
+    np.testing.assert_allclose(result, expected, rtol=1e-7)
+
+
+def test_mosq_birth_zero_temperature():
+    """Test birth rate calculation when the temperature is zero."""
+    C = CONSTANTS_MOSQUITO_BIRTH
+    temp = 0.0
+    temperature = np.array([temp])
+    expected_value = (
+        C["CONST_2"]
+        * np.exp(C["CONST_3"] * ((temp - C["CONST_4"]) / C["CONST_5"]) ** 2)
+        * (C["CONST_1"] - temp) ** C["CONST_6"]
+    )
+    expected = np.array([expected_value])
+    result = mosq_birth(temperature)
+    np.testing.assert_allclose(result, expected, rtol=1e-7)
+
+
+def test_mosq_birth_multidimensional_input():
+    """Test that the function handles multi-dimensional arrays correctly."""
+    C = CONSTANTS_MOSQUITO_BIRTH
+    const_1 = C["CONST_1"]
+    temp_below_a = 25.0
+    temp_below_b = -5.0
+    temperature = np.array([[temp_below_a, const_1 + 10], [const_1, temp_below_b]])
+
+    expected_below_1 = (
+        C["CONST_2"]
+        * np.exp(C["CONST_3"] * ((temp_below_a - C["CONST_4"]) / C["CONST_5"]) ** 2)
+        * (C["CONST_1"] - temp_below_a) ** C["CONST_6"]
+    )
+    expected_below_2 = (
+        C["CONST_2"]
+        * np.exp(C["CONST_3"] * (((temp_below_b) - C["CONST_4"]) / C["CONST_5"]) ** 2)
+        * (C["CONST_1"] - (-5.0)) ** C["CONST_6"]
+    )
+
+    expected = np.array([[expected_below_1, 0.0], [0.0, expected_below_2]])
+    result = mosq_birth(temperature)
+
+    assert result.shape == temperature.shape
+    np.testing.assert_allclose(result, expected, rtol=1e-7)
+
+
+def test_mosq_birth_empty_input():
+    """Test that the function handles an empty array input gracefully."""
+    temperature = np.array([])
+    expected = np.array([])
+    result = mosq_birth(temperature)
+    assert result.shape == expected.shape
