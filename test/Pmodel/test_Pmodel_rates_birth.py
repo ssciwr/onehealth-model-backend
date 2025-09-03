@@ -13,12 +13,15 @@ from heiplanet_models.Pmodel.Pmodel_rates_birth import (
     mosq_birth,
     mosq_dia_hatch,
     mosq_dia_lay,
+    water_hatching,
+    validate_spatial_alignment,
 )
 from heiplanet_models.Pmodel.Pmodel_params import (
     CONSTANT_DECLINATION_ANGLE,
     CONSTANTS_MOSQUITO_BIRTH,
     CONSTANTS_MOSQUITO_DIAPAUSE_HATCHING,
     CONSTANTS_MOSQUITO_DIAPAUSE_LAY,
+    CONSTANTS_WATER_HATCHING,
     DAYS_YEAR,
     HALF_DAYS_YEAR,
 )
@@ -156,6 +159,74 @@ def resources_path():
 def temp_dummy_data(resources_path):
     """Loads the dummy temperature data from a NetCDF file."""
     return xr.open_dataarray(resources_path / "temperature_dummy.nc")
+
+
+@pytest.fixture
+def rainfall_data():
+    # Create a simple rainfall DataArray: shape (time, lat, lon)
+    data = np.array(
+        [
+            [[1, 2], [3, 4]],
+            [[5, 6], [7, 8]],
+            [[9, 10], [11, 12]],
+        ]
+    )
+    return xr.DataArray(
+        data,
+        dims=("time", "latitude", "longitude"),
+        coords={
+            "time": [0, 1, 2],
+            "latitude": [10, 20],
+            "longitude": [30, 40],
+        },
+    )
+
+
+@pytest.fixture
+def population_data_2d(rainfall_data):
+    """Provides a 2D population DataArray matching the spatial dims of rainfall_data."""
+    data = np.array([[10, 20], [30, 40]])
+    return xr.DataArray(
+        data,
+        dims=("latitude", "longitude"),
+        coords={
+            "latitude": rainfall_data.latitude,
+            "longitude": rainfall_data.longitude,
+        },
+    )
+
+
+@pytest.fixture
+def population_data_time_variant():
+    # Population density with time dimension
+    data = np.array(
+        [
+            [[10, 20], [30, 40]],
+            [[50, 60], [70, 80]],
+            [[90, 100], [110, 120]],
+        ]
+    )
+    return xr.DataArray(
+        data,
+        dims=("time", "latitude", "longitude"),
+        coords={
+            "time": [0, 1, 2],
+            "latitude": [10, 20],
+            "longitude": [30, 40],
+        },
+    )
+
+
+@pytest.fixture
+def dummy_constants_water_hatching():
+    return {
+        "E_OPT": 8.0,
+        "E_VAR": 0.05,
+        "E_0": 1.5,
+        "E_RAT": 0.2,
+        "E_DENS": 0.01,
+        "E_FAC": 0.01,
+    }
 
 
 # ---- revolution_angle()
@@ -350,6 +421,39 @@ def test_daylight_forsythe_none_input_raises():
         daylight_forsythe(
             latitude=None, declination_angle=0.0, daylight_coefficient=0.0
         )
+
+
+# ---- validate_spatial_alignment()
+def test_validate_spatial_alignment_success(rainfall_data, population_data_2d):
+    """Test that no error is raised for aligned coordinates."""
+    try:
+        validate_spatial_alignment(rainfall_data, population_data_2d)
+    except ValueError:
+        pytest.fail("ValueError was raised unexpectedly for aligned coordinates.")
+
+
+def test_validate_spatial_alignment_misaligned_lat_raises(rainfall_data):
+    """Test that a ValueError is raised for misaligned latitude."""
+    misaligned_pop = rainfall_data.copy()
+    misaligned_pop["latitude"] = [98, 99]
+    with pytest.raises(ValueError, match="must be aligned"):
+        validate_spatial_alignment(rainfall_data, misaligned_pop)
+
+
+def test_validate_spatial_alignment_misaligned_lon_raises(rainfall_data):
+    """Test that a ValueError is raised for misaligned longitude."""
+    misaligned_pop = rainfall_data.copy()
+    misaligned_pop["longitude"] = [100, 101]
+    with pytest.raises(ValueError, match="must be aligned"):
+        validate_spatial_alignment(rainfall_data, misaligned_pop)
+
+
+def test_validate_spatial_alignment_missing_coords_raises(rainfall_data):
+    """Test that a ValueError is raised if coordinates are missing."""
+    # Create an array without latitude/longitude coordinates
+    no_coords_arr = xr.DataArray(np.zeros((2, 2)), dims=("x", "y"))
+    with pytest.raises(ValueError, match="must have 'latitude' and 'longitude'"):
+        validate_spatial_alignment(rainfall_data, no_coords_arr)
 
 
 # ---- mosq_birth()
@@ -597,3 +701,123 @@ def test_mosq_dia_lay_output_values(mock_lay_data):
 
     # Assert that all these non-zero values are equal to the expected ratio
     assert np.all(non_zero_values == ratio)
+
+
+# ---- water_hatching()
+def test_water_hatching_with_2d_population_data(rainfall_data, population_data_2d):
+    """Test that a 2D population array is correctly broadcast to 3D."""
+    result = water_hatching(rainfall_data, population_data_2d)
+    assert result.shape == rainfall_data.shape
+    assert "time" in result.dims
+
+
+def test_water_hatching_population_effect_is_constant(
+    rainfall_data, population_data_time_variant
+):
+    """Test that only the first time slice of population data is used."""
+    # Manually calculate the population component using only the first time slice
+    C = CONSTANTS_WATER_HATCHING
+    pop_t0 = population_data_time_variant.isel(time=0)
+    expected_pop_hatch = C["E_DENS"] / (C["E_DENS"] + np.exp(-C["E_FAC"] * pop_t0))
+
+    # Calculate the rainfall component
+    exp_term = np.exp(-C["E_VAR"] * (rainfall_data - C["E_OPT"]) ** 2)
+    rainfall_hatch = (1 + C["E_0"]) * exp_term / (exp_term + C["E_0"])
+
+    # Calculate the final expected result
+    expected_result = ((1 - C["E_RAT"]) * rainfall_hatch) + (
+        C["E_RAT"] * expected_pop_hatch
+    )
+
+    # Get the actual result from the function
+    actual_result = water_hatching(rainfall_data, population_data_time_variant)
+
+    xr.testing.assert_allclose(actual_result, expected_result)
+
+
+def test_water_hatching_weighting(rainfall_data, population_data_2d, monkeypatch):
+    """Test the E_RAT weighting between rainfall and population effects."""
+    C = CONSTANTS_WATER_HATCHING.copy()
+
+    # --- Test with E_RAT = 0 (only rainfall matters) ---
+    C["E_RAT"] = 0.0
+    monkeypatch.setitem(CONSTANTS_WATER_HATCHING, "E_RAT", 0.0)
+
+    exp_term = np.exp(-C["E_VAR"] * (rainfall_data - C["E_OPT"]) ** 2)
+    expected_rainfall_only = (1 + C["E_0"]) * exp_term / (exp_term + C["E_0"])
+    result_rainfall_only = water_hatching(rainfall_data, population_data_2d)
+    xr.testing.assert_allclose(result_rainfall_only, expected_rainfall_only)
+
+    # --- Test with E_RAT = 1 (only population matters) ---
+    monkeypatch.setitem(CONSTANTS_WATER_HATCHING, "E_RAT", 1.0)
+
+    expected_pop_only_2d = C["E_DENS"] / (
+        C["E_DENS"] + np.exp(-C["E_FAC"] * population_data_2d)
+    )
+    # Broadcast the 2D expected result to 3D to match the function's output shape
+    expected_pop_only = expected_pop_only_2d.expand_dims(
+        time=rainfall_data.coords["time"]
+    )
+    result_pop_only = water_hatching(rainfall_data, population_data_2d)
+    xr.testing.assert_allclose(result_pop_only, expected_pop_only)
+
+    # Restore original E_RAT for other tests
+    monkeypatch.setitem(CONSTANTS_WATER_HATCHING, "E_RAT", C["E_RAT"])
+
+
+def test_water_hatching_mismatched_spatial_dims_raises(rainfall_data):
+    """Test that mismatched spatial coordinates raise a ValueError."""
+    # Create population data with different coordinates
+    mismatched_pop = xr.DataArray(
+        np.zeros((2, 2)),
+        dims=("latitude", "longitude"),
+        coords={"latitude": [98, 99], "longitude": [100, 101]},
+    )
+    # The function should detect the misalignment and raise an error.
+    with pytest.raises(ValueError, match="must be aligned"):
+        water_hatching(rainfall_data, mismatched_pop)
+
+
+def test_water_hatching_optimal_rainfall(
+    rainfall_data, population_data_2d, monkeypatch
+):
+    """Test that the rainfall component is maximized at optimal rainfall."""
+    C = CONSTANTS_WATER_HATCHING
+    # Set rainfall to the optimal value
+    optimal_rainfall = rainfall_data.copy(data=np.full(rainfall_data.shape, C["E_OPT"]))
+
+    # Isolate the rainfall effect
+    monkeypatch.setitem(CONSTANTS_WATER_HATCHING, "E_RAT", 0.0)
+    result = water_hatching(optimal_rainfall, population_data_2d)
+
+    # At optimal rainfall, the rainfall_hatch term should be 1.0
+    # (1 + E_0) * exp(0) / (exp(0) + E_0) = (1 + E_0) / (1 + E_0) = 1
+    expected = xr.full_like(rainfall_data, 1.0, dtype=float)
+    xr.testing.assert_allclose(result, expected)
+
+
+def test_water_hatching_zero_population(rainfall_data, population_data_2d, monkeypatch):
+    """Test that the population component is minimized with zero population."""
+    C = CONSTANTS_WATER_HATCHING
+    # Set population to zero
+    zero_population = population_data_2d.copy(data=np.zeros_like(population_data_2d))
+
+    # Isolate the population effect
+    monkeypatch.setitem(CONSTANTS_WATER_HATCHING, "E_RAT", 1.0)
+    result = water_hatching(rainfall_data, zero_population)
+
+    # With zero population, the population_hatch term should be at its minimum
+    # E_DENS / (E_DENS + exp(0)) = E_DENS / (E_DENS + 1)
+    expected_val = C["E_DENS"] / (C["E_DENS"] + 1.0)
+    expected = xr.full_like(rainfall_data, expected_val, dtype=float)
+    xr.testing.assert_allclose(result, expected)
+
+
+def test_water_hatching_output_retains_coords(rainfall_data, population_data_2d):
+    """Test that the output DataArray has the same coordinates as the input rainfall data."""
+    result = water_hatching(rainfall_data, population_data_2d)
+    assert result.dims == rainfall_data.dims
+    for coord_name in rainfall_data.coords:
+        xr.testing.assert_equal(
+            result.coords[coord_name], rainfall_data.coords[coord_name]
+        )
