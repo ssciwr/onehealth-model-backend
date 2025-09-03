@@ -393,4 +393,55 @@ def test_main_execution_fail(monkeypatch, caplog):
     )
 
     Pmodel_initial.main()
-    assert "Error in main execution: Mock loading failure"
+    assert "Error in main execution: Mock loading failure" in caplog.text
+
+
+def test_load_dataset_return_full_dataset(dummy_dataset_path):
+    """Test load_dataset returns a full xr.Dataset when no variable_name is given."""
+    # This test covers the 'else' path for variable extraction.
+    ds = Pmodel_initial.load_dataset(path_dataset=dummy_dataset_path)
+    assert isinstance(ds, xr.Dataset)
+    assert "dens" in ds.data_vars
+
+
+def test_load_data_rainfall_load_fails(monkeypatch, caplog):
+    """Test that load_data handles a failure specifically when loading rainfall."""
+    # Mock load_dataset to fail only when loading the rainfall file.
+    original_load = Pmodel_initial.load_dataset
+
+    def mock_load_fail_on_rainfall(*args, **kwargs):
+        if "pr_dummy" in str(kwargs.get("path_dataset", "")):
+            raise ValueError("Mock rainfall loading failure")
+        return original_load(*args, **kwargs)
+
+    monkeypatch.setattr(
+        "src.heiplanet_models.Pmodel.Pmodel_initial.load_dataset",
+        mock_load_fail_on_rainfall,
+    )
+
+    with pytest.raises(Exception):
+        Pmodel_initial.load_data()
+    # The outer exception handler logs a more general message.
+    # We assert for this final message.
+    assert "Failed to load model input data" in caplog.text
+
+
+def test_align_xarray_datasets_alignment_error(
+    dummy_rainfall, misaligned_population_nc, monkeypatch, caplog
+):
+    """Test that align_xarray_datasets handles an exception from interpolation."""
+
+    # Mock the .interp() method on the DataArray class to raise an error
+    def mock_interp(*args, **kwargs):
+        raise RuntimeError("Mock internal interpolation error")
+
+    monkeypatch.setattr(xr.DataArray, "interp", mock_interp)
+
+    # Load the misaligned dataset into a DataArray before passing it
+    misaligned_pop_data = Pmodel_initial.load_dataset(
+        path_dataset=misaligned_population_nc, variable_name="dens"
+    )
+
+    with pytest.raises(Exception):
+        Pmodel_initial.align_xarray_datasets(misaligned_pop_data, dummy_rainfall)
+    assert "Failed to align coordinates using interpolation" in caplog.text
