@@ -9,6 +9,7 @@ from heiplanet_models.Pmodel.Pmodel_params import CONSTANT_DECLINATION_ANGLE
 from heiplanet_models.Pmodel.Pmodel_params import CONSTANTS_MOSQUITO_BIRTH
 from heiplanet_models.Pmodel.Pmodel_params import CONSTANTS_MOSQUITO_DIAPAUSE_LAY
 from heiplanet_models.Pmodel.Pmodel_params import CONSTANTS_MOSQUITO_DIAPAUSE_HATCHING
+from heiplanet_models.Pmodel.Pmodel_params import CONSTANTS_WATER_HATCHING
 
 # from heiplanet_models.Pmodel.Pmodel_params import CONSTANTS_WATER_HATCHING
 
@@ -23,6 +24,32 @@ HALF_DAYS_YEAR = 183
 # ---- Logger
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
+
+
+# ---- Helper Functions
+def validate_spatial_alignment(arr1: xr.DataArray, arr2: xr.DataArray) -> None:
+    """Validates that two xarray DataArrays have aligned spatial coordinates.
+
+    Args:
+        arr1 (xr.DataArray): The first DataArray.
+        arr2 (xr.DataArray): The second DataArray.
+
+    Raises:
+        ValueError: If the 'latitude' or 'longitude' coordinates do not match
+                    or if the coordinates are missing.
+    """
+    try:
+        if not np.array_equal(
+            arr1.latitude.values, arr2.latitude.values
+        ) or not np.array_equal(arr1.longitude.values, arr2.longitude.values):
+            raise ValueError(
+                "Spatial coordinates ('latitude', 'longitude') of input arrays "
+                "must be aligned."
+            )
+    except AttributeError:
+        raise ValueError(
+            "Input DataArrays must have 'latitude' and 'longitude' coordinates."
+        )
 
 
 # ---- General functions
@@ -294,62 +321,72 @@ def mosq_dia_lay(temperature: xr.DataArray, latitude: xr.DataArray) -> xr.DataAr
     return xr.DataArray(out, dims=temperature.dims, coords=temperature.coords)
 
 
-# def water_hatching(
-#     rainfall_data: xr.DataArray,
-#     population_data: xr.DataArray,
-# ) -> xr.DataArray:
-#     """
-#     Compute the water hatching probability or rate as a function of rainfall and population data.
+def water_hatching(
+    rainfall_data: xr.DataArray,
+    population_data: xr.DataArray,
+) -> xr.DataArray:
+    """Compute the water hatching probability or rate as a function of rainfall and population data.
 
-#     Ref. Equation: # 13
-#     Name: Hatching fraction depending in human density and rainfall
+    This function calculates a hatching rate based on two factors: a rainfall-dependent term that
+    peaks at an optimal rainfall level, and a population-density-dependent term modeling artificial
+    breeding sites. The two factors are combined in a weighted average.
 
-#     Args:
-#         rainfall_data (xr.DataArray): Rainfall data with dimensions (time, latitude, longitude).
-#         population_data (xr.DataArray): Population density data with dimensions (time, latitude, longitude) or (latitude, longitude).
+    Ref. Equation: # 13
+    Name: Hatching fraction depending in human density and rainfall
 
-#     Returns:
-#         xr.DataArray: Combined hatching probability or rate with the same shape as rainfall_data.
-#     """
+    Args:
+        rainfall_data (xr.DataArray): A 3D DataArray of rainfall data with
+            dimensions ('time', 'latitude', 'longitude').
+        population_data (xr.DataArray): A DataArray of population density.
+            Can be 3D ('time', 'latitude', 'longitude') or 2D
+            ('latitude', 'longitude').
 
-#     E_OPT = CONSTANTS_WATER_HATCHING["E_OPT"]
-#     E_VAR = CONSTANTS_WATER_HATCHING["E_VAR"]
-#     E_0 = CONSTANTS_WATER_HATCHING["E_0"]
-#     E_RAT = CONSTANTS_WATER_HATCHING["E_RAT"]
-#     E_DENS = CONSTANTS_WATER_HATCHING["E_DENS"]
-#     E_FAC = CONSTANTS_WATER_HATCHING["E_FAC"]
+    Returns:
+        xr.DataArray: A DataArray of the combined hatching probability, with
+            the same shape as `rainfall_data`.
+    """
 
-#     # Handle missing 'time' dimension in population_data
-#     if "time" not in population_data.dims:
-#         population_data = population_data.expand_dims(time=rainfall_data.time)
+    E_OPT = CONSTANTS_WATER_HATCHING["E_OPT"]
+    E_VAR = CONSTANTS_WATER_HATCHING["E_VAR"]
+    E_0 = CONSTANTS_WATER_HATCHING["E_0"]
+    E_RAT = CONSTANTS_WATER_HATCHING["E_RAT"]
+    E_DENS = CONSTANTS_WATER_HATCHING["E_DENS"]
+    E_FAC = CONSTANTS_WATER_HATCHING["E_FAC"]
 
-#     population_hatch = E_DENS / (E_DENS + np.exp(-E_FAC * population_data))
-#     logger.debug(population_hatch.values)
+    # Validate input alignment first
+    validate_spatial_alignment(rainfall_data, population_data)
 
-#     exp_term = np.exp(-E_VAR * (rainfall_data - E_OPT) ** 2)
-#     rainfall_hatch = (1 + E_0) * exp_term / (exp_term + E_0)
+    # Handle missing 'time' dimension in population_data
+    if "time" not in population_data.dims:
+        population_data = population_data.expand_dims(time=rainfall_data.time)
 
-#     logger.debug(f"Dimension rainfall_hatch: {rainfall_hatch.shape}")
-#     logger.debug(f"Dimension rainfall_hatch: {rainfall_hatch.dims}")
-#     logger.debug(f"Dimension population_hatch: {population_hatch.shape}")
-#     logger.debug(f"Dimension population_hatch: {population_hatch.dims}")
+    population_hatch = E_DENS / (E_DENS + np.exp(-E_FAC * population_data))
+    logger.debug(population_hatch.values)
 
-#     try:
-#         # Use the first time slice for density adjustment and broadcast to match rainfall_hatch
-#         population_hatch_no_time = population_hatch.isel(time=0).drop_vars("time")
-#         population_hatch_broadcasted = population_hatch_no_time.expand_dims(
-#             time=rainfall_hatch.coords["time"]
-#         )
-#     except Exception as e:
-#         raise RuntimeError(
-#             "Error broadcasting population density adjustment: " + str(e)
-#         )
+    exp_term = np.exp(-E_VAR * (rainfall_data - E_OPT) ** 2)
+    rainfall_hatch = (1 + E_0) * exp_term / (exp_term + E_0)
 
-#     # Weighted combination (element-wise)
-#     result = ((1 - E_RAT) * rainfall_hatch) + (E_RAT * population_hatch_broadcasted)
-#     logger.debug(f"Shape result: {result.shape}")
+    logger.debug(f"Dimension rainfall_hatch: {rainfall_hatch.shape}")
+    logger.debug(f"Dimension rainfall_hatch: {rainfall_hatch.dims}")
+    logger.debug(f"Dimension population_hatch: {population_hatch.shape}")
+    logger.debug(f"Dimension population_hatch: {population_hatch.dims}")
 
-#     return result
+    try:
+        # Use the first time slice for density adjustment and broadcast to match rainfall_hatch
+        population_hatch_no_time = population_hatch.isel(time=0).drop_vars("time")
+        population_hatch_broadcasted = population_hatch_no_time.expand_dims(
+            time=rainfall_hatch.coords["time"]
+        )
+    except Exception as e:
+        raise RuntimeError(
+            "Error broadcasting population density adjustment: " + str(e)
+        )
+
+    # Weighted combination (element-wise)
+    result = ((1 - E_RAT) * rainfall_hatch) + (E_RAT * population_hatch_broadcasted)
+    logger.debug(f"Shape result: {result.shape}")
+
+    return result
 
 
 if __name__ == "__main__":
