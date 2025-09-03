@@ -1,4 +1,5 @@
 import logging
+from typing import Union
 
 import numpy as np
 import xarray as xr
@@ -8,7 +9,8 @@ from heiplanet_models.Pmodel.Pmodel_params import CONSTANT_DECLINATION_ANGLE
 from heiplanet_models.Pmodel.Pmodel_params import CONSTANTS_MOSQUITO_BIRTH
 from heiplanet_models.Pmodel.Pmodel_params import CONSTANTS_MOSQUITO_DIAPAUSE_LAY
 from heiplanet_models.Pmodel.Pmodel_params import CONSTANTS_MOSQUITO_DIAPAUSE_HATCHING
-from heiplanet_models.Pmodel.Pmodel_params import CONSTANTS_WATER_HATCHING
+
+# from heiplanet_models.Pmodel.Pmodel_params import CONSTANTS_WATER_HATCHING
 
 
 MIN_LAT_DEGRESS = -90
@@ -24,18 +26,23 @@ logger.addHandler(logging.NullHandler())
 
 
 # ---- General functions
-def revolution_angle(days: int) -> float:
-    """
-    Calculate Earth's revolution angle in radians for a given day of the year.
+def revolution_angle(days: Union[int, np.ndarray]) -> Union[float, np.ndarray]:
+    """Calculate Earth's revolution angle in radians for given days of the year.
+
+    This function can process both a single integer day or a numpy array of days.
 
     Args:
-        days (int): Day of the year (must be in the range 1-366, inclusive).
+        days (Union[int, np.ndarray]): Day or days of the year (values must be
+            in the range 1-366, inclusive).
 
     Returns:
-        float: Revolution angle in radians.
+        Union[float, np.ndarray]: Revolution angle or angles in radians.
+            Returns a float for a single day input, and a numpy array for an
+            array input.
 
     Raises:
-        ValueError: If days is not in the range 1 to 366.
+        TypeError: If `days` is not an integer or an array of integers.
+        ValueError: If any day is not in the range 1 to 366.
     """
 
     CONST_1 = CONSTANTS_REVOLUTION_ANGLE["CONST_1"]
@@ -44,17 +51,19 @@ def revolution_angle(days: int) -> float:
     CONST_4 = CONSTANTS_REVOLUTION_ANGLE["CONST_4"]
     CONST_5 = CONSTANTS_REVOLUTION_ANGLE["CONST_5"]
 
-    if not isinstance(days, int):
-        raise TypeError("days MUST be an integer value.")
+    days_arr = np.asarray(days)
 
-    if not (1 <= days <= 366):
-        raise ValueError("days MUST be in the range 1 to 366.")
+    if not np.issubdtype(days_arr.dtype, np.integer):
+        raise TypeError("Input 'days' must be an integer or an array of integers.")
+
+    if not np.all((days_arr >= 1) & (days_arr <= 366)):
+        raise ValueError("All 'days' must be in the range 1 to 366.")
 
     theta = CONST_1 + 2 * np.arctan(
-        CONST_2 * np.tan(CONST_3 * ((days % CONST_4) - CONST_5))
+        CONST_2 * np.tan(CONST_3 * ((days_arr % CONST_4) - CONST_5))
     )
 
-    return theta
+    return theta.item() if days_arr.ndim == 0 else theta
 
 
 def declination_angle(revolution_angle: float) -> float:
@@ -141,18 +150,23 @@ def mosq_birth(temperature: np.ndarray) -> np.ndarray:
 
 
 def mosq_dia_hatch(temperature: xr.DataArray, latitude: xr.DataArray) -> xr.DataArray:
-    """
-    Calculate mosquito diapause hatching based on temperature and daylight.
+    """Calculates mosquito diapause hatching based on temperature and daylight.
+
+    Hatching is predicted when the rolling average temperature is above a
+    critical threshold (`CTT`) and the daily photoperiod is longer than a
+    critical length (`CPP`).
 
     Args:
-        temperature (xr.DataArray): Temperature data with dimensions (longitude, latitude, time).
-        latitude (xr.DataArray): Latitude values (1D array).
+        temperature (xr.DataArray): 3D DataArray of temperature values
+            (longitude, latitude, time).
+        latitude (xr.DataArray): 1D DataArray of latitude values.
 
     Returns:
-        xr.DataArray: Diapause hatching array with same dims/coords as input.
+        xr.DataArray: A 3D DataArray indicating where hatching occurs. Values
+            are a constant ratio where conditions are met, and 0 otherwise.
 
     Raises:
-        ValueError: If input dimensions are incompatible.
+        ValueError: If input arrays have incompatible dimensions.
     """
 
     PERIOD = CONSTANTS_MOSQUITO_DIAPAUSE_HATCHING["PERIOD"]
@@ -179,23 +193,15 @@ def mosq_dia_hatch(temperature: xr.DataArray, latitude: xr.DataArray) -> xr.Data
     # Mask values below critical temperature threshold
     out[out < CTT] = 0
 
-    # Calculate declination angle for each day
     days = np.arange(1, n_time + 1)
     theta = revolution_angle(days)
     phi = declination_angle(theta)  # shape: (n_time,)
 
-    # Conversion fromn degrees to radians
-    latitude_radians = np.deg2rad(latitude.values)
+    latitude_degrees = latitude.values
 
     for k in range(n_latitude):
-        lat = latitude_radians[k]  # radians
+        lat = latitude_degrees[k]
 
-        # daylight for all days
-        # part_1 = np.sin(lat) * np.sin(phi).squeeze()  # OK
-        # part_2 = np.cos(lat) * np.cos(phi).squeeze()  # OK
-
-        # daylight calculation
-        # daylight = 24 - (24 / np.pi) * np.arccos((part_1 / part_2) + 0j).real  # OK
         daylight = daylight_forsythe(
             latitude=lat,
             declination_angle=phi,
@@ -204,6 +210,7 @@ def mosq_dia_hatch(temperature: xr.DataArray, latitude: xr.DataArray) -> xr.Data
 
         # Replicate daylight shape to (x, z)
         daylight_matrix = np.tile(daylight, (n_longitude, 1))
+
         # Mask where daylight < CPP
         T_help = out[:, k, :]
         T_help[daylight_matrix < CPP] = 0
@@ -256,15 +263,11 @@ def mosq_dia_lay(temperature: xr.DataArray, latitude: xr.DataArray) -> xr.DataAr
     out = temperature.copy().values
 
     # Conversion fromn degrees to radians
-    latitude_radians = np.deg2rad(latitude.values)
+    latitude_degrees = latitude.values
 
     for k in range(n_latitude):
-        lat = latitude_radians[k]
-        # part_1 = np.sin(lat) * np.sin(phi)
-        # part_2 = np.cos(lat) * np.cos(phi)
+        lat = latitude_degrees[k]
 
-        # daylight calculation
-        # daylight = 24 - (24 / np.pi) * np.arccos((part_1 / part_2) + 0j).real  # OK
         daylight = daylight_forsythe(
             latitude=lat,
             declination_angle=phi,
@@ -291,62 +294,62 @@ def mosq_dia_lay(temperature: xr.DataArray, latitude: xr.DataArray) -> xr.DataAr
     return xr.DataArray(out, dims=temperature.dims, coords=temperature.coords)
 
 
-def water_hatching(
-    rainfall_data: xr.DataArray,
-    population_data: xr.DataArray,
-) -> xr.DataArray:
-    """
-    Compute the water hatching probability or rate as a function of rainfall and population data.
+# def water_hatching(
+#     rainfall_data: xr.DataArray,
+#     population_data: xr.DataArray,
+# ) -> xr.DataArray:
+#     """
+#     Compute the water hatching probability or rate as a function of rainfall and population data.
 
-    Ref. Equation: # 13
-    Name: Hatching fraction depending in human density and rainfall
+#     Ref. Equation: # 13
+#     Name: Hatching fraction depending in human density and rainfall
 
-    Args:
-        rainfall_data (xr.DataArray): Rainfall data with dimensions (time, latitude, longitude).
-        population_data (xr.DataArray): Population density data with dimensions (time, latitude, longitude) or (latitude, longitude).
+#     Args:
+#         rainfall_data (xr.DataArray): Rainfall data with dimensions (time, latitude, longitude).
+#         population_data (xr.DataArray): Population density data with dimensions (time, latitude, longitude) or (latitude, longitude).
 
-    Returns:
-        xr.DataArray: Combined hatching probability or rate with the same shape as rainfall_data.
-    """
+#     Returns:
+#         xr.DataArray: Combined hatching probability or rate with the same shape as rainfall_data.
+#     """
 
-    E_OPT = CONSTANTS_WATER_HATCHING["E_OPT"]
-    E_VAR = CONSTANTS_WATER_HATCHING["E_VAR"]
-    E_0 = CONSTANTS_WATER_HATCHING["E_0"]
-    E_RAT = CONSTANTS_WATER_HATCHING["E_RAT"]
-    E_DENS = CONSTANTS_WATER_HATCHING["E_DENS"]
-    E_FAC = CONSTANTS_WATER_HATCHING["E_FAC"]
+#     E_OPT = CONSTANTS_WATER_HATCHING["E_OPT"]
+#     E_VAR = CONSTANTS_WATER_HATCHING["E_VAR"]
+#     E_0 = CONSTANTS_WATER_HATCHING["E_0"]
+#     E_RAT = CONSTANTS_WATER_HATCHING["E_RAT"]
+#     E_DENS = CONSTANTS_WATER_HATCHING["E_DENS"]
+#     E_FAC = CONSTANTS_WATER_HATCHING["E_FAC"]
 
-    # Handle missing 'time' dimension in population_data
-    if "time" not in population_data.dims:
-        population_data = population_data.expand_dims(time=rainfall_data.time)
+#     # Handle missing 'time' dimension in population_data
+#     if "time" not in population_data.dims:
+#         population_data = population_data.expand_dims(time=rainfall_data.time)
 
-    population_hatch = E_DENS / (E_DENS + np.exp(-E_FAC * population_data))
-    logger.debug(population_hatch.values)
+#     population_hatch = E_DENS / (E_DENS + np.exp(-E_FAC * population_data))
+#     logger.debug(population_hatch.values)
 
-    exp_term = np.exp(-E_VAR * (rainfall_data - E_OPT) ** 2)
-    rainfall_hatch = (1 + E_0) * exp_term / (exp_term + E_0)
+#     exp_term = np.exp(-E_VAR * (rainfall_data - E_OPT) ** 2)
+#     rainfall_hatch = (1 + E_0) * exp_term / (exp_term + E_0)
 
-    logger.debug(f"Dimension rainfall_hatch: {rainfall_hatch.shape}")
-    logger.debug(f"Dimension rainfall_hatch: {rainfall_hatch.dims}")
-    logger.debug(f"Dimension population_hatch: {population_hatch.shape}")
-    logger.debug(f"Dimension population_hatch: {population_hatch.dims}")
+#     logger.debug(f"Dimension rainfall_hatch: {rainfall_hatch.shape}")
+#     logger.debug(f"Dimension rainfall_hatch: {rainfall_hatch.dims}")
+#     logger.debug(f"Dimension population_hatch: {population_hatch.shape}")
+#     logger.debug(f"Dimension population_hatch: {population_hatch.dims}")
 
-    try:
-        # Use the first time slice for density adjustment and broadcast to match rainfall_hatch
-        population_hatch_no_time = population_hatch.isel(time=0).drop_vars("time")
-        population_hatch_broadcasted = population_hatch_no_time.expand_dims(
-            time=rainfall_hatch.coords["time"]
-        )
-    except Exception as e:
-        raise RuntimeError(
-            "Error broadcasting population density adjustment: " + str(e)
-        )
+#     try:
+#         # Use the first time slice for density adjustment and broadcast to match rainfall_hatch
+#         population_hatch_no_time = population_hatch.isel(time=0).drop_vars("time")
+#         population_hatch_broadcasted = population_hatch_no_time.expand_dims(
+#             time=rainfall_hatch.coords["time"]
+#         )
+#     except Exception as e:
+#         raise RuntimeError(
+#             "Error broadcasting population density adjustment: " + str(e)
+#         )
 
-    # Weighted combination (element-wise)
-    result = ((1 - E_RAT) * rainfall_hatch) + (E_RAT * population_hatch_broadcasted)
-    logger.debug(f"Shape result: {result.shape}")
+#     # Weighted combination (element-wise)
+#     result = ((1 - E_RAT) * rainfall_hatch) + (E_RAT * population_hatch_broadcasted)
+#     logger.debug(f"Shape result: {result.shape}")
 
-    return result
+#     return result
 
 
 if __name__ == "__main__":
@@ -384,16 +387,17 @@ if __name__ == "__main__":
     print("\n---- function: mosquito_birth()")
     # TODO: test this function
 
+    print("\n---- function: mosquito_diapause_hatch()")
+    result = mosq_dia_hatch(model_data.temperature_mean, model_data.latitude)
+    print(f"{print_slices(result, 3)}")
+
     print("\n---- function: mosquito_diapause_lay()")
     # TODO: test this function
 
-    print("\n---- function: mosquito_diapause_hatch()")
-    # TODO: test this function
+    # print("\n---- function: water_hatching()")
+    # hatch = water_hatching(
+    #     rainfall_data=model_data.rainfall,
+    #     population_data=model_data.population_density,
+    # )
 
-    print("\n---- function: water_hatching()")
-    hatch = water_hatching(
-        rainfall_data=model_data.rainfall,
-        population_data=model_data.population_density,
-    )
-
-    print_slices(hatch, value=3)
+    # print_slices(hatch, value=3)
