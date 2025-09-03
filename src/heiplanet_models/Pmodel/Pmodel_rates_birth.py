@@ -106,15 +106,26 @@ def daylight_forsythe(
 
 # --- Specific functions
 def mosq_birth(temperature: np.ndarray) -> np.ndarray:
+    """Calculates the mosquito birth rate based on temperature.
 
+    This function computes the birth rate using a formula that is applied
+    only when the temperature is below a certain threshold (CONST_1).
+    If the temperature is at or above this threshold, the birth rate is
+    considered to be zero.
+
+    Args:
+        temperature (np.ndarray): An array of temperature values.
+
+    Returns:
+        np.ndarray: An array of the same shape as the input, containing
+            the calculated mosquito birth rates.
+    """
     CONST_1 = CONSTANTS_MOSQUITO_BIRTH["CONST_1"]
     CONST_2 = CONSTANTS_MOSQUITO_BIRTH["CONST_2"]
     CONST_3 = CONSTANTS_MOSQUITO_BIRTH["CONST_3"]
     CONST_4 = CONSTANTS_MOSQUITO_BIRTH["CONST_4"]
     CONST_5 = CONSTANTS_MOSQUITO_BIRTH["CONST_5"]
     CONST_6 = CONSTANTS_MOSQUITO_BIRTH["CONST_6"]
-
-    CONSTANTS_MOSQUITO_BIRTH["CONST_1"]
 
     out = temperature.copy()
     mask = out < CONST_1
