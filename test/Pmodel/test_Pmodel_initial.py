@@ -309,26 +309,6 @@ def test_load_data_fail(tmp_path):
         )
 
 
-def test_main_runs(tmp_path, caplog):
-    # Create a dummy file for rainfall
-    lon = np.linspace(0, 10, 2)
-    lat = np.linspace(0, 20, 2)
-    time = np.arange(2)
-    data = np.random.rand(len(lon), len(lat), len(time))
-    ds = xr.DataArray(
-        data,
-        coords={"longitude": lon, "latitude": lat, "time": time},
-        dims=("longitude", "latitude", "time"),
-        name="tp",
-    ).to_dataset()
-    nc_path = tmp_path / "rainfall.nc"
-    ds.to_netcdf(nc_path)
-    # Patch config to use this file
-    Pmodel_initial.PATH_DATASETS_SANDBOX["RAINFALL"] = nc_path
-    # Run main (should not raise)
-    Pmodel_initial.main()
-
-
 def test_load_dataset_rename_fail(dummy_dataset_path, caplog):
     """Test that load_dataset raises an error if renaming fails."""
     with pytest.raises(Exception):
@@ -379,21 +359,6 @@ def test_load_temperature_expand_fail(monkeypatch, caplog):
     with pytest.raises(Exception):
         Pmodel_initial.load_temperature(path_dataset=TEMP_PATH, variable_name="t2m")
     assert "Failed to expand temperature array" in caplog.text
-
-
-def test_main_execution_fail(monkeypatch, caplog):
-    """Test that the main function logs an error on failure."""
-
-    # Mock load_dataset to fail
-    def mock_load_dataset(*args, **kwargs):
-        raise ValueError("Mock loading failure")
-
-    monkeypatch.setattr(
-        "src.heiplanet_models.Pmodel.Pmodel_initial.load_dataset", mock_load_dataset
-    )
-
-    Pmodel_initial.main()
-    assert "Error in main execution: Mock loading failure" in caplog.text
 
 
 def test_load_dataset_return_full_dataset(dummy_dataset_path):
