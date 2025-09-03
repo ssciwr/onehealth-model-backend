@@ -1,25 +1,45 @@
+"""Calculates biological rates for the P-model mosquito population simulation.
+
+This module provides a collection of functions to compute key biological and
+environmental rates that drive the mosquito population dynamics in the P-model.
+It includes calculations for birth rates, diapause (a state of suspended
+development) for both egg hatching and laying, and water-dependent hatching
+probabilities.
+
+The functions rely on environmental inputs such as temperature, rainfall,
+latitude, and the day of the year to model the mosquito life cycle. It also
+contains helper functions for astronomical calculations, such as determining
+the Earth's revolution angle, the sun's declination, and the length of daylight,
+which are critical for modeling photoperiod-sensitive processes like diapause.
+
+Key functions include:
+- mosq_birth: Calculates temperature-dependent birth rates.
+- mosq_dia_hatch: Determines the rate of diapause termination for hatching.
+- mosq_dia_lay: Models the induction of diapause for egg-laying.
+- water_hatching: Computes hatching probability based on rainfall and human
+  population density.
+"""
+
 import logging
 from typing import Union
 
 import numpy as np
 import xarray as xr
 
-from heiplanet_models.Pmodel.Pmodel_params import CONSTANTS_REVOLUTION_ANGLE
-from heiplanet_models.Pmodel.Pmodel_params import CONSTANT_DECLINATION_ANGLE
-from heiplanet_models.Pmodel.Pmodel_params import CONSTANTS_MOSQUITO_BIRTH
-from heiplanet_models.Pmodel.Pmodel_params import CONSTANTS_MOSQUITO_DIAPAUSE_LAY
-from heiplanet_models.Pmodel.Pmodel_params import CONSTANTS_MOSQUITO_DIAPAUSE_HATCHING
-from heiplanet_models.Pmodel.Pmodel_params import CONSTANTS_WATER_HATCHING
+from heiplanet_models.Pmodel.Pmodel_params import (
+    CONSTANTS_REVOLUTION_ANGLE,
+    CONSTANT_DECLINATION_ANGLE,
+    CONSTANTS_MOSQUITO_BIRTH,
+    CONSTANTS_MOSQUITO_DIAPAUSE_LAY,
+    CONSTANTS_MOSQUITO_DIAPAUSE_HATCHING,
+    CONSTANTS_WATER_HATCHING,
+    MIN_LAT_DEGREES,
+    MAX_LAT_DEGREES,
+    HOURS_PER_DAY,
+    DAYS_YEAR,
+    HALF_DAYS_YEAR,
+)
 
-# from heiplanet_models.Pmodel.Pmodel_params import CONSTANTS_WATER_HATCHING
-
-
-MIN_LAT_DEGRESS = -90
-MAX_LAT_DEGREES = 90
-HOURS_PER_DAY = 24
-
-DAYS_YEAR = 365
-HALF_DAYS_YEAR = 183
 
 # ---- Logger
 logger = logging.getLogger(__name__)
@@ -124,7 +144,7 @@ def daylight_forsythe(
         ValueError: If latitude is not between -90 and 90 degrees.
     """
 
-    if not MIN_LAT_DEGRESS <= latitude <= MAX_LAT_DEGREES:
+    if not MIN_LAT_DEGREES <= latitude <= MAX_LAT_DEGREES:
         raise ValueError("Latitude must be between -90 and 90 degrees.")
 
     latitude_rad = np.deg2rad(latitude)
