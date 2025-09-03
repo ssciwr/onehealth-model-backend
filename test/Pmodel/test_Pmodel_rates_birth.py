@@ -12,15 +12,83 @@ from heiplanet_models.Pmodel.Pmodel_rates_birth import (
     daylight_forsythe,
     mosq_birth,
     mosq_dia_hatch,
+    mosq_dia_lay,
 )
 from heiplanet_models.Pmodel.Pmodel_params import (
     CONSTANT_DECLINATION_ANGLE,
     CONSTANTS_MOSQUITO_BIRTH,
     CONSTANTS_MOSQUITO_DIAPAUSE_HATCHING,
+    CONSTANTS_MOSQUITO_DIAPAUSE_LAY,
+    DAYS_YEAR,
+    HALF_DAYS_YEAR,
 )
 
 
 # ---- Pytest Fixtures
+@pytest.fixture
+def mock_lay_data():
+    """Provides mock xarray data for diapause lay tests for a single year."""
+    lons = [10.0]
+    lats = [45.0]  # Mid-latitude
+    times = np.arange(DAYS_YEAR)
+    coords = {"longitude": lons, "latitude": lats, "time": times}
+    dims = ("longitude", "latitude", "time")
+
+    temp_data = xr.DataArray(
+        np.zeros((len(lons), len(lats), len(times))), dims=dims, coords=coords
+    )
+    lat_data = xr.DataArray(lats, dims=("latitude"), coords={"latitude": lats})
+    return temp_data, lat_data
+
+
+@pytest.fixture
+def mock_lay_data_multi_year():
+    """Provides mock xarray data for diapause lay tests for two years."""
+    lons = [10.0]
+    lats = [45.0]
+    times = np.arange(DAYS_YEAR * 2)
+    coords = {"longitude": lons, "latitude": lats, "time": times}
+    dims = ("longitude", "latitude", "time")
+
+    temp_data = xr.DataArray(
+        np.zeros((len(lons), len(lats), len(times))), dims=dims, coords=coords
+    )
+    lat_data = xr.DataArray(lats, dims=("latitude"), coords={"latitude": lats})
+    return temp_data, lat_data
+
+
+@pytest.fixture
+def mock_lay_data_equator():
+    """Provides mock xarray data for diapause lay tests at the equator."""
+    lons = [10.0]
+    lats = [0.0]  # Equator
+    times = np.arange(DAYS_YEAR)
+    coords = {"longitude": lons, "latitude": lats, "time": times}
+    dims = ("longitude", "latitude", "time")
+
+    temp_data = xr.DataArray(
+        np.zeros((len(lons), len(lats), len(times))), dims=dims, coords=coords
+    )
+    lat_data = xr.DataArray(lats, dims=("latitude"), coords={"latitude": lats})
+    return temp_data, lat_data
+
+
+@pytest.fixture
+def mock_lay_data_polar():
+    """Provides mock xarray data for diapause lay tests at a polar latitude."""
+    lons = [10.0]
+    lats = [80.0]  # Polar latitude
+    times = np.arange(DAYS_YEAR)
+    coords = {"longitude": lons, "latitude": lats, "time": times}
+    dims = ("longitude", "latitude", "time")
+
+    temp_data = xr.DataArray(
+        np.zeros((len(lons), len(lats), len(times))), dims=dims, coords=coords
+    )
+    lat_data = xr.DataArray(lats, dims=("latitude"), coords={"latitude": lats})
+    return temp_data, lat_data
+
+
 @pytest.fixture
 def mock_hatch_data():
     """Provides mock xarray data for diapause hatching tests."""
@@ -173,7 +241,7 @@ def test_revolution_angle_vector_with_invalid_type_raises():
 
 # ---- declination_angle()
 def test_declination_angle_at_equinox():
-    """Test declination at an equinox (revolution angle PI/2), should be 0."""
+    """Test declination angle is near zero at an equinox revolution angle."""
     expected = 2.41367e-17
     result = declination_angle(np.pi / 2)
     assert isinstance(result, float)
@@ -472,3 +540,60 @@ def test_mosq_dia_hatch_with_dummy_data(temp_dummy_data):
 
     # Assert that the function's output matches the expected result
     np.testing.assert_allclose(result.values, expected_octave_result, atol=1e-4)
+
+
+# ---- mosq_dia_lay()
+def test_mosq_dia_lay_invalid_temp_dims_raises(mock_lay_data):
+    """Test that a non-3D temperature array raises a ValueError."""
+    _, lat_data = mock_lay_data
+    invalid_temp = xr.DataArray(np.zeros((2, 2)), dims=("x", "y"))
+    with pytest.raises(ValueError, match="Temperature array must be 3D"):
+        mosq_dia_lay(invalid_temp, lat_data)
+
+
+def test_mosq_dia_lay_invalid_lat_dims_raises(mock_lay_data):
+    """Test that a non-1D latitude array raises a ValueError."""
+    temp_data, _ = mock_lay_data
+    invalid_lat = xr.DataArray(np.zeros((2, 2)), dims=("x", "y"))
+    with pytest.raises(ValueError, match="Latitude array must be 1D."):
+        mosq_dia_lay(temp_data, invalid_lat)
+
+
+def test_mosq_dia_lay_mid_latitude_seasonal_split(mock_lay_data):
+    """Test that diapause is zero in the first half of the year."""
+    temp_data, lat_data = mock_lay_data
+    result = mosq_dia_lay(temp_data, lat_data)
+
+    # Assert first half of the year is all zero
+    assert np.all(result.values[:, :, :HALF_DAYS_YEAR] == 0)
+    # Assert there is some diapause in the second half
+    assert np.any(result.values[:, :, HALF_DAYS_YEAR:] > 0)
+
+
+def test_mosq_dia_lay_equator_no_diapause(mock_lay_data_equator):
+    """Test that no diapause occurs at the equator."""
+    temp_data, lat_data = mock_lay_data_equator
+    result = mosq_dia_lay(temp_data, lat_data)
+    # At the equator, daylight is always long enough to prevent diapause
+    assert np.all(result.values == 0)
+
+
+def test_mosq_dia_lay_polar_handling(mock_lay_data_polar):
+    """Test that the function handles polar regions without producing NaNs."""
+    temp_data, lat_data = mock_lay_data_polar
+    result = mosq_dia_lay(temp_data, lat_data)
+    # Ensure no NaNs are in the output, which can happen with extreme daylight calculations
+    assert not np.isnan(result.values).any()
+
+
+def test_mosq_dia_lay_output_values(mock_lay_data):
+    """Test that all non-zero output values are equal to RATIO_DIA_LAY."""
+    temp_data, lat_data = mock_lay_data
+    result = mosq_dia_lay(temp_data, lat_data)
+    ratio = CONSTANTS_MOSQUITO_DIAPAUSE_LAY["RATIO_DIA_LAY"]
+
+    # Get all non-zero values from the result
+    non_zero_values = result.values[result.values > 0]
+
+    # Assert that all these non-zero values are equal to the expected ratio
+    assert np.all(non_zero_values == ratio)
