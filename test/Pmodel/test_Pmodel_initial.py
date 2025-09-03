@@ -26,6 +26,12 @@ TEMP_PATH = RESOURCES / "temperature_dummy.nc"
 
 # ---- Pytest Fixtures
 @pytest.fixture
+def dummy_dataset_path():
+    """Provides a path to a dummy dataset for testing."""
+    return DENSE_PATH
+
+
+@pytest.fixture
 def dummy_population():
     return Pmodel_initial.load_dataset(
         path_dataset=DENSE_PATH,
@@ -321,3 +327,70 @@ def test_main_runs(tmp_path, caplog):
     Pmodel_initial.PATH_DATASETS_SANDBOX["RAINFALL"] = nc_path
     # Run main (should not raise)
     Pmodel_initial.main()
+
+
+def test_load_dataset_rename_fail(dummy_dataset_path, caplog):
+    """Test that load_dataset raises an error if renaming fails."""
+    with pytest.raises(Exception):
+        Pmodel_initial.load_dataset(
+            path_dataset=dummy_dataset_path,
+            names_dimensions={"non_existent_dim": "new_dim"},
+        )
+    assert "Failed to rename dimensions" in caplog.text
+
+
+def test_load_dataset_transpose_fail(dummy_dataset_path, caplog):
+    """Test that load_dataset raises an error if transposing fails."""
+    with pytest.raises(Exception):
+        Pmodel_initial.load_dataset(
+            path_dataset=dummy_dataset_path,
+            dimension_order=("longitude", "latitude", "non_existent_dim"),
+        )
+    assert "Failed to transpose dataset" in caplog.text
+
+
+def test_load_initial_conditions_extract_fail(
+    initial_conditions_file, monkeypatch, caplog
+):
+    """Test that load_initial_conditions raises an error if extracting a variable fails."""
+
+    # Mock isel to raise an exception
+    def mock_isel(*args, **kwargs):
+        raise IndexError("Mock isel failure")
+
+    monkeypatch.setattr(xr.DataArray, "isel", mock_isel)
+
+    with pytest.raises(Exception):
+        Pmodel_initial.load_initial_conditions(
+            filepath_previous=initial_conditions_file, sizes=(10, 10)
+        )
+    assert "Failed to extract variable" in caplog.text
+
+
+def test_load_temperature_expand_fail(monkeypatch, caplog):
+    """Test that load_temperature raises an error if np.repeat fails."""
+
+    # Mock np.repeat to raise an exception
+    def mock_repeat(*args, **kwargs):
+        raise ValueError("Mock repeat failure")
+
+    monkeypatch.setattr(np, "repeat", mock_repeat)
+
+    with pytest.raises(Exception):
+        Pmodel_initial.load_temperature(path_dataset=TEMP_PATH, variable_name="t2m")
+    assert "Failed to expand temperature array" in caplog.text
+
+
+def test_main_execution_fail(monkeypatch, caplog):
+    """Test that the main function logs an error on failure."""
+
+    # Mock load_dataset to fail
+    def mock_load_dataset(*args, **kwargs):
+        raise ValueError("Mock loading failure")
+
+    monkeypatch.setattr(
+        "src.heiplanet_models.Pmodel.Pmodel_initial.load_dataset", mock_load_dataset
+    )
+
+    Pmodel_initial.main()
+    assert "Error in main execution: Mock loading failure"
