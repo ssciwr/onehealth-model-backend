@@ -16,7 +16,7 @@ import xarray as xr
 import numpy as np
 
 
-from src.heiplanet_models.Pmodel.config import (
+from heiplanet_models.Pmodel.config import (
     CHUNKING_SCHEME,
     COORDINATES_ORDER,
     MODEL_VARIABLES,
@@ -25,7 +25,7 @@ from src.heiplanet_models.Pmodel.config import (
     CONST_K1,
     CONST_K2,
 )
-from src.heiplanet_models.Pmodel.Pmodel_input import PmodelInput
+from heiplanet_models.Pmodel.Pmodel_input import PmodelInput
 
 # ---- Logger
 logger = logging.getLogger(__name__)
