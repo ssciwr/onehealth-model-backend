@@ -1,7 +1,9 @@
 import pytest
 import math
+from pathlib import Path
 
 import numpy as np
+import xarray as xr
 
 
 from heiplanet_models.Pmodel.Pmodel_rates_birth import (
@@ -9,11 +11,83 @@ from heiplanet_models.Pmodel.Pmodel_rates_birth import (
     declination_angle,
     daylight_forsythe,
     mosq_birth,
+    mosq_dia_hatch,
 )
 from heiplanet_models.Pmodel.Pmodel_params import (
     CONSTANT_DECLINATION_ANGLE,
     CONSTANTS_MOSQUITO_BIRTH,
+    CONSTANTS_MOSQUITO_DIAPAUSE_HATCHING,
 )
+
+
+# ---- Pytest Fixtures
+@pytest.fixture
+def mock_hatch_data():
+    """Provides mock xarray data for diapause hatching tests."""
+    lons = [10.0, 11.0]
+    lats = [45.0, 46.0]
+    times = np.arange(60, dtype=int)  # 60 days
+    coords = {"longitude": lons, "latitude": lats, "time": times}
+    dims = ("longitude", "latitude", "time")
+
+    temp_data = xr.DataArray(
+        np.zeros((len(lons), len(lats), len(times))), dims=dims, coords=coords
+    )
+    lat_data = xr.DataArray(lats, dims=("latitude"), coords={"latitude": lats})
+    return temp_data, lat_data
+
+
+@pytest.fixture
+def mock_hatch_data_below_ctt():
+    """Provides mock xarray data for diapause hatching tests with temperatures below CTT."""
+    lons = [10.0, 11.0]
+    lats = [45.0, 46.0]
+    times = np.arange(60, dtype=int)  # 60 days
+    coords = {"longitude": lons, "latitude": lats, "time": times}
+    dims = ("longitude", "latitude", "time")
+
+    CTT = CONSTANTS_MOSQUITO_DIAPAUSE_HATCHING["CTT"]
+    # All temperatures set below CTT
+    temp_data = xr.DataArray(
+        np.full((len(lons), len(lats), len(times)), CTT - 5), dims=dims, coords=coords
+    )
+    lat_data = xr.DataArray(lats, dims=("latitude"), coords={"latitude": lats})
+    return temp_data, lat_data
+
+
+@pytest.fixture
+def mock_hatch_data_high_latitude():
+    """Provides mock xarray data for diapause hatching tests at high latitude."""
+    lons = [10.0, 11.0]
+    lats = [80.0]  # High latitude for short daylight
+    times = np.arange(60, dtype=int)  # 60 days
+    coords = {"longitude": lons, "latitude": lats, "time": times}
+    dims = ("longitude", "latitude", "time")
+
+    CTT = CONSTANTS_MOSQUITO_DIAPAUSE_HATCHING["CTT"]
+    # Temperatures always above CTT
+    temp_data = xr.DataArray(
+        np.full((len(lons), len(lats), len(times)), CTT + 10), dims=dims, coords=coords
+    )
+    lat_data = xr.DataArray(lats, dims=("latitude"), coords={"latitude": lats})
+    return temp_data, lat_data
+
+
+@pytest.fixture
+def resources_path():
+    """Provides the correct, absolute path to the test resources directory."""
+    # The test file is in '.../test/Pmodel/'.
+    # The resources are in '.../test/resources/'.
+    # Path(__file__).parent gives the directory of the current test file ('.../test/Pmodel').
+    # .parent then goes up one level to '.../test/'.
+    # Finally, we join it with the 'resources' directory name.
+    return Path(__file__).parent.parent / "resources"
+
+
+@pytest.fixture
+def temp_dummy_data(resources_path):
+    """Loads the dummy temperature data from a NetCDF file."""
+    return xr.open_dataarray(resources_path / "temperature_dummy.nc")
 
 
 # ---- revolution_angle()
@@ -69,6 +143,32 @@ def test_revolution_angle_string_input_raises():
 def test_revolution_angle_none_input_raises():
     with pytest.raises(TypeError):
         revolution_angle(None)
+
+
+def test_revolution_angle_vector_input():
+    """Test that the function correctly processes a vector of days."""
+    days = np.array([1, 183, 365])
+    results = revolution_angle(days)
+    assert isinstance(results, np.ndarray)
+    assert results.shape == (3,)
+    # Check if the results for individual days match
+    np.testing.assert_allclose(results[0], revolution_angle(1))
+    np.testing.assert_allclose(results[1], revolution_angle(183))
+    np.testing.assert_allclose(results[2], revolution_angle(365))
+
+
+def test_revolution_angle_vector_with_invalid_day_raises():
+    """Test that a vector with an out-of-range day raises a ValueError."""
+    days = np.array([1, 367, 365])
+    with pytest.raises(ValueError, match="All 'days' must be in the range 1 to 366."):
+        revolution_angle(days)
+
+
+def test_revolution_angle_vector_with_invalid_type_raises():
+    """Test that a vector with a non-integer type raises a TypeError."""
+    days = np.array([1.0, 183.5, 365.0])
+    with pytest.raises(TypeError, match="Input 'days' must be an integer"):
+        revolution_angle(days)
 
 
 # ---- declination_angle()
@@ -283,3 +383,92 @@ def test_mosq_birth_empty_input():
     expected = np.array([])
     result = mosq_birth(temperature)
     assert result.shape == expected.shape
+
+
+# ---- mosq_dia_hatch()
+def test_mosq_dia_hatch_invalid_temp_dims_raises(mock_hatch_data):
+    """Test that a non-3D temperature array raises a ValueError."""
+    _, lat_data = mock_hatch_data
+    invalid_temp = xr.DataArray(np.zeros((2, 2)), dims=("x", "y"))
+    with pytest.raises(ValueError, match="Temperature array must be 3D"):
+        mosq_dia_hatch(invalid_temp, lat_data)
+
+
+def test_mosq_dia_hatch_invalid_lat_dims_raises(mock_hatch_data):
+    """Test that a non-1D latitude array raises a ValueError."""
+    temp_data, _ = mock_hatch_data
+    invalid_lat = xr.DataArray(np.zeros((2, 2)), dims=("x", "y"))
+    with pytest.raises(ValueError, match="Latitude array must be 1D."):
+        mosq_dia_hatch(temp_data, invalid_lat)
+
+
+def test_mosq_dia_hatch_temp_below_ctt(mock_hatch_data_below_ctt):
+    """Test that hatching is zero if temperature is always below the critical threshold."""
+    temp_data, lat_data = mock_hatch_data_below_ctt
+    result = mosq_dia_hatch(temp_data, lat_data)
+    assert np.all(result.values == 0)
+
+
+def test_mosq_dia_hatch_daylight_below_cpp(mock_hatch_data_high_latitude):
+    """Test that hatching is zero if daylight is always below the critical photoperiod."""
+    temp_data, lat_data = mock_hatch_data_high_latitude
+    result = mosq_dia_hatch(temp_data, lat_data)
+    # Expect all zeros because daylight hours will be below CPP for the first 60 days
+    assert np.all(result.values == 0)
+
+
+def test_mosq_dia_hatch_with_nan_input(mock_hatch_data):
+    """Test that NaN values in the input are handled correctly."""
+    temp_data, lat_data = mock_hatch_data
+    C = CONSTANTS_MOSQUITO_DIAPAUSE_HATCHING
+    temp_data.values[:] = C["CTT"] + 10
+    temp_data.values[0, 0, 30] = np.nan  # Introduce a NaN
+
+    result = mosq_dia_hatch(temp_data, lat_data)
+    # Ensure no NaNs are in the output
+    assert not np.isnan(result.values).any()
+    # The cell with the original NaN should result in 0 after nan_to_num
+    assert result.values[0, 0, 30] == 0
+
+
+def test_mosq_dia_hatch_with_dummy_data(temp_dummy_data):
+    """
+    Test mosq_dia_hatch with dummy data and compare against a known Octave result.
+    """
+    # Extract latitude coordinate from the input data
+    latitude = temp_dummy_data.latitude
+
+    # Run the function
+    result = mosq_dia_hatch(temp_dummy_data, latitude)
+
+    # Define the expected result from the Octave output
+    # Note: The dimensions are transposed from (lat, lon, time) in Octave
+    # to (lon, lat, time) as returned by the Python function.
+    expected_octave_result = np.array(
+        [
+            # Time slice 1
+            [
+                [0.0, 0.0, 0.0, 0.0, 0.0],
+                [0.1, 0.1, 0.1, 0.1, 0.1],
+                [0.1, 0.1, 0.1, 0.1, 0.1],
+                [0.1, 0.1, 0.1, 0.1, 0.1],
+            ],
+            # Time slice 2
+            [
+                [0.0, 0.0, 0.0, 0.0, 0.0],
+                [0.0, 0.0, 0.0, 0.0, 0.0],
+                [0.0, 0.0, 0.0, 0.0, 0.0],
+                [0.0, 0.0, 0.0, 0.0, 0.0],
+            ],
+            # Time slice 3
+            [
+                [0.0, 0.0, 0.0, 0.0, 0.0],
+                [0.0, 0.0, 0.0, 0.0, 0.0],
+                [0.0, 0.0, 0.0, 0.0, 0.0],
+                [0.0, 0.0, 0.0, 0.0, 0.1],
+            ],
+        ]
+    )
+
+    # Assert that the function's output matches the expected result
+    np.testing.assert_allclose(result.values, expected_octave_result, atol=1e-4)
