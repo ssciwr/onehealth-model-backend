@@ -58,8 +58,7 @@ def revolution_angle(days: int) -> float:
 
 
 def declination_angle(revolution_angle: float) -> float:
-    """
-    Predict the sun's declination angle in radians.
+    """Predict the sun's declination angle in radians.
 
     Args:
         revolution_angle (float): Revolution angle in radians.
@@ -75,8 +74,7 @@ def declination_angle(revolution_angle: float) -> float:
 def daylight_forsythe(
     latitude: float, declination_angle: float, daylight_coefficient: float
 ) -> float:
-    """
-    Calculate daylight hours using Forsythe's method.
+    """Calculate daylight hours using Forsythe's method.
 
     Args:
         latitude (float): Latitude in degrees (-90 to 90).
@@ -94,14 +92,14 @@ def daylight_forsythe(
         raise ValueError("Latitude must be between -90 and 90 degrees.")
 
     latitude_rad = np.deg2rad(latitude)
-    daylight_coeff_rad = np.deg2rad(daylight_coefficient)
+    daylight_coeff_rad = np.deg2rad(daylight_coefficient).squeeze()
 
     angle_calculation = (
         np.sin(daylight_coeff_rad) + np.sin(latitude_rad) * np.sin(declination_angle)
     ) / (np.cos(latitude_rad) * np.cos(declination_angle))
 
     daylight = np.real(
-        HOURS_PER_DAY - (HOURS_PER_DAY / np.pi) * np.arccos(angle_calculation)
+        HOURS_PER_DAY - (HOURS_PER_DAY / np.pi) * np.arccos(angle_calculation + 0j)
     )
     return daylight
 
@@ -363,10 +361,14 @@ if __name__ == "__main__":
     print(f"\tRevolution angle, day 366: {revolution_angle(366)}")
 
     print("\n---- function: declination_angle()")
-    # TODO: test this function
+    print(f"\tDeclination angle, np.pi/2: {declination_angle(np.pi / 2)}")
+    print(f"\tDeclination angle, -0.409: {declination_angle(-0.409)}")
 
     print("\n---- function: daylight_forsythe()")
-    # TODO: test this function
+    result = daylight_forsythe(
+        latitude=89.999, declination_angle=-0.409, daylight_coefficient=0.0
+    )
+    print(f"\tDaylight Forsythe: {result}")
 
     print("\n---- function: mosquito_birth()")
     # TODO: test this function
