@@ -281,12 +281,7 @@ def load_data(
     )
 
 
-def main() -> None:
-    """Main entry point for module testing and demonstration.
-
-    Loads rainfall and other datasets, prints their attributes and shapes,
-    and demonstrates the data loading pipeline.
-    """
+if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     try:
         dataset = load_dataset(
@@ -320,7 +315,3 @@ def main() -> None:
         logger.info("Data loading complete.")
     except Exception as e:
         logger.error(f"Error in main execution: {e}")
-
-
-if __name__ == "__main__":
-    main()
