@@ -70,6 +70,16 @@ CONSTANTS_MOSQUITO_J = {
     "Tm": 4.086981e01,
 }
 
+CONSTANTS_MOSQUITO_I = {
+    "CONST_1": 50.1,
+    "CONST_2": 3.574,
+    "CONST_3": 0.069,
+    "CONST_4": 1.0,
+    "q": 1.695638e-04,
+    "T0": 3.750303e00,
+    "Tm": 3.553575e01,
+}
+
 
 CONSTANTS_CARRYING_CAPACITY = {
     "ALPHA_RAIN": 1e-3,
