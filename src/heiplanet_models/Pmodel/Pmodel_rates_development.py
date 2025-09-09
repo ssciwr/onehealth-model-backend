@@ -3,7 +3,7 @@ import logging
 import numpy as np
 import xarray as xr
 
-from .Pmodel_params import (
+from heiplanet_models.Pmodel.Pmodel_params import (
     CONSTANTS_MOSQUITO_J,
     CONSTANTS_CARRYING_CAPACITY,
 )
@@ -158,3 +158,15 @@ def carrying_capacity(
     logger.debug("End of the function")
 
     return result
+
+
+if __name__ == "__main__":
+
+    print("\n---- function: mosq_dev_j()")
+    T = np.array([[15.0, 20.0], [25.0, 30.0]])
+    print(T)
+    # Output:
+    # [[15. 20.]
+    #  [25. 30.]]
+
+    print(mosq_dev_j(T))
