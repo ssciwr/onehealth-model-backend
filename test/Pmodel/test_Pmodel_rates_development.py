@@ -88,3 +88,11 @@ def test_mosq_dev_j_multidimensional_input():
     result = mosq_dev_j(temps)
     assert result.shape == temps.shape
     assert np.all(np.isfinite(result))
+
+
+def test_mosq_dev_j_known_matrix_output():
+    """Test mosq_dev_j returns expected output for a specific matrix."""
+    T = np.array([[15.0, 20.0], [25.0, 30.0]])
+    expected = np.array([[0.036536, 0.058754], [0.093720, 0.120192]])
+    result = mosq_dev_j(T)
+    np.testing.assert_allclose(result, expected, atol=1e-6)
