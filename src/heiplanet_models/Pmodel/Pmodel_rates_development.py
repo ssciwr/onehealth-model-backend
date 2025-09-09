@@ -12,14 +12,14 @@ logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 
 
-def mosq_dev_j(T: np.ndarray) -> np.ndarray:
+def mosq_dev_j(temperature: np.ndarray) -> np.ndarray:
     """Calculate mosquito juvenile development rate as a function of temperature.
 
     This function implements the Octave mosq_dev_j formula for mosquito juvenile
     development rate, using a temperature-dependent mathematical model.
 
     Args:
-        T (numpy.ndarray): Array of temperature values (°C).
+        temperature (numpy.ndarray): Array of temperature values (°C).
 
     Returns:
         numpy.ndarray: Array of development rates, elementwise for each temperature.
@@ -35,7 +35,7 @@ def mosq_dev_j(T: np.ndarray) -> np.ndarray:
     # #  Commented on purpose, this is documented in original Octave/Matlab code
     # Tout = q*T*(T - T0 )*((Tm - T)^(1/2));
 
-    T_out = CONST_1 - CONST_2 * T + CONST_3 * T**2
+    T_out = CONST_1 - CONST_2 * temperature + CONST_3 * temperature**2
     T_out = CONST_4 / T_out
     return T_out
 
