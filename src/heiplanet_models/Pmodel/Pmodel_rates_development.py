@@ -5,6 +5,7 @@ import xarray as xr
 
 from heiplanet_models.Pmodel.Pmodel_params import (
     CONSTANTS_MOSQUITO_J,
+    CONSTANTS_MOSQUITO_I,
     CONSTANTS_CARRYING_CAPACITY,
 )
 
@@ -24,42 +25,41 @@ def mosq_dev_j(temperature: np.ndarray) -> np.ndarray:
     Returns:
         numpy.ndarray: Array of development rates, elementwise for each temperature.
     """
-    # TODO: Status --> it works
 
     CONST_1 = CONSTANTS_MOSQUITO_J["CONST_1"]
     CONST_2 = CONSTANTS_MOSQUITO_J["CONST_2"]
     CONST_3 = CONSTANTS_MOSQUITO_J["CONST_3"]
     CONST_4 = CONSTANTS_MOSQUITO_J["CONST_4"]
 
-    # #  New function briere with coeffiecient with initial data collection
-    # #  Commented on purpose, this is documented in original Octave/Matlab code
-    # Tout = q*T*(T - T0 )*((Tm - T)^(1/2));
-
     T_out = CONST_1 - CONST_2 * temperature + CONST_3 * temperature**2
     T_out = CONST_4 / T_out
     return T_out
 
 
-def mosq_dev_i(T: np.ndarray) -> np.ndarray:
-    """
-    Python implementation of the Octave mosq_dev_i function.
+def mosq_dev_i(temperature: np.ndarray) -> np.ndarray:
+    """Calculate mosquito development rate for the 'i' stage as a function of temperature.
+
+    This function implements the Octave mosq_dev_i formula for the 'i' developmental
+    stage of mosquitoes, using a temperature-dependent mathematical model.
 
     Args:
-        T: numpy.ndarray of temperatures
+        temperature (numpy.ndarray): Array of temperature values in degrees Celsius.
 
     Returns:
-        numpy.ndarray with development rates applied elementwise
+        numpy.ndarray: Array of development rates, elementwise for each temperature value.
     """
-    # q = 1.695638e-04;
-    # T0 = 3.750303e+00;
-    # Tm = 3.553575e+01;
 
-    #  new function briere with coffiecint with initial data collection, for Sandra and Zia model
-    # T = q*T*(T - T0 )*((Tm - T)**(1/2));
+    CONST_1 = CONSTANTS_MOSQUITO_I["CONST_1"]
+    CONST_2 = CONSTANTS_MOSQUITO_I["CONST_2"]
+    CONST_3 = CONSTANTS_MOSQUITO_I["CONST_3"]
+    CONST_4 = CONSTANTS_MOSQUITO_I["CONST_4"]
 
-    # Old parameter description in original model
-    T_out = 50.1 - 3.574 * T + 0.069 * T**2
-    T_out = 1.0 / T_out
+    # # New function briere with coeffiecint with initial data collection, for Sandra and Zia model
+    # # Commented on purpose
+    # T = q*T*(T - T0 )*((Tm - T)^(1/2));
+
+    T_out = CONST_1 - CONST_2 * temperature + CONST_3 * temperature**2
+    T_out = CONST_4 / T_out
     return T_out
 
 
@@ -165,8 +165,7 @@ if __name__ == "__main__":
     print("\n---- function: mosq_dev_j()")
     T = np.array([[15.0, 20.0], [25.0, 30.0]])
     print(T)
-    # Output:
-    # [[15. 20.]
-    #  [25. 30.]]
-
     print(mosq_dev_j(T))
+
+    print("\n---- function: mosq_dev_i()")
+    print(mosq_dev_i(T))
