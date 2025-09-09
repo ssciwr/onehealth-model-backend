@@ -1,6 +1,13 @@
 # -----------------------------------------------
 # ----      General function constants       ----
 # -----------------------------------------------
+MIN_LAT_DEGREES = -90
+MAX_LAT_DEGREES = 90
+HOURS_PER_DAY = 24
+
+DAYS_YEAR = 365
+HALF_DAYS_YEAR = 183
+
 
 # Ref: https://doi.org/10.1016/0304-3800(94)00034-F
 CONSTANTS_REVOLUTION_ANGLE = {
@@ -50,10 +57,23 @@ CONSTANTS_WATER_HATCHING = {
     "E_FAC": 0.01,
 }
 
+# ----------------------------------------------------
+# ----      Development function constants        ----
+# ----------------------------------------------------
+CONSTANTS_MOSQUITO_J = {
+    "CONST_1": 82.42,
+    "CONST_2": 4.87,
+    "CONST_3": 8e-2,
+    "CONST_4": 1.0,
+    "q": 5.116230e-5,
+    "T0": 7.628991e00,
+    "Tm": 4.086981e01,
+}
 
-MIN_LAT_DEGREES = -90
-MAX_LAT_DEGREES = 90
-HOURS_PER_DAY = 24
 
-DAYS_YEAR = 365
-HALF_DAYS_YEAR = 183
+CONSTANTS_CARRYING_CAPACITY = {
+    "ALPHA_RAIN": 1e-3,
+    "ALPHA_DENS": 1e-5,
+    "GAMMA": 9e-1,
+    "LAMBDA": 1e6 * 625.0 * 100.0,
+}
