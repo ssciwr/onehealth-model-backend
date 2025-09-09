@@ -31,6 +31,10 @@ def mosq_dev_j(temperature: np.ndarray) -> np.ndarray:
     CONST_3 = CONSTANTS_MOSQUITO_J["CONST_3"]
     CONST_4 = CONSTANTS_MOSQUITO_J["CONST_4"]
 
+    # # New function briere with coeffiecint with initial data collection, for Sandra and Zia model
+    # # Commented on purpose
+    # T = q*T*(T - T0 )*((Tm - T)^(1/2));
+
     T_out = CONST_1 - CONST_2 * temperature + CONST_3 * temperature**2
     T_out = CONST_4 / T_out
     return T_out
