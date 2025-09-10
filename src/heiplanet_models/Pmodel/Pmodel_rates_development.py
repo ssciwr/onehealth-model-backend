@@ -98,33 +98,33 @@ def mosq_dev_e(temperature: np.ndarray) -> np.ndarray:
 
 
 def carrying_capacity(
-    rainfall_data: xr.DataArray,
-    population_data: xr.DataArray,
-    constants: dict = CONSTANTS_CARRYING_CAPACITY,
+    rainfall_data: xr.DataArray, population_data: xr.DataArray
 ) -> xr.DataArray:
-    """
-    Compute the carrying capacity over time using rainfall and population density.
+    """Computes the carrying capacity over time using rainfall and population density.
 
-    Ref. Equation: # 14
-    Name: Juvenile carrying capacity
+    This function calculates the juvenile carrying capacity (Ref. Equation #14)
+    based on a recursive formula involving historical rainfall and population
+    density.
 
     Args:
-        rainfall_data: Rainfall DataArray with dimensions (time, latitude, longitude).
-        population_data: Population density DataArray with dimensions (time, latitude, longitude) or (latitude, longitude).
-        constants: Dictionary with keys 'ALPHA_RAIN', 'ALPHA_DENS', 'GAMMA', 'LAMBDA'.
+        rainfall_data: A DataArray containing rainfall data with dimensions
+            (time, latitude, longitude).
+        population_data: A DataArray containing population density data. It can
+            be time-dependent with dimensions (time, latitude, longitude) or
+            time-independent with dimensions (latitude, longitude).
 
     Returns:
-        xr.DataArray: Carrying capacity with the same shape as rainfall_data.
+        An xarray DataArray representing the carrying capacity, with the same
+        shape as the `rainfall_data`.
     """
 
-    ALPHA_RAIN = constants["ALPHA_RAIN"]
-    ALPHA_DENS = constants["ALPHA_DENS"]
-    GAMMA = constants["GAMMA"]
-    LAMBDA = constants["LAMBDA"]
+    ALPHA_RAIN = CONSTANTS_CARRYING_CAPACITY["ALPHA_RAIN"]
+    ALPHA_DENS = CONSTANTS_CARRYING_CAPACITY["ALPHA_DENS"]
+    GAMMA = CONSTANTS_CARRYING_CAPACITY["GAMMA"]
+    LAMBDA = CONSTANTS_CARRYING_CAPACITY["LAMBDA"]
 
-    logger.debug(
-        f"rainfall_data dims: {rainfall_data.dims}, population_data dims: {population_data.dims}"
-    )
+    logger.debug(f"rainfall_data dims: {rainfall_data.dims}")
+    logger.debug(f"population_data dims: {population_data.dims}")
 
     logger.debug(f"Rainfall data: {rainfall_data.values}")
 
@@ -137,8 +137,9 @@ def carrying_capacity(
     # Initialize A with zeros
     A = xr.zeros_like(rainfall_data)
 
-    # Initial condition
+    # Initial condition for Population data
     population_data_initial_slice = population_data.sel(time=rainfall_data.time[0])
+
     A.loc[dict(time=rainfall_data.time[0])] = (
         ALPHA_RAIN * rainfall_data.sel(time=rainfall_data.time[0])
         + ALPHA_DENS * population_data_initial_slice
@@ -170,6 +171,22 @@ def carrying_capacity(
 
 if __name__ == "__main__":
 
+    # Configure logging
+    logging.basicConfig(level=logging.DEBUG)
+
+    from heiplanet_models.Pmodel.Pmodel_initial import load_data
+
+    def print_slices(dataset, value):
+
+        for i in range(value):  # for indices 0, 1, 2
+            print(f"Slice at time index {i}:")
+            print(dataset.isel(time=i).values)
+            print()  # Blank line for readability
+
+    model_data = load_data(time_step=10)
+    print("---- Model attributes ")
+    model_data.print_attributes()
+
     print("\n---- function: mosq_dev_j()")
     temperatute = np.array([[15.0, 20.0], [25.0, 30.0]])
     print(temperatute)
@@ -180,3 +197,9 @@ if __name__ == "__main__":
 
     print("\n---- function: mosq_dev_e()")
     print(mosq_dev_e(temperatute))
+
+    print("\n---- function: carrying_capacity()")
+    result = carrying_capacity(
+        rainfall_data=model_data.rainfall, population_data=model_data.population_density
+    )
+    print(f"{print_slices(result, 3)}")
