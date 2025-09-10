@@ -6,6 +6,7 @@ import xarray as xr
 from heiplanet_models.Pmodel.Pmodel_params import (
     CONSTANTS_MOSQUITO_J,
     CONSTANTS_MOSQUITO_I,
+    CONSTANTS_MOSQUITO_E,
     CONSTANTS_CARRYING_CAPACITY,
 )
 
@@ -33,7 +34,7 @@ def mosq_dev_j(temperature: np.ndarray) -> np.ndarray:
 
     # # New function briere with coeffiecint with initial data collection, for Sandra and Zia model
     # # Commented on purpose
-    # T = q*T*(T - T0 )*((Tm - T)^(1/2));
+    # temperature = q*temperatute*(temperatute - T0 )*((Tm - temperatute)^(1/2));
 
     T_out = CONST_1 - CONST_2 * temperature + CONST_3 * temperature**2
     T_out = CONST_4 / T_out
@@ -60,36 +61,41 @@ def mosq_dev_i(temperature: np.ndarray) -> np.ndarray:
 
     # # New function briere with coeffiecint with initial data collection, for Sandra and Zia model
     # # Commented on purpose
-    # T = q*T*(T - T0 )*((Tm - T)^(1/2));
+    # temperature = q*temperature*(temperature - T0 )*((Tm - temperature)^(1/2));
 
     T_out = CONST_1 - CONST_2 * temperature + CONST_3 * temperature**2
     T_out = CONST_4 / T_out
     return T_out
 
 
-def mosq_dev_e(T: np.ndarray) -> np.ndarray:
+def mosq_dev_e(temperature: np.ndarray) -> np.ndarray:
     """
-    Python implementation of the Octave mosq_dev_e function (Brière model).
+    Calculates the mosquito egg development rate using the Brière model.
 
     Args:
-        T: numpy.ndarray of temperatures
+        temperature (numpy.ndarray): Array of temperature values in degrees Celsius.
 
     Returns:
-        numpy.ndarray with development rates applied elementwise
+        numpy.ndarray: Array of development rates, elementwise for each temperature value.
+
+    Raises:
+        ValueError: If input is not a numpy ndarray.
     """
-    q = 0.0001246068
-    T0 = -7.0024634748
-    Tm = 34.1519214674
+    q = CONSTANTS_MOSQUITO_E["q"]
+    T0 = CONSTANTS_MOSQUITO_E["T0"]
+    Tm = CONSTANTS_MOSQUITO_E["Tm"]
 
     # Apply the Brière model formula elementwise
-    T_out = q * T * (T - T0) * np.sqrt(np.maximum(Tm - T, 0))
+    T_out: np.ndarray = (
+        q * temperatute * (temperatute - T0) * np.sqrt(np.maximum(Tm - temperatute, 0))
+    )
 
     # Found in original code
-    # T_out = 50.1 - 3.574 * T + 0.069 * T**2;
-    # T = 1 ./ T;
+    # T_out = CONST_1 - CONST_2 * temperatute + CONST_3 * temperatute**2;
+    # T_out = CONST_4 ./ T_OUT;
 
     # Ensure no negative values due to sqrt of negative numbers
-    T_out = np.where((T > T0) & (T < Tm), T_out, 0.0)
+    T_out = np.where((temperatute > T0) & (temperatute < Tm), T_out, 0.0)
     return T_out
 
 
@@ -167,9 +173,12 @@ def carrying_capacity(
 if __name__ == "__main__":
 
     print("\n---- function: mosq_dev_j()")
-    T = np.array([[15.0, 20.0], [25.0, 30.0]])
-    print(T)
-    print(mosq_dev_j(T))
+    temperatute = np.array([[15.0, 20.0], [25.0, 30.0]])
+    print(temperatute)
+    print(mosq_dev_j(temperatute))
 
     print("\n---- function: mosq_dev_i()")
-    print(mosq_dev_i(T))
+    print(mosq_dev_i(temperatute))
+
+    print("\n---- function: mosq_dev_e()")
+    print(mosq_dev_e(temperatute))
