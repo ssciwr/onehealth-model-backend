@@ -1,13 +1,19 @@
 import pytest
 
 import numpy as np
+import pandas as pd
+import xarray as xr
 
 from heiplanet_models.Pmodel.Pmodel_rates_development import (
     mosq_dev_j,
     mosq_dev_i,
     mosq_dev_e,
+    carrying_capacity,
 )
-from heiplanet_models.Pmodel.Pmodel_params import CONSTANTS_MOSQUITO_E
+from heiplanet_models.Pmodel.Pmodel_params import (
+    CONSTANTS_MOSQUITO_E,
+    CONSTANTS_CARRYING_CAPACITY,
+)
 
 
 # ---- Pytest Fixtures
@@ -27,6 +33,112 @@ def typical_temperature_array_i():
 def typical_temperature_array_e():
     """Provides a 1D numpy array of typical temperature values for mosq_dev_e."""
     return np.array([15, 20, 25, 30], dtype=float)
+
+
+@pytest.fixture
+def rainfall_data_fixture():
+    """Provides a sample rainfall DataArray."""
+    return xr.DataArray(
+        np.ones((3, 2, 2)),
+        dims=["time", "latitude", "longitude"],
+        coords={
+            "time": pd.to_datetime(["2024-01-01", "2024-01-02", "2024-01-03"]),
+            "latitude": [10, 20],
+            "longitude": [30, 40],
+        },
+    )
+
+
+@pytest.fixture
+def population_data_time_independent_fixture():
+    """Provides a sample time-independent population DataArray."""
+    return xr.DataArray(
+        np.full((2, 2), 0.5),
+        dims=["latitude", "longitude"],
+        coords={"latitude": [10, 20], "longitude": [30, 40]},
+    )
+
+
+@pytest.fixture
+def population_data_time_dependent_fixture():
+    """Provides a sample time-dependent population DataArray."""
+    return xr.DataArray(
+        np.random.rand(3, 2, 2),
+        dims=["time", "latitude", "longitude"],
+        coords={
+            "time": pd.to_datetime(["2024-01-01", "2024-01-02", "2024-01-03"]),
+            "latitude": [10, 20],
+            "longitude": [30, 40],
+        },
+    )
+
+
+@pytest.fixture
+def single_time_step_rainfall_fixture():
+    """Provides a rainfall DataArray with a single time step."""
+    return xr.DataArray(
+        np.ones((1, 2, 2)),
+        dims=["time", "latitude", "longitude"],
+        coords={
+            "time": pd.to_datetime(["2024-01-01"]),
+            "latitude": [10, 20],
+            "longitude": [30, 40],
+        },
+    )
+
+
+@pytest.fixture
+def single_time_step_population_fixture():
+    """Provides a population DataArray with a single time step."""
+    return xr.DataArray(
+        np.full((1, 2, 2), 0.5),
+        dims=["time", "latitude", "longitude"],
+        coords={
+            "time": pd.to_datetime(["2024-01-01"]),
+            "latitude": [10, 20],
+            "longitude": [30, 40],
+        },
+    )
+
+
+@pytest.fixture
+def zero_rainfall_fixture():
+    """Provides a rainfall DataArray with all zeros."""
+    return xr.DataArray(
+        np.zeros((3, 2, 2)),
+        dims=["time", "latitude", "longitude"],
+        coords={
+            "time": pd.to_datetime(["2024-01-01", "2024-01-02", "2024-01-03"]),
+            "latitude": [10, 20],
+            "longitude": [30, 40],
+        },
+    )
+
+
+@pytest.fixture
+def zero_population_fixture():
+    """Provides a population DataArray with all zeros."""
+    return xr.DataArray(
+        np.zeros((2, 2)),
+        dims=["latitude", "longitude"],
+        coords={"latitude": [10, 20], "longitude": [30, 40]},
+    )
+
+
+@pytest.fixture
+def rainfall_with_nan_fixture():
+    """Provides a rainfall DataArray containing NaN values."""
+    data = np.ones((3, 2, 2))
+    data[1, 0, 0] = np.nan
+    return xr.DataArray(
+        data,
+        dims=["time", "latitude", "longitude"],
+        coords={
+            "time": pd.to_datetime(["2024-01-01", "2024-01-02", "2024-01-03"]),
+            "latitude": [10, 20],
+            "longitude": [30, 40],
+        },
+    )
 
 
 # ---- Unit Tests for mosq_dev_j
@@ -282,3 +394,147 @@ def test_mosq_dev_e_known_matrix_output():
     expected = expected.reshape(2, 2)
     result = mosq_dev_e(T)
     np.testing.assert_allclose(result, expected, atol=1e-4)
+
+
+# ---- Unit Tests for carrying_capacity
+def test_carrying_capacity_time_independent_population(
+    rainfall_data_fixture, population_data_time_independent_fixture
+):
+    """
+    Test carrying_capacity with time-independent population data.
+
+    This test validates that the function correctly handles population_data
+    without a 'time' dimension by broadcasting it across all time steps.
+    """
+    # Call the function with test data
+    result = carrying_capacity(
+        rainfall_data_fixture, population_data_time_independent_fixture
+    )
+
+    # 1. Verify that the output is an xarray.DataArray
+    assert isinstance(result, xr.DataArray)
+
+    # 2. Verify that the output shape matches the rainfall_data shape
+    assert result.shape == rainfall_data_fixture.shape
+
+    # 3. Verify the initial condition calculation
+    alpha_rain = CONSTANTS_CARRYING_CAPACITY["ALPHA_RAIN"]
+    alpha_dens = CONSTANTS_CARRYING_CAPACITY["ALPHA_DENS"]
+    lambda_val = CONSTANTS_CARRYING_CAPACITY["LAMBDA"]
+
+    # Expected value for the first time step (k=0)
+    # A[0] = alpha_rain * rainfall[0] + alpha_dens * population
+    # result[0] = A[0] * LAMBDA (since factor for k=0 is not applied in the loop)
+    expected_initial_A = (
+        alpha_rain * rainfall_data_fixture.isel(time=0)
+        + alpha_dens * population_data_time_independent_fixture
+    )
+    expected_initial_result = expected_initial_A * lambda_val
+
+    # Check if the calculated initial result matches the expected one
+    xr.testing.assert_allclose(result.isel(time=0), expected_initial_result)
+
+
+def test_carrying_capacity_time_dependent_population(
+    rainfall_data_fixture, population_data_time_dependent_fixture
+):
+    """
+    Test carrying_capacity with time-dependent population data.
+    """
+    result = carrying_capacity(
+        rainfall_data_fixture, population_data_time_dependent_fixture
+    )
+    assert isinstance(result, xr.DataArray)
+    assert result.shape == rainfall_data_fixture.shape
+    assert not np.isnan(result.values).any()
+
+
+def test_carrying_capacity_single_time_step(
+    single_time_step_rainfall_fixture, single_time_step_population_fixture
+):
+    """
+    Test carrying_capacity with a single time step.
+    """
+    result = carrying_capacity(
+        single_time_step_rainfall_fixture, single_time_step_population_fixture
+    )
+    assert result.shape == single_time_step_rainfall_fixture.shape
+    assert result.time.size == 1
+
+
+def test_carrying_capacity_multiple_time_steps(
+    rainfall_data_fixture, population_data_time_independent_fixture
+):
+    """
+    Test the recursive calculation over multiple time steps.
+    """
+    result = carrying_capacity(
+        rainfall_data_fixture, population_data_time_independent_fixture
+    )
+
+    alpha_rain = CONSTANTS_CARRYING_CAPACITY["ALPHA_RAIN"]
+    alpha_dens = CONSTANTS_CARRYING_CAPACITY["ALPHA_DENS"]
+    gamma = CONSTANTS_CARRYING_CAPACITY["GAMMA"]
+    lambda_val = CONSTANTS_CARRYING_CAPACITY["LAMBDA"]
+
+    # Manually calculate the first few steps
+    # Step k=0
+    A0 = (
+        alpha_rain * rainfall_data_fixture.isel(time=0)
+        + alpha_dens * population_data_time_independent_fixture
+    )
+    # The scaling factor is not applied for k=0 in the implementation's loop,
+    # so we only apply the final LAMBDA scaling.
+    result0 = A0 * lambda_val
+    xr.testing.assert_allclose(result.isel(time=0), result0)
+
+    # Step k=1
+    # The recursive step uses the unscaled previous value of A.
+    A1_unscaled = (
+        gamma * A0
+        + alpha_rain * rainfall_data_fixture.isel(time=1)
+        + alpha_dens * population_data_time_independent_fixture
+    )
+    factor1 = (1 - gamma) / (1 - gamma**2)
+    A1_scaled = A1_unscaled * factor1
+    expected_result1 = A1_scaled * lambda_val
+
+    # Assign the correct time coordinate to the expected result
+    expected_result1["time"] = rainfall_data_fixture.time[1]
+
+    xr.testing.assert_allclose(result.isel(time=1), expected_result1)
+
+
+def test_carrying_capacity_with_zeros(zero_rainfall_fixture, zero_population_fixture):
+    """
+    Test carrying_capacity with zero rainfall and population.
+    """
+    result = carrying_capacity(zero_rainfall_fixture, zero_population_fixture)
+    assert (result.values == 0).all()
+
+
+def test_carrying_capacity_with_nan_values(
+    rainfall_with_nan_fixture, population_data_time_independent_fixture
+):
+    """
+    Test carrying_capacity with NaN values in input data.
+    """
+    result = carrying_capacity(
+        rainfall_with_nan_fixture, population_data_time_independent_fixture
+    )
+    # The NaN should propagate. Check the position where NaN was introduced.
+    assert np.isnan(result.isel(time=1, latitude=0, longitude=0).values)
+
+
+def test_carrying_capacity_output_properties(
+    rainfall_data_fixture, population_data_time_independent_fixture
+):
+    """
+    Test the data type and shape of the output.
+    """
+    result = carrying_capacity(
+        rainfall_data_fixture, population_data_time_independent_fixture
+    )
+    assert isinstance(result, xr.DataArray)
+    assert result.shape == rainfall_data_fixture.shape
+    assert result.dtype == float
