@@ -5,6 +5,7 @@ import numpy as np
 from heiplanet_models.Pmodel.Pmodel_params import (
     CONSTANTS_MORTALITY_MOSQUITO_E,
     CONSTANTS_MORTALITY_MOSQUITO_J,
+    CONSTANTS_MORTALITY_MOSQUITO_A,
 )
 
 logger = logging.getLogger(__name__)
@@ -64,4 +65,42 @@ def mosq_mort_j(temperature: np.ndarray) -> np.ndarray:
 
     T_out = -np.log(T_out)
 
+    return T_out
+
+
+def mosq_mort_a(temperature: np.ndarray) -> np.ndarray:
+    """
+    Calculates the daily mortality rate for adult mosquitoes based on temperature.
+
+    This function implements the Octave `mosq_mort_a` logic in Python.
+
+    Args:
+        temperature (np.ndarray): Array of temperature values.
+
+    Returns:
+        numpy.ndarray: Array of daily adult mosquito mortality rates, elementwise for each temperature value.
+    """
+    CONST_1 = CONSTANTS_MORTALITY_MOSQUITO_A["CONST_1"]
+    CONST_2 = CONSTANTS_MORTALITY_MOSQUITO_A["CONST_2"]
+    CONST_3 = CONSTANTS_MORTALITY_MOSQUITO_A["CONST_3"]
+    CONST_4 = CONSTANTS_MORTALITY_MOSQUITO_A["CONST_4"]
+    CONST_5 = CONSTANTS_MORTALITY_MOSQUITO_A["CONST_5"]
+    CONST_6 = CONSTANTS_MORTALITY_MOSQUITO_A["CONST_6"]
+
+    T_out: np.ndarray = np.array(temperature).copy()
+    mask_pos = T_out > 0
+    mask_zero = ~mask_pos
+
+    # For T > 0
+    T_out[mask_pos] = (
+        CONST_1
+        * np.exp(CONST_2 * ((T_out[mask_pos] - CONST_3) / CONST_4) ** CONST_5)
+        * T_out[mask_pos] ** CONST_6
+    )
+    # For T <= 0
+    T_out[mask_zero] = CONST_1 * np.exp(
+        CONST_2 * ((T_out[mask_zero] - CONST_3) / CONST_4) ** CONST_5
+    )
+
+    T_out = -np.log(T_out)
     return T_out
