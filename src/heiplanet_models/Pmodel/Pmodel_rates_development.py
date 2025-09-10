@@ -104,7 +104,7 @@ def carrying_capacity(
 
     This function calculates the juvenile carrying capacity (Ref. Equation #14)
     based on a recursive formula involving historical rainfall and population
-    density.
+    density. It is optimized to use vectorized operations for performance.
 
     Args:
         rainfall_data: A DataArray containing rainfall data with dimensions
@@ -117,53 +117,41 @@ def carrying_capacity(
         An xarray DataArray representing the carrying capacity, with the same
         shape as the `rainfall_data`.
     """
-
     ALPHA_RAIN = CONSTANTS_CARRYING_CAPACITY["ALPHA_RAIN"]
     ALPHA_DENS = CONSTANTS_CARRYING_CAPACITY["ALPHA_DENS"]
     GAMMA = CONSTANTS_CARRYING_CAPACITY["GAMMA"]
     LAMBDA = CONSTANTS_CARRYING_CAPACITY["LAMBDA"]
 
-    logger.debug(f"rainfall_data dims: {rainfall_data.dims}")
-    logger.debug(f"population_data dims: {population_data.dims}")
+    logger.debug(f"rainfall_data dims: {rainfall_data.dims}, shape: {rainfall_data.shape}")
+    logger.debug(f"population_data dims: {population_data.dims}, shape: {population_data.shape}")
 
-    logger.debug(f"Rainfall data: {rainfall_data.values}")
-
-    logger.debug(f"Population data: {population_data.values}")
-
-    # Align population_data to rainfall_data if needed (assume population_data is time-invariant if no time dim)
     if "time" not in population_data.dims:
         population_data = population_data.expand_dims(time=rainfall_data.time)
 
-    # Initialize A with zeros
-    A = xr.zeros_like(rainfall_data)
+    population_data_initial_slice = population_data.isel(time=0)
 
-    # Initial condition for Population data
-    population_data_initial_slice = population_data.sel(time=rainfall_data.time[0])
-
-    A.loc[dict(time=rainfall_data.time[0])] = (
-        ALPHA_RAIN * rainfall_data.sel(time=rainfall_data.time[0])
-        + ALPHA_DENS * population_data_initial_slice
+    # Create an array of powers of GAMMA
+    time_size = len(rainfall_data.time)
+    gamma_powers = xr.DataArray(
+        GAMMA ** np.arange(time_size - 1, -1, -1), dims=["time"]
     )
 
-    # Recursive computation
-    for k in range(1, len(rainfall_data.time)):
-        prev_rainfall = A.sel(time=rainfall_data.time[k - 1])
-        curr_rainfall = rainfall_data.sel(time=rainfall_data.time[k])
-        A.loc[dict(time=rainfall_data.time[k])] = (
-            GAMMA * prev_rainfall
-            + ALPHA_RAIN * curr_rainfall
-            + ALPHA_DENS * population_data_initial_slice
-        )
+    # Calculate the term related to rainfall and population density
+    rainfall_term = ALPHA_RAIN * rainfall_data + ALPHA_DENS * population_data_initial_slice
+    
+    # Apply the recursive formula using cumulative sum
+    # This is equivalent to the loop but vectorized
+    A = (rainfall_term * gamma_powers).cumsum(dim="time", skipna=True) / gamma_powers
 
-    # Apply scaling factor
-    for k in range(1, len(rainfall_data.time)):
-        factor = (1 - GAMMA) / (1 - GAMMA ** (k + 1))
-        A.loc[dict(time=rainfall_data.time[k])] = factor * A.sel(
-            time=rainfall_data.time[k]
-        )
+    # Calculate the scaling factor
+    k = xr.DataArray(np.arange(time_size), dims="time")
+    scaling_factor = (1 - GAMMA) / (1 - GAMMA ** (k + 1))
+    
+    # Apply scaling factors
+    A_scaled = A * scaling_factor
 
     # Final scaling
-    result = A * LAMBDA
+    result = A_scaled * LAMBDA
     logger.debug("End of the function")
 
     return result

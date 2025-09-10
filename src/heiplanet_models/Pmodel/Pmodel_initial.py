@@ -36,7 +36,7 @@ def load_dataset(
     path_dataset: Union[Path, str],
     decode_times: bool = True,
     names_dimensions: Optional[dict[str, str]] = None,
-    chunks: Optional[dict[str, int]] = None,
+    chunks: Optional[dict[str, Union[int, str]]] = None,
     dimension_order: Optional[tuple[str, ...]] = None,
     variable_name: Optional[str] = None,
     **kwargs: Any,
@@ -47,7 +47,7 @@ def load_dataset(
         path_dataset: Path to the dataset file.
         decode_times: Whether to decode time coordinates.
         names_dimensions: Optional mapping for renaming dataset dimensions.
-        chunks: Optional Dask chunking scheme for efficient reading.
+        chunks: Optional Dask chunking scheme to apply after loading.
         dimension_order: Optional tuple specifying desired dimension order.
         variable_name: Optional variable name to extract from the dataset.
         **kwargs: Additional keyword arguments for xarray.open_dataset.
@@ -56,12 +56,11 @@ def load_dataset(
         xr.Dataset or xr.DataArray: Loaded dataset or extracted variable.
 
     Raises:
-        Exception: If dataset loading, renaming, transposing, or variable extraction fails.
+        Exception: If any step in loading or processing fails.
     """
     try:
         dataset = xr.open_dataset(
             filename_or_obj=path_dataset,
-            chunks=chunks,
             decode_times=decode_times,
             **kwargs,
         )
@@ -83,6 +82,13 @@ def load_dataset(
             dataset = dataset.transpose(*dimension_order)
         except Exception as e:
             logger.error(f"Failed to transpose dataset '{path_dataset}': {e}")
+            raise
+
+    if chunks:
+        try:
+            dataset = dataset.chunk(chunks)
+        except Exception as e:
+            logger.error(f"Failed to rechunk dataset '{path_dataset}': {e}")
             raise
 
     if variable_name:
@@ -234,7 +240,8 @@ def load_data(
     try:
         var_latitude = load_dataset(
             path_dataset=path_temperature,
-            names_dimensions={"time": "time"},
+            #names_dimensions={"time": "time"},
+            names_dimensions={"valid_time": "time"},
             chunks=CHUNKING_SCHEME,
             variable_name="latitude",
         )
@@ -254,7 +261,7 @@ def load_data(
         )
         var_temperature, var_temperature_mean = load_temperature(
             path_dataset=path_temperature,
-            names_dimensions={"time": "time"},
+            names_dimensions={"valid_time": "time"},
             chunks=CHUNKING_SCHEME,
             dimension_order=COORDINATES_ORDER,
             variable_name="t2m",
