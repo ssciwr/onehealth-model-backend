@@ -3,6 +3,7 @@ import numpy as np
 
 from heiplanet_models.Pmodel.Pmodel_rates_mortality import mosq_mort_e
 from heiplanet_models.Pmodel.Pmodel_rates_mortality import mosq_mort_j
+from heiplanet_models.Pmodel.Pmodel_rates_mortality import mosq_mort_a
 
 
 # ---- Pytest Fixtures
@@ -10,6 +11,30 @@ from heiplanet_models.Pmodel.Pmodel_rates_mortality import mosq_mort_j
 def typical_temperature_array():
     """Provides a 1D numpy array of typical temperature values."""
     return np.array([10, 20, 25, 30], dtype=float)
+
+
+@pytest.fixture
+def edge_case_temperature_array():
+    """Provides an array of edge case temperature values."""
+    return np.array([0, 50, -10, 100, 1000], dtype=float)
+
+
+@pytest.fixture
+def negative_temperature_array():
+    """Provides an array of negative temperature values."""
+    return np.array([-10, 0, 10], dtype=float)
+
+
+@pytest.fixture
+def empty_temperature_array():
+    """Provides an empty numpy array."""
+    return np.array([])
+
+
+@pytest.fixture
+def multidimensional_temperature_array():
+    """Provides a 2D numpy array of typical temperature values."""
+    return np.array([[10, 20], [25, 30]], dtype=float)
 
 
 # ---- Unit Tests for mosq_mort_e
@@ -190,4 +215,96 @@ def test_mosq_mort_j_numerical_stability_near_zero():
     # Create input that would result in a near-zero intermediate value
     T = np.array([-1e6, 1e6], dtype=float)
     result = mosq_mort_j(T)
+    assert np.all(np.isfinite(result) | np.isinf(result))
+
+
+# ---- Unit Tests for mosq_mort_a
+def test_mosq_mort_a_typical_temperatures(typical_temperature_array):
+    """Test mosq_mort_a with typical temperature values."""
+    result = mosq_mort_a(typical_temperature_array)
+    assert result.shape == typical_temperature_array.shape
+    assert np.all(np.isfinite(result))
+    assert isinstance(result, np.ndarray)
+
+
+def test_mosq_mort_a_scalar_input():
+    """Test mosq_mort_a with a scalar temperature value."""
+    temp = 25.0
+    result = mosq_mort_a(temp)
+    assert np.isscalar(result) or isinstance(result, float)
+    assert np.isfinite(result)
+
+
+def test_mosq_mort_a_multidimensional_input(multidimensional_temperature_array):
+    """Test mosq_mort_a with multi-dimensional input arrays."""
+    result = mosq_mort_a(multidimensional_temperature_array)
+    assert result.shape == multidimensional_temperature_array.shape
+    assert np.all(np.isfinite(result))
+
+
+def test_mosq_mort_a_edge_case_temperatures(edge_case_temperature_array):
+    """Test mosq_mort_a with edge case temperatures."""
+    result = mosq_mort_a(edge_case_temperature_array)
+    assert result.shape == edge_case_temperature_array.shape
+    assert np.all(np.isfinite(result) | np.isinf(result))
+
+
+def test_mosq_mort_a_negative_temperatures(negative_temperature_array):
+    """Test mosq_mort_a with negative temperature values."""
+    result = mosq_mort_a(negative_temperature_array)
+    assert result.shape == negative_temperature_array.shape
+    assert np.all(np.isfinite(result))
+
+
+def test_mosq_mort_a_large_temperatures():
+    """Test mosq_mort_a with very large temperature values."""
+    temps = np.array([100, 1000], dtype=float)
+    result = mosq_mort_a(temps)
+    assert result.shape == temps.shape
+    assert np.all(np.isfinite(result) | np.isinf(result))
+
+
+def test_mosq_mort_a_empty_array(empty_temperature_array):
+    """Test mosq_mort_a with an empty array."""
+    result = mosq_mort_a(empty_temperature_array)
+    assert result.size == 0
+    assert isinstance(result, np.ndarray)
+
+
+def test_mosq_mort_a_non_numeric_input():
+    """Test mosq_mort_a with non-numeric input values."""
+    with pytest.raises(TypeError):
+        mosq_mort_a(np.array(["a", "b"], dtype=object))
+
+
+def test_mosq_mort_a_output_consistency():
+    """Test mosq_mort_a output matches manual calculation for known input."""
+    from heiplanet_models.Pmodel.Pmodel_params import CONSTANTS_MORTALITY_MOSQUITO_A
+
+    CONST_1 = CONSTANTS_MORTALITY_MOSQUITO_A["CONST_1"]
+    CONST_2 = CONSTANTS_MORTALITY_MOSQUITO_A["CONST_2"]
+    CONST_3 = CONSTANTS_MORTALITY_MOSQUITO_A["CONST_3"]
+    CONST_4 = CONSTANTS_MORTALITY_MOSQUITO_A["CONST_4"]
+    CONST_5 = CONSTANTS_MORTALITY_MOSQUITO_A["CONST_5"]
+    CONST_6 = CONSTANTS_MORTALITY_MOSQUITO_A["CONST_6"]
+    T = np.array([15.0, 25.0])
+    expected = -np.log(
+        CONST_1 * np.exp(CONST_2 * ((T - CONST_3) / CONST_4) ** CONST_5) * T**CONST_6
+    )
+    result = mosq_mort_a(T)
+    np.testing.assert_allclose(result, expected)
+
+
+def test_mosq_mort_a_known_matrix_output():
+    """Test mosq_mort_a returns expected output for a specific matrix."""
+    T = np.array([[15.0, 20.0], [25.0, 30.0]])
+    expected = np.array([[0.123266, 0.090511], [0.068645, 0.103640]])
+    result = mosq_mort_a(T)
+    np.testing.assert_allclose(result, expected, atol=1e-6)
+
+
+def test_mosq_mort_a_numerical_stability_near_zero():
+    """Test mosq_mort_a avoids log(0) errors for near-zero intermediate results."""
+    T = np.array([-1e6, 1e6], dtype=float)
+    result = mosq_mort_a(T)
     assert np.all(np.isfinite(result) | np.isinf(result))
