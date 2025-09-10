@@ -108,3 +108,11 @@ CONSTANTS_MORTALITY_MOSQUITO_E = {
     "CONST_4": 21.53,
     "CONST_5": 6,
 }
+
+CONSTANTS_MORTALITY_MOSQUITO_J = {
+    "CONST_1": 0.977,
+    "CONST_2": -0.5,
+    "CONST_3": 21.8,
+    "CONST_4": 16.6,
+    "CONST_5": 6,
+}
