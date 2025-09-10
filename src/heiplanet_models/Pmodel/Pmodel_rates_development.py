@@ -34,7 +34,7 @@ def mosq_dev_j(temperature: np.ndarray) -> np.ndarray:
 
     # # New function briere with coeffiecint with initial data collection, for Sandra and Zia model
     # # Commented on purpose
-    # temperature = q*temperatute*(temperatute - T0 )*((Tm - temperatute)^(1/2));
+    # temperature = q*temperatute*(temperatute - T0 )*((Tm - temperatute)**(1/2));
 
     T_out = CONST_1 - CONST_2 * temperature + CONST_3 * temperature**2
     T_out = CONST_4 / T_out
@@ -61,7 +61,7 @@ def mosq_dev_i(temperature: np.ndarray) -> np.ndarray:
 
     # # New function briere with coeffiecint with initial data collection, for Sandra and Zia model
     # # Commented on purpose
-    # temperature = q*temperature*(temperature - T0 )*((Tm - temperature)^(1/2));
+    # temperature = q*temperature*(temperature - T0 )*((Tm - temperature)**(1/2));
 
     T_out = CONST_1 - CONST_2 * temperature + CONST_3 * temperature**2
     T_out = CONST_4 / T_out
@@ -86,7 +86,9 @@ def mosq_dev_e(temperature: np.ndarray) -> np.ndarray:
     Tm = CONSTANTS_MOSQUITO_E["Tm"]
 
     # # New function briere with coeffiecint with initial data collection, for Sandra and Zia model
-    T_out = q * temperature * (temperature - T0) * ((Tm - temperature) ^ (1 / 2))
+    T_out = (
+        q * temperature * (temperature - T0) * ((Tm - temperature) ** (1 / 2))
+    )  # Corrected ^ to **
 
     # Found in original code
     # T_out = CONST_1 - CONST_2 * temperatute + CONST_3 * temperatute**2;
