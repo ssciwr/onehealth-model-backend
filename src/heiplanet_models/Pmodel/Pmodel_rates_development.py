@@ -85,10 +85,8 @@ def mosq_dev_e(temperature: np.ndarray) -> np.ndarray:
     T0 = CONSTANTS_MOSQUITO_E["T0"]
     Tm = CONSTANTS_MOSQUITO_E["Tm"]
 
-    # Apply the Brière model formula elementwise
-    T_out: np.ndarray = (
-        q * temperature * (temperature - T0) * np.sqrt(np.maximum(Tm - temperature, 0))
-    )
+    # # New function briere with coeffiecint with initial data collection, for Sandra and Zia model
+    T_out = q * temperature * (temperature - T0) * ((Tm - temperature) ^ (1 / 2))
 
     # Found in original code
     # T_out = CONST_1 - CONST_2 * temperatute + CONST_3 * temperatute**2;
