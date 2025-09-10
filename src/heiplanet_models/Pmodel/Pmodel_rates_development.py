@@ -94,8 +94,6 @@ def mosq_dev_e(temperature: np.ndarray) -> np.ndarray:
     # T_out = CONST_1 - CONST_2 * temperatute + CONST_3 * temperatute**2;
     # T_out = CONST_4 ./ T_OUT;
 
-    # Ensure no negative values due to sqrt of negative numbers
-    T_out = np.where((temperature > T0) & (temperature < Tm), T_out, 0.0)
     return T_out
 
 
