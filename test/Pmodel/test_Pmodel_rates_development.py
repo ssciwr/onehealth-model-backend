@@ -227,6 +227,44 @@ def test_mosq_dev_e_boundary_temperatures():
     np.testing.assert_allclose(result, expected, atol=1e-9)
 
 
+def test_mosq_dev_e_large_temperatures():
+    """Test mosq_dev_e with very large temperature values."""
+    temps = np.array([100, 1000], dtype=float)
+    with np.errstate(invalid="ignore"):
+        result = mosq_dev_e(temps)
+    assert result.shape == temps.shape
+    # Values above Tm should be nan
+    assert np.all(np.isnan(result[temps > CONSTANTS_MOSQUITO_E["Tm"]]))
+
+
+def test_mosq_dev_e_empty_array():
+    """Test mosq_dev_e with an empty array."""
+    temps = np.array([])
+    result = mosq_dev_e(temps)
+    assert result.size == 0
+    assert isinstance(result, np.ndarray)
+
+
+def test_mosq_dev_e_multidimensional_input():
+    """Test mosq_dev_e with multi-dimensional input arrays."""
+    temps = np.array([[20, 25], [30, 35]], dtype=float)
+    with np.errstate(invalid="ignore"):
+        result = mosq_dev_e(temps)
+    assert result.shape == temps.shape
+    assert np.all(np.isfinite(result[np.where(temps <= CONSTANTS_MOSQUITO_E["Tm"])]))
+
+
+def test_mosq_dev_e_output_consistency():
+    """Test mosq_dev_e output matches manual calculation for known input."""
+    q = CONSTANTS_MOSQUITO_E["q"]
+    T0 = CONSTANTS_MOSQUITO_E["T0"]
+    Tm = CONSTANTS_MOSQUITO_E["Tm"]
+    T = np.array([15.0, 25.0])
+    expected = q * T * (T - T0) * ((Tm - T) ** (1 / 2))
+    result = mosq_dev_e(T)
+    np.testing.assert_allclose(result, expected)
+
+
 def test_mosq_dev_e_non_numeric_input():
     """Test mosq_dev_e with non-numeric input values."""
     with pytest.raises(TypeError):
