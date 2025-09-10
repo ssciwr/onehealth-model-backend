@@ -96,3 +96,15 @@ CONSTANTS_CARRYING_CAPACITY = {
     "GAMMA": 9e-1,
     "LAMBDA": 1e6 * 625 * 100,
 }
+
+# ----------------------------------------------------
+# ----       Mortality function constants         ----
+# ----------------------------------------------------
+
+CONSTANTS_MORTALITY_MOSQUITO_E = {
+    "CONST_1": 0.955,
+    "CONST_2": -0.5,
+    "CONST_3": 18.8,
+    "CONST_4": 21.53,
+    "CONST_5": 6,
+}
