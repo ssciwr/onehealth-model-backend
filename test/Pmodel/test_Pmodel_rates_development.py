@@ -2,7 +2,12 @@ import pytest
 
 import numpy as np
 
-from heiplanet_models.Pmodel.Pmodel_rates_development import mosq_dev_j, mosq_dev_i
+from heiplanet_models.Pmodel.Pmodel_rates_development import (
+    mosq_dev_j,
+    mosq_dev_i,
+    mosq_dev_e,
+)
+from heiplanet_models.Pmodel.Pmodel_params import CONSTANTS_MOSQUITO_E
 
 
 # ---- Pytest Fixtures
@@ -16,6 +21,12 @@ def typical_temperature_array():
 def typical_temperature_array_i():
     """Provides a 1D numpy array of typical temperature values for mosq_dev_i."""
     return np.array([10, 20, 25, 30], dtype=float)
+
+
+@pytest.fixture
+def typical_temperature_array_e():
+    """Provides a 1D numpy array of typical temperature values for mosq_dev_e."""
+    return np.array([15, 20, 25, 30], dtype=float)
 
 
 # ---- Unit Tests for mosq_dev_j
@@ -187,3 +198,49 @@ def test_mosq_dev_i_known_matrix_output():
     expected = np.array([[0.083229, 0.160772], [0.258065, 0.200803]])
     result = mosq_dev_i(T)
     np.testing.assert_allclose(result, expected, atol=1e-6)
+
+
+# ---- Unit Tests for mosq_dev_e
+def test_mosq_dev_e_scalar_input():
+    """Test mosq_dev_e with a scalar temperature value."""
+    temp = 25.0
+    result = mosq_dev_e(temp)
+    assert np.isscalar(result) or isinstance(result, float)
+    assert np.isfinite(result)
+
+
+def test_mosq_dev_e_typical_temperatures(typical_temperature_array_e):
+    """Test mosq_dev_e with typical temperature values."""
+    result = mosq_dev_e(typical_temperature_array_e)
+    assert result.shape == typical_temperature_array_e.shape
+    assert np.all(np.isfinite(result))
+    assert isinstance(result, np.ndarray)
+
+
+def test_mosq_dev_e_boundary_temperatures():
+    """Test mosq_dev_e with boundary temperatures T0 and Tm."""
+    T0 = CONSTANTS_MOSQUITO_E["T0"]
+    Tm = CONSTANTS_MOSQUITO_E["Tm"]
+    temps = np.array([T0, Tm])
+    result = mosq_dev_e(temps)
+    expected = np.array([0.0, 0.0])
+    np.testing.assert_allclose(result, expected, atol=1e-9)
+
+
+def test_mosq_dev_e_non_numeric_input():
+    """Test mosq_dev_e with non-numeric input values."""
+    with pytest.raises(TypeError):
+        mosq_dev_e("a string")
+    with pytest.raises(TypeError):
+        mosq_dev_e([25.0, "30.0"])
+
+
+def test_mosq_dev_e_known_matrix_output():
+    """Test mosq_dev_e returns expected output for a specific matrix."""
+    T = np.array([[15.0, 20.0], [25.0, 30.0]])
+    # Expected values calculated manually based on the corrected formula
+    expected = np.array([[0.1800, 0.2532, 0.3016, 0.2819]])
+    # Reshape to match input
+    expected = expected.reshape(2, 2)
+    result = mosq_dev_e(T)
+    np.testing.assert_allclose(result, expected, atol=1e-4)
