@@ -10,14 +10,14 @@ from heiplanet_models.Pmodel.config import (
 from heiplanet_models.Pmodel.Pmodel_initial import load_data
 
 
-
 INITIAL_YEAR = 2024
 FINAL_YEAR = 2024
 
 
-# Main processor
+# Main processor 
 for year in range(INITIAL_YEAR, FINAL_YEAR + 1):
     logging.basicConfig(level=logging.DEBUG)
+    
     # Generate filenames using f-strings for better readability
     path_file_temperature_dataset = PATH_ROOT / f'{DATASET_PREFIXES["TEMPERATURE_DATASET"]}{year}.nc'
     path_file_rainfall_dataset = PATH_ROOT / f'{DATASET_PREFIXES["RAINFALL_DATASET"]}{year}.nc'

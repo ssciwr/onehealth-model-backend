@@ -20,6 +20,7 @@ from heiplanet_models.Pmodel.config import (
     CHUNKING_SCHEME,
     COORDINATES_ORDER,
     MODEL_VARIABLES,
+    PATH_DATASETS_PRODUCTION,
     PATH_DATASETS_SANDBOX,
     TIME_STEP,
     CONST_K1,
@@ -216,9 +217,9 @@ def align_xarray_datasets(
 
 
 def load_data(
-    path_temperature: Union[Path, str] = PATH_DATASETS_SANDBOX["TEMPERATURE"],
-    path_rainfall: Union[Path, str] = PATH_DATASETS_SANDBOX["RAINFALL"],
-    path_population: Union[Path, str] = PATH_DATASETS_SANDBOX["HUMAN_POPULATION"],
+    path_temperature: Union[Path, str] = PATH_DATASETS_PRODUCTION["TEMPERATURE"],
+    path_rainfall: Union[Path, str] = PATH_DATASETS_PRODUCTION["RAINFALL"],
+    path_population: Union[Path, str] = PATH_DATASETS_PRODUCTION["HUMAN_POPULATION"],
     filepath_previous: Optional[Union[Path, str]] = None,
     time_step: int = TIME_STEP,
 ) -> PmodelInput:
@@ -261,6 +262,7 @@ def load_data(
         )
         var_temperature, var_temperature_mean = load_temperature(
             path_dataset=path_temperature,
+            #names_dimensions={"time": "time"},
             names_dimensions={"valid_time": "time"},
             chunks=CHUNKING_SCHEME,
             dimension_order=COORDINATES_ORDER,

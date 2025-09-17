@@ -10,7 +10,35 @@ logger.addHandler(logging.NullHandler())
 # ---- Root folder where all the NetCDF files will be stored
 PATH_ROOT = Path("data/in/Pratik_datalake")
 
-# ---- Paths to files
+DATASET_PREFIXES = {
+    "TEMPERATURE":"ERA5land_global_t2m_daily_0.5_",
+    "RAINFALL" : "ERA5land_global_tp_daily_0.5_",
+    "POPULATION_DENSITY" : "pop_dens_",
+}
+
+SETTINGS_DATASET= {
+    "TEMPERATURE":{
+        "decode_times": False,
+        "names_dimensions":{"valid_time: time"},    
+        "dimension_order": ("longitude", "latitude", "time"),
+        "variable_name": "t2m",
+    },
+    "RAINFALL":{
+        "names_dimensions": None,
+        "dimension_order": ("longitude", "latitude", "time"),
+        "variable_name": "tp",
+    },
+    "POPULATION":{
+        "decode_times": True,
+        "names_dimensions":{"lon": "longitude", "lat": "latitude", "time": "time"},
+        "dimension_order": ("longitude", "latitude", "time"),
+        "variable_name":"dens"
+
+    }
+
+}
+
+# # ---- Paths to files
 PATH_DATASETS_SANDBOX = {
     "TEMPERATURE": Path("data/in/Pratik_datalake/temperature_dummy.nc"),
     "RAINFALL": Path("data/in/Pratik_datalake/pr_dummy.nc"),
@@ -25,11 +53,9 @@ PATH_DATASETS_PRODUCTION = {
     "HUMAN_POPULATION": Path("data/in/Pratik_datalake/pop_dens_2024_global_0.5.nc"),
 }
 
-DATASET_PREFIXES = {
-    "TEMPERATURE_DATASET":"ERA5land_global_t2m_daily_0.5_",
-    "RAINFALL_DATASET" : "ERA5land_global_tp_daily_0.5_",
-    "POPULATION_DENSITY_DATASET" : "pop_dens_",
-}
+
+
+
 
 # ---- Configuration initial conditions
 CONST_K1 = 625
@@ -46,10 +72,3 @@ COORDINATES_ORDER = ("longitude", "latitude", "time")
 # ---- ODE
 MODEL_VARIABLES = ["eggs", "ed", "juv", "imm", "adults"]
 TIME_STEP = 10
-
-
-DATASET_PREFIXES = {
-    "TEMPERATURE_DATASET":"ERA5land_global_t2m_daily_0.5_",
-    "RAINFALL_DATASET" : "ERA5land_global_tp_daily_0.5_",
-    "POPULATION_DENSITY_DATASET" : "pop_dens_",
-}

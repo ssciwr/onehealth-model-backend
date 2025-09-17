@@ -21,6 +21,7 @@ Key functions include:
 """
 
 import logging
+import time
 from typing import Union
 
 import numpy as np
@@ -41,9 +42,48 @@ from heiplanet_models.Pmodel.Pmodel_params import (
 )
 
 
+
 # ---- Logger
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
+
+# ---- Old Implementation for Comparison
+def mosq_dia_hatch_old(temperature: xr.DataArray, latitude: xr.DataArray) -> xr.DataArray:
+    """Original (loop-based) implementation of mosquito diapause hatching for comparison."""
+    PERIOD = CONSTANTS_MOSQUITO_DIAPAUSE_HATCHING["PERIOD"]
+    CPP = CONSTANTS_MOSQUITO_DIAPAUSE_HATCHING["CPP"]
+    CTT = CONSTANTS_MOSQUITO_DIAPAUSE_HATCHING["CTT"]
+    RATIO_DIA_HATCH = CONSTANTS_MOSQUITO_DIAPAUSE_HATCHING["RATIO_DIA_HATCH"]
+    DAYLENGTH_COEFFICIENT = CONSTANTS_MOSQUITO_DIAPAUSE_HATCHING["DAYLENGTH_COEFFICIENT"]
+
+    if temperature.ndim != 3:
+        raise ValueError("Temperature array must be 3D (longitude, latitude, time).")
+    if latitude.ndim != 1:
+        raise ValueError("Latitude array must be 1D.")
+
+    n_longitude, n_latitude, n_time = temperature.shape
+    out = temperature.copy().values
+    for k in range(n_time - 1, PERIOD - 2, -1):
+        out[:, :, k] = np.mean(out[:, :, (k - PERIOD + 1):(k + 1)], axis=2)
+    out[out < CTT] = 0
+    days = np.arange(1, n_time + 1)
+    theta = revolution_angle(days)
+    phi = declination_angle(theta)
+    latitude_degrees = latitude.values
+    for k in range(n_latitude):
+        lat = latitude_degrees[k]
+        daylight = daylight_forsythe(
+            latitude=lat,
+            declination_angle=phi,
+            daylight_coefficient=DAYLENGTH_COEFFICIENT,
+        )
+        daylight_matrix = np.tile(daylight, (n_longitude, 1))
+        T_help = out[:, k, :]
+        T_help[daylight_matrix < CPP] = 0
+        out[:, k, :] = T_help
+    out = np.nan_to_num(out, nan=0.0)
+    out[out > 0] = RATIO_DIA_HATCH
+    return xr.DataArray(out, dims=temperature.dims, coords=temperature.coords)
 
 
 # ---- Helper Functions
@@ -144,8 +184,13 @@ def daylight_forsythe(
         ValueError: If latitude is not between -90 and 90 degrees.
     """
 
-    if not MIN_LAT_DEGREES <= latitude <= MAX_LAT_DEGREES:
-        raise ValueError("Latitude must be between -90 and 90 degrees.")
+    # Vectorized latitude check
+    if isinstance(latitude, (np.ndarray, list)):
+        if not np.all((MIN_LAT_DEGREES <= np.array(latitude)) & (np.array(latitude) <= MAX_LAT_DEGREES)):
+            raise ValueError("All latitude values must be between -90 and 90 degrees.")
+    else:
+        if not (MIN_LAT_DEGREES <= latitude <= MAX_LAT_DEGREES):
+            raise ValueError("Latitude must be between -90 and 90 degrees.")
 
     latitude_rad = np.deg2rad(latitude)
     daylight_coeff_rad = np.deg2rad(daylight_coefficient).squeeze()
@@ -220,9 +265,7 @@ def mosq_dia_hatch(temperature: xr.DataArray, latitude: xr.DataArray) -> xr.Data
     CPP = CONSTANTS_MOSQUITO_DIAPAUSE_HATCHING["CPP"]
     CTT = CONSTANTS_MOSQUITO_DIAPAUSE_HATCHING["CTT"]
     RATIO_DIA_HATCH = CONSTANTS_MOSQUITO_DIAPAUSE_HATCHING["RATIO_DIA_HATCH"]
-    DAYLENGTH_COEFFICIENT = CONSTANTS_MOSQUITO_DIAPAUSE_HATCHING[
-        "DAYLENGTH_COEFFICIENT"
-    ]
+    DAYLENGTH_COEFFICIENT = CONSTANTS_MOSQUITO_DIAPAUSE_HATCHING["DAYLENGTH_COEFFICIENT"]
 
     # Validate input dimensions
     if temperature.ndim != 3:
@@ -230,47 +273,44 @@ def mosq_dia_hatch(temperature: xr.DataArray, latitude: xr.DataArray) -> xr.Data
     if latitude.ndim != 1:
         raise ValueError("Latitude array must be 1D.")
 
-    n_longitude, n_latitude, n_time = temperature.shape
+    # Use xarray rolling mean for temperature over 'time' dimension
+    temp_rolling = temperature.rolling(time=PERIOD, min_periods=PERIOD).mean()
 
-    # Calculate mean temperature of the last 'PERIOD' days and compare to CTT
-    out = temperature.copy().values
-    for k in range(n_time - 1, PERIOD - 2, -1):
-        out[:, :, k] = np.mean(out[:, :, (k - PERIOD + 1) : (k + 1)], axis=2)
+    # To match the original: leave first PERIOD-1 time steps unchanged
+    temp_rolling_corrected = temp_rolling.copy()
 
     # Mask values below critical temperature threshold
-    out[out < CTT] = 0
+    temp_masked = temp_rolling_corrected.where(temp_rolling_corrected >= CTT, 0)
 
+    # Prepare for vectorized daylight calculation
+    n_time = temperature.sizes["time"]
+    n_latitude = temperature.sizes["latitude"]
+    n_longitude = temperature.sizes["longitude"]
     days = np.arange(1, n_time + 1)
     theta = revolution_angle(days)
     phi = declination_angle(theta)  # shape: (n_time,)
 
-    latitude_degrees = latitude.values
+    # Broadcast latitude and declination to 2D arrays (latitude, time)
+    lat_vals = latitude.values[:, np.newaxis]  # shape (n_latitude, 1)
+    phi_vals = phi[np.newaxis, :]  # shape (1, n_time)
+    daylight = daylight_forsythe(
+        latitude=lat_vals,
+        declination_angle=phi_vals,
+        daylight_coefficient=DAYLENGTH_COEFFICIENT,
+    )  # shape (n_latitude, n_time)
 
-    for k in range(n_latitude):
-        lat = latitude_degrees[k]
+    # Mask where daylight < CPP (broadcast to all longitudes)
+    daylight_mask = daylight >= CPP  # shape (n_latitude, n_time)
+    # Expand to (longitude, latitude, time)
+    daylight_mask_3d = np.broadcast_to(daylight_mask, (n_longitude, n_latitude, n_time))
 
-        daylight = daylight_forsythe(
-            latitude=lat,
-            declination_angle=phi,
-            daylight_coefficient=DAYLENGTH_COEFFICIENT,
-        )
-
-        # Replicate daylight shape to (x, z)
-        daylight_matrix = np.tile(daylight, (n_longitude, 1))
-
-        # Mask where daylight < CPP
-        T_help = out[:, k, :]
-        T_help[daylight_matrix < CPP] = 0
-        out[:, k, :] = T_help
-
+    # Apply daylight mask to temp_masked
+    out = temp_masked.where(daylight_mask_3d, 0)
     # Set NaNs to 0
-    out = np.nan_to_num(out, nan=0.0)
-
+    out = out.fillna(0)
     # Binarize and scale
-    out[out > 0] = RATIO_DIA_HATCH
-
-    # Return as xarray.DataArray with same dims/coords as input
-    return xr.DataArray(out, dims=temperature.dims, coords=temperature.coords)
+    out = xr.where(out > 0, RATIO_DIA_HATCH, 0)
+    return out
 
 
 def mosq_dia_lay(temperature: xr.DataArray, latitude: xr.DataArray) -> xr.DataArray:
@@ -445,8 +485,22 @@ if __name__ == "__main__":
     # TODO: test this function
 
     print("\n---- function: mosquito_diapause_hatch()")
-    result = mosq_dia_hatch(model_data.temperature_mean, model_data.latitude)
-    print(f"{print_slices(result, 3)}")
+
+    # Compare old and new implementations
+    t0 = time.time()
+    result_old = mosq_dia_hatch_old(model_data.temperature_mean, model_data.latitude)
+    t1 = time.time()
+    print(f"Old (loop) implementation time: {t1-t0:.4f} s")
+    print_slices(result_old, 3)
+
+    t2 = time.time()
+    result_new = mosq_dia_hatch(model_data.temperature_mean, model_data.latitude)
+    t3 = time.time()
+    print(f"New (vectorized) implementation time: {t3-t2:.4f} s")
+    print_slices(result_new, 3)
+
+    # Check if results are close
+    print("Are results close?", np.allclose(result_old.values, result_new.values, atol=1e-6))
 
     print("\n---- function: mosquito_diapause_lay()")
     # TODO: test this function
