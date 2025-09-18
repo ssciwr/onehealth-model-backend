@@ -125,11 +125,13 @@ def non_existing_paths(tmp_path):
 
 
 @pytest.fixture
-def standard_etl_settings():
+def standard_etl_settings(tmp_path):
     """Fixture for standard ETL settings for testing."""
+    data_dir = tmp_path / "data"
+    data_dir.mkdir()
     return {
         "ingestion": {
-            "path_root_datasets": "/tmp/data",
+            "path_root_datasets": str(data_dir),
             "filename_components": {
                 "temperature": {
                     "prefix": "temp_",
