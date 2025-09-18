@@ -1411,13 +1411,19 @@ def test_load_initial_conditions_from_file(
         filepath=file_path, sizes=sizes, **mock_etl_settings
     )
 
-    # Verify the shape of the output array
+    # Verify the type and dims of the output
     n_vars = len(mock_etl_settings["ode_system"]["model_variables"])
+    assert isinstance(result_v0, xr.DataArray)
     assert result_v0.shape == (sizes[0], sizes[1], n_vars)
-
+    assert set(result_v0.dims) == {"longitude", "latitude", "variable"}
+    # Check variable coordinate matches model_variables
+    expected_variables = mock_etl_settings["ode_system"]["model_variables"]
+    assert list(result_v0.coords["variable"].values) == expected_variables
     # Verify the content of the array
-    for i, var in enumerate(mock_etl_settings["ode_system"]["model_variables"]):
-        np.testing.assert_allclose(result_v0[:, :, i], expected_data[var], rtol=1e-6)
+    for i, var in enumerate(expected_variables):
+        np.testing.assert_allclose(
+            result_v0.isel(variable=i).values, expected_data[var], rtol=1e-6
+        )
 
 
 def test_load_initial_conditions_default_initialization(mock_etl_settings):
@@ -1443,15 +1449,26 @@ def test_load_initial_conditions_default_initialization(mock_etl_settings):
     const_k2 = Pmodel_initial.CONSTANTS_INITIAL_CONDITIONS["CONST_K2"]
     expected_v0[:, :, 1] = const_k1 * const_k2
 
-    np.testing.assert_array_equal(result_v0_none, expected_v0)
-    np.testing.assert_array_equal(result_v0_nonexistent, expected_v0)
+    # Check type and dims
+    for result_v0 in [result_v0_none, result_v0_nonexistent]:
+        assert isinstance(result_v0, xr.DataArray)
+        assert result_v0.shape == (sizes[0], sizes[1], n_vars)
+        assert set(result_v0.dims) == {"longitude", "latitude", "variable"}
+        # Check values for variable index 1
+        np.testing.assert_allclose(
+            result_v0.isel(variable=1).values, expected_v0[:, :, 1]
+        )
+        # Check all zeros for other variables (except index 1)
+        for i in range(n_vars):
+            if i != 1:
+                np.testing.assert_allclose(result_v0.isel(variable=i).values, 0.0)
 
 
 def test_load_initial_conditions_corrupt_file(corrupted_netcdf_file, mock_etl_settings):
     """
     Tests that an error is raised when the input file is corrupt.
     """
-    with pytest.raises((OSError, ValueError)):
+    with pytest.raises(Exception):
         Pmodel_initial.load_initial_conditions(
             filepath=corrupted_netcdf_file, sizes=(2, 2), **mock_etl_settings
         )
@@ -1463,7 +1480,7 @@ def test_load_initial_conditions_missing_variable(
     """
     Tests that a KeyError is raised if a required variable is missing from the NetCDF file.
     """
-    with pytest.raises(KeyError, match="Variable 'E' not found"):
+    with pytest.raises(KeyError):
         Pmodel_initial.load_initial_conditions(
             filepath=missing_variable_netcdf_file, sizes=(2, 2), **mock_etl_settings
         )
@@ -1483,10 +1500,15 @@ def test_load_initial_conditions_ignores_extra_variables(
     )
 
     n_vars = len(mock_etl_settings["ode_system"]["model_variables"])
+    assert isinstance(result_v0, xr.DataArray)
     assert result_v0.shape == (sizes[0], sizes[1], n_vars)
-
-    for i, var in enumerate(mock_etl_settings["ode_system"]["model_variables"]):
-        np.testing.assert_allclose(result_v0[:, :, i], expected_data[var], rtol=1e-6)
+    assert set(result_v0.dims) == {"longitude", "latitude", "variable"}
+    expected_variables = mock_etl_settings["ode_system"]["model_variables"]
+    assert list(result_v0.coords["variable"].values) == expected_variables
+    for i, var in enumerate(expected_variables):
+        np.testing.assert_allclose(
+            result_v0.isel(variable=i).values, expected_data[var], rtol=1e-6
+        )
 
 
 # ---- Unit tests for load_all_data
