@@ -44,7 +44,7 @@ def read_global_settings(filepath_configuration_file: str) -> dict[str, Any]:
     return global_settings
 
 
-def check_all_paths_exist(path_dict: dict[str, str | Path]) -> bool:
+def check_all_paths_exist(path_dict: dict[str, Union[str, Path]]) -> bool:
     """Check if all values in the dictionary are existing filesystem paths.
 
     Args:
@@ -135,7 +135,7 @@ def preprocess_dataset(dataset: xr.Dataset, **kwargs) -> xr.Dataset:
         dataset (xr.Dataset): The xarray Dataset to preprocess.
         **kwargs: Optional keyword arguments:
             - names_dimensions (dict[str, str]): Mapping of old to new dimension names for renaming.
-            - dimension_order (list[str] | tuple[str, ...]): Desired order of dimensions for transposing.
+            - dimension_order (Union[list[str], tuple[str, ...]]): Desired order of dimensions for transposing.
 
     Returns:
         xr.Dataset: The preprocessed xarray Dataset.
