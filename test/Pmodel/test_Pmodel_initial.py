@@ -14,7 +14,7 @@ import numpy as np
 import xarray as xr
 import pandas as pd
 
-from src.heiplanet_models.Pmodel import Pmodel_initial
+from heiplanet_models.Pmodel import Pmodel_initial
 
 
 # ===================================
