@@ -1522,7 +1522,7 @@ def test_load_all_data_happy_path(
 
     # --- Call the function under test ---
     result = Pmodel_initial.load_all_data(
-        paths=mock_data_paths, ETL_SETTINGS=full_etl_settings
+        paths=mock_data_paths, etl_settings=full_etl_settings
     )
 
     # --- Assertions ---
@@ -1556,7 +1556,7 @@ def test_load_all_data_missing_path(full_etl_settings, mock_data_paths):
 
     with pytest.raises(KeyError, match="temperature_dataset"):
         Pmodel_initial.load_all_data(
-            paths=mock_data_paths, ETL_SETTINGS=full_etl_settings
+            paths=mock_data_paths, etl_settings=full_etl_settings
         )
 
 
@@ -1575,7 +1575,7 @@ def test_load_all_data_loading_error(monkeypatch, full_etl_settings, mock_data_p
 
     with pytest.raises(FileNotFoundError, match="Dataset file not found"):
         Pmodel_initial.load_all_data(
-            paths=mock_data_paths, ETL_SETTINGS=full_etl_settings
+            paths=mock_data_paths, etl_settings=full_etl_settings
         )
 
 
@@ -1617,7 +1617,7 @@ def test_load_all_data_processing_error(
 
     with pytest.raises(ValueError, match="Processing failed"):
         Pmodel_initial.load_all_data(
-            paths=mock_data_paths, ETL_SETTINGS=full_etl_settings
+            paths=mock_data_paths, etl_settings=full_etl_settings
         )
 
 
@@ -1649,5 +1649,5 @@ def test_load_all_data_missing_etl_config(
 
     with pytest.raises(KeyError, match="data_variable"):
         Pmodel_initial.load_all_data(
-            paths=mock_data_paths, ETL_SETTINGS=full_etl_settings
+            paths=mock_data_paths, etl_settings=full_etl_settings
         )
