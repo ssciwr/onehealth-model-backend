@@ -389,22 +389,8 @@ def load_initial_conditions(
     filepath: Optional[Union[Path, str]] = None,
     sizes: tuple[int, int] = (0, 0),
     **etl_settings,
-) -> np.ndarray:
-    """Load or initialize the model state variables for the simulation.
-
-    Args:
-        filepath (Optional[Union[Path, str]]): Path to a file containing previous initial conditions. If None or file does not exist, initializes with default values.
-        sizes (tuple[int, int]): Tuple specifying the (longitude, latitude) grid sizes.
-        **etl_settings: Arbitrary keyword arguments containing ETL configuration.
-
-    Returns:
-        np.ndarray: Initialized or loaded state variable array with shape (n_longitude, n_latitude, n_vars).
-
-    Raises:
-        FileNotFoundError: If the specified file does not exist when required.
-        KeyError: If a required variable is missing in previous conditions or ETL settings.
-        Exception: If loading or extracting previous conditions fails for other reasons.
-    """
+) -> xr.DataArray:
+    """Load or initialize the model state variables for the simulation as an xarray.DataArray."""
 
     CONST_K1 = CONSTANTS_INITIAL_CONDITIONS["CONST_K1"]
     CONST_K2 = CONSTANTS_INITIAL_CONDITIONS["CONST_K2"]
@@ -413,10 +399,16 @@ def load_initial_conditions(
 
     n_longitude, n_latitude = sizes
     n_vars = len(MODEL_VARIABLES)
-    v0 = np.zeros((n_longitude, n_latitude, n_vars), dtype=np.float64)
+
+    coords = {
+        "longitude": np.arange(n_longitude),
+        "latitude": np.arange(n_latitude),
+        "variable": MODEL_VARIABLES,
+    }
 
     if filepath is None or not Path(filepath).exists():
-        v0[:, :, 1] = CONST_K1 * CONST_K2
+        data = np.zeros((n_longitude, n_latitude, n_vars), dtype=np.float64)
+        data[:, :, 1] = CONST_K1 * CONST_K2
         logger.info("Initialized initial conditions with default values.")
     else:
         try:
@@ -426,6 +418,7 @@ def load_initial_conditions(
                 f"Failed to load previous initial conditions from '{filepath}': {e}"
             )
             raise
+        data = np.zeros((n_longitude, n_latitude, n_vars), dtype=np.float64)
         for i, var in enumerate(MODEL_VARIABLES):
             if var not in ds:
                 logger.error(
@@ -435,14 +428,21 @@ def load_initial_conditions(
                     f"Variable '{var}' not found in previous conditions dataset."
                 )
             try:
-                v0[:, :, i] = ds[var].isel(time=-1).values
+                data[:, :, i] = ds[var].isel(time=-1).values
             except Exception as e:
                 logger.error(
                     f"Failed to extract variable '{var}' from previous conditions: {e}"
                 )
                 raise
         logger.info("Loaded initial conditions from previous file.")
-    return v0
+
+    v0_xr = xr.DataArray(
+        data,
+        dims=("longitude", "latitude", "variable"),
+        coords=coords,
+        name="initial_conditions",
+    )
+    return v0_xr
 
 
 def load_all_data(paths: dict[str, Any], etl_settings: dict[str, Any]) -> PmodelInput:
