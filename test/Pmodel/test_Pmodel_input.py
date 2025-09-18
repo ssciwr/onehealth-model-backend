@@ -2,7 +2,7 @@ import pytest
 import numpy as np
 import xarray as xr
 
-from src.heiplanet_models.Pmodel.Pmodel_input import PmodelInput
+from heiplanet_models.Pmodel.Pmodel_input import PmodelInput
 
 
 @pytest.fixture
