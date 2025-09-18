@@ -445,19 +445,19 @@ def load_initial_conditions(
     return v0
 
 
-def load_all_data(paths: dict[str, Any], ETL_SETTINGS: dict[str, Any]) -> PmodelInput:
+def load_all_data(paths: dict[str, Any], etl_settings: dict[str, Any]) -> PmodelInput:
     """Load, preprocess, and assemble all required datasets and arrays for the model.
 
     Args:
         paths (dict[str, Any]): Dictionary mapping dataset names to their file paths.
-        ETL_SETTINGS (dict[str, Any]): Dictionary containing ETL configuration and transformation settings.
+        etl_settings (dict[str, Any]): Dictionary containing ETL configuration and transformation settings.
 
     Returns:
         PmodelInput: An object containing all loaded and processed model input arrays.
 
     Raises:
         FileNotFoundError: If any required dataset file does not exist.
-        KeyError: If required keys are missing in ETL_SETTINGS or datasets.
+        KeyError: If required keys are missing in etl_settings or datasets.
         Exception: For any other errors during data loading or processing.
     """
     # ===========================
@@ -466,7 +466,7 @@ def load_all_data(paths: dict[str, Any], ETL_SETTINGS: dict[str, Any]) -> Pmodel
     # --- Load temperature dataset
     try:
         temperature = load_temperature_dataset(
-            path_dataset=paths["temperature_dataset"], **ETL_SETTINGS
+            path_dataset=paths["temperature_dataset"], **etl_settings
         )
     except Exception as e:
         logger.exception(f"Failed to load temperature dataset {e}")
@@ -475,7 +475,7 @@ def load_all_data(paths: dict[str, Any], ETL_SETTINGS: dict[str, Any]) -> Pmodel
     # --- Load rainfall dataset
     try:
         rainfall = load_rainfall_dataset(
-            path_dataset=paths["rainfall_dataset"], **ETL_SETTINGS
+            path_dataset=paths["rainfall_dataset"], **etl_settings
         )
     except Exception as e:
         logger.exception(f"Failed to load rainfall dataset {e}")
@@ -484,7 +484,7 @@ def load_all_data(paths: dict[str, Any], ETL_SETTINGS: dict[str, Any]) -> Pmodel
     # --- Load human population dataset
     try:
         human_population = load_population_dataset(
-            path_dataset=paths["human_population_dataset"], **ETL_SETTINGS
+            path_dataset=paths["human_population_dataset"], **etl_settings
         )
     except Exception as e:
         logger.exception(f"Failed to load human_population dataset {e}")
@@ -492,7 +492,7 @@ def load_all_data(paths: dict[str, Any], ETL_SETTINGS: dict[str, Any]) -> Pmodel
 
     # ==== Posprocess datasets
     # --- Human population
-    params = ETL_SETTINGS["transformation"]["human_population_dataset"][
+    params = etl_settings["transformation"]["human_population_dataset"][
         "postprocessing"
     ]
     human_population = postprocess_dataset(
@@ -504,18 +504,18 @@ def load_all_data(paths: dict[str, Any], ETL_SETTINGS: dict[str, Any]) -> Pmodel
     # ========================================
     # --- Temperature arrays
     da_temperature, da_temperature_mean = create_temperature_daily(
-        temperature_dataset=temperature, **ETL_SETTINGS
+        temperature_dataset=temperature, **etl_settings
     )
 
     # --- Rainfall Array
-    rainfall_variable_name = ETL_SETTINGS["transformation"]["rainfall_dataset"][
+    rainfall_variable_name = etl_settings["transformation"]["rainfall_dataset"][
         "data_variable"
     ]
     da_rainfall = rainfall[rainfall_variable_name]
     logger.debug(f"Rainfall shape: {da_rainfall.shape}")
 
     # --- Human population Array
-    human_population_variable_name = ETL_SETTINGS["transformation"][
+    human_population_variable_name = etl_settings["transformation"][
         "human_population_dataset"
     ]["data_variable"]
     da_population = human_population[human_population_variable_name]
@@ -527,13 +527,13 @@ def load_all_data(paths: dict[str, Any], ETL_SETTINGS: dict[str, Any]) -> Pmodel
     # --- Create/Load initial conditions
     # Extract longitude and latitude dimensions from temperature mean shape
     n_longitude, n_latitude = da_temperature_mean.shape[:2]
-    filepath_initial_conditions = ETL_SETTINGS["ingestion"]["initial_conditions"][
+    filepath_initial_conditions = etl_settings["ingestion"]["initial_conditions"][
         "file_path_initial_conditions"
     ]
     initial_conditions = load_initial_conditions(
         filepath=filepath_initial_conditions,
         sizes=(n_longitude, n_latitude),
-        **ETL_SETTINGS,
+        **etl_settings,
     )
 
     # ================================================
