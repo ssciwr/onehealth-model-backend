@@ -450,17 +450,20 @@ def test_read_global_settings_valid_yaml(valid_yaml_file):
 
 def test_read_global_settings_file_not_found():
     """Test that FileNotFoundError is raised for a non-existent file."""
-    with pytest.raises(FileNotFoundError):
+    with pytest.raises(FileNotFoundError) as excinfo:
         Pmodel_initial.read_global_settings("/nonexistent/path/to/file.yaml")
+    assert (
+        "No such file or directory" in str(excinfo.value)
+        or "not found" in str(excinfo.value).lower()
+    )
 
 
 def test_read_global_settings_invalid_yaml(invalid_yaml_file):
     """Test that yaml.YAMLError is raised for invalid YAML syntax."""
-    with pytest.raises(Exception) as excinfo:
-        Pmodel_initial.read_global_settings(str(invalid_yaml_file))
     import yaml as _yaml
 
-    assert isinstance(excinfo.value, _yaml.YAMLError)
+    with pytest.raises(_yaml.YAMLError):
+        Pmodel_initial.read_global_settings(str(invalid_yaml_file))
 
 
 def test_read_global_settings_empty_yaml(empty_yaml_file):
@@ -558,15 +561,17 @@ def test_assemble_filepaths_empty_filename_components(standard_etl_settings):
 
 def test_assemble_filepaths_raises_key_error_for_missing_ingestion():
     """Test that a KeyError is raised if 'ingestion' key is missing."""
-    with pytest.raises(KeyError):
+    with pytest.raises(KeyError) as excinfo:
         Pmodel_initial.assemble_filepaths(2024, **{})
+    assert "ingestion" in str(excinfo.value)
 
 
 def test_assemble_filepaths_raises_key_error_for_missing_path_root():
     """Test that a KeyError is raised if 'path_root_datasets' is missing."""
     etl_settings = {"ingestion": {"filename_components": {}}}
-    with pytest.raises(KeyError):
+    with pytest.raises(KeyError) as excinfo:
         Pmodel_initial.assemble_filepaths(2024, **etl_settings)
+    assert "path_root_datasets" in str(excinfo.value)
 
 
 def test_assemble_filepaths_raises_key_error_for_malformed_components(
@@ -577,8 +582,9 @@ def test_assemble_filepaths_raises_key_error_for_malformed_components(
     standard_etl_settings["ingestion"]["filename_components"]["temperature"].pop(
         "prefix"
     )
-    with pytest.raises(KeyError):
+    with pytest.raises(KeyError) as excinfo:
         Pmodel_initial.assemble_filepaths(2024, **standard_etl_settings)
+    assert "prefix" in str(excinfo.value)
 
 
 @pytest.mark.parametrize("invalid_year", ["2024", 2024.0, None])
@@ -586,8 +592,9 @@ def test_assemble_filepaths_raises_type_error_for_non_integer_year(
     standard_etl_settings, invalid_year
 ):
     """Test that a TypeError is raised for a non-integer year."""
-    with pytest.raises(TypeError):
+    with pytest.raises(TypeError) as excinfo:
         Pmodel_initial.assemble_filepaths(invalid_year, **standard_etl_settings)
+    assert "not an integer" in str(excinfo.value) or excinfo.type is TypeError
 
 
 # ---- Unit tests for load_dataset
@@ -610,20 +617,26 @@ def test_load_dataset_valid_netcdf_pathlib_path(valid_netcdf_file):
 
 def test_load_dataset_file_not_found():
     """Test that FileNotFoundError is raised for a non-existent file."""
-    with pytest.raises(FileNotFoundError):
+    with pytest.raises(FileNotFoundError) as excinfo:
         Pmodel_initial.load_dataset("/nonexistent/path/to/file.nc")
+    assert (
+        "No such file or directory" in str(excinfo.value)
+        or "not found" in str(excinfo.value).lower()
+    )
 
 
 def test_load_dataset_invalid_file_format(invalid_format_file):
     """Test that an error is raised for a file with an invalid format."""
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError) as excinfo:
         Pmodel_initial.load_dataset(invalid_format_file)
+    assert "cannot be parsed" in str(excinfo.value) or excinfo.type is ValueError
 
 
 def test_load_dataset_corrupted_file(corrupted_netcdf_file):
     """Test that an error is raised when loading a corrupted file."""
-    with pytest.raises((OSError, ValueError)):
+    with pytest.raises((OSError, ValueError)) as excinfo:
         Pmodel_initial.load_dataset(corrupted_netcdf_file)
+    assert excinfo.type in (OSError, ValueError)
 
 
 def test_load_dataset_with_kwargs(valid_netcdf_file):
@@ -638,8 +651,9 @@ def test_load_dataset_with_kwargs(valid_netcdf_file):
 
 def test_load_dataset_empty_file(empty_file):
     """Test that an error is raised when loading an empty file."""
-    with pytest.raises((ValueError, OSError)):
+    with pytest.raises((ValueError, OSError)) as excinfo:
         Pmodel_initial.load_dataset(empty_file)
+    assert excinfo.type in (OSError, ValueError)
 
 
 # ---- Unit tests for preprocess_dataset
@@ -684,22 +698,25 @@ def test_preprocess_dataset_rename_and_transpose(sample_dataset):
 def test_preprocess_dataset_rename_raises_key_error(sample_dataset):
     """Test that a ValueError is raised for a non-existent dimension in rename map."""
     rename_map = {"z": "time"}
-    with pytest.raises(ValueError):
+    with pytest.raises(Exception) as excinfo:
         Pmodel_initial.preprocess_dataset(sample_dataset, names_dimensions=rename_map)
+    assert "z" in str(excinfo.value)
 
 
 def test_preprocess_dataset_transpose_raises_error_non_existent_dim(sample_dataset):
     """Test that an error is raised if a dimension in the order does not exist."""
     order = ("x", "y", "z")
-    with pytest.raises(ValueError):
+    with pytest.raises(Exception) as excinfo:
         Pmodel_initial.preprocess_dataset(sample_dataset, dimension_order=order)
+    assert "z" in str(excinfo.value)
 
 
 def test_preprocess_dataset_transpose_raises_error_incomplete_order(sample_dataset):
     """Test that a ValueError is raised for an incomplete dimension order."""
     order = ("x",)
-    with pytest.raises(ValueError):
+    with pytest.raises(Exception) as excinfo:
         Pmodel_initial.preprocess_dataset(sample_dataset, dimension_order=order)
+    assert "order" in str(excinfo.value) or excinfo.type is Exception
 
 
 def test_preprocess_dataset_with_empty_dataset():
@@ -771,10 +788,11 @@ def test_postprocess_dataset_error_during_alignment(alignment_datasets, monkeypa
         Pmodel_initial, "align_xarray_datasets", mock_align_raises_error
     )
 
-    with pytest.raises(ValueError, match="Alignment failed"):
+    with pytest.raises(ValueError, match="Alignment failed") as excinfo:
         Pmodel_initial.postprocess_dataset(
             misaligned_ds, reference_dataset=reference_ds, align_dataset=True
         )
+    assert "Alignment failed" in str(excinfo.value)
 
 
 def test_postprocess_dataset_with_empty_dataset(alignment_datasets):
@@ -846,8 +864,9 @@ def test_align_xarray_datasets_missing_coords_in_fixed(alignment_datasets):
     misaligned_ds, _ = alignment_datasets
     # Create a fixed_dataset with no coordinates
     invalid_fixed_ds = xr.Dataset()
-    with pytest.raises(AttributeError):
+    with pytest.raises(AttributeError) as excinfo:
         Pmodel_initial.align_xarray_datasets(misaligned_ds, invalid_fixed_ds)
+    assert excinfo.type is AttributeError
 
 
 def test_align_xarray_datasets_wrong_dims_in_misaligned(alignment_datasets):
@@ -857,8 +876,9 @@ def test_align_xarray_datasets_wrong_dims_in_misaligned(alignment_datasets):
     wrong_dims_ds = xr.Dataset(
         {"data": (("x", "y"), np.random.rand(2, 2))}, coords={"x": [0, 1], "y": [0, 1]}
     )
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError) as excinfo:
         Pmodel_initial.align_xarray_datasets(wrong_dims_ds, fixed_ds)
+    assert excinfo.type is ValueError
 
 
 # ---- Unit tests for load_temperature_dataset

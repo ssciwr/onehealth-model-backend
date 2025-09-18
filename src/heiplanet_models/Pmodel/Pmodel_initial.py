@@ -160,6 +160,15 @@ def preprocess_dataset(dataset: xr.Dataset, **kwargs) -> xr.Dataset:
     # --- Transpose dimensions if specified
     dimension_order = kwargs.get("dimension_order")
     if dimension_order:
+        # Check if dimension_order is a permutation of all dataset.dims
+        dims_set = set(dataset.dims)
+
+        if set(dimension_order) != dims_set or len(dimension_order) != len(
+            dataset.dims
+        ):
+            msg = f"dimension_order {dimension_order} must be a permutation of all dataset dimensions {tuple(dataset.dims)}."
+            logger.error(msg)
+            raise ValueError(msg)
         try:
             logger.debug(f"Before transpose dimensions: {dataset.dims}")
             dataset = dataset.transpose(*dimension_order)
