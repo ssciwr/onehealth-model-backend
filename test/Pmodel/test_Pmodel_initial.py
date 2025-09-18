@@ -148,8 +148,9 @@ def standard_etl_settings(tmp_path):
 def valid_netcdf_file(tmp_path):
     """Fixture to create a valid NetCDF file and return its path and original dataset."""
     file_path = tmp_path / "test_dataset.nc"
+    rng = np.random.default_rng()
     original_ds = xr.Dataset(
-        {"temperature": (("lat", "lon"), np.random.rand(2, 3))},
+        {"temperature": (("lat", "lon"), rng.random((2, 3)))},
         coords={"lat": [10, 20], "lon": [100, 110, 120]},
     )
     original_ds.to_netcdf(file_path)
@@ -184,8 +185,9 @@ def empty_file(tmp_path):
 @pytest.fixture
 def sample_dataset():
     """Fixture to create a sample xarray.Dataset for preprocessing tests."""
+    rng = np.random.default_rng()
     return xr.Dataset(
-        {"data_var": (("x", "y"), np.random.rand(2, 3))},
+        {"data_var": (("x", "y"), rng.random((2, 3)))},
         coords={"x": [1, 2], "y": [10, 20, 30]},
     )
 
@@ -275,11 +277,12 @@ def temperature_daily_etl_settings():
 @pytest.fixture
 def sample_temperature_dataset():
     """Pytest fixture for a sample temperature xarray Dataset."""
+    rng = np.random.default_rng()
     return xr.Dataset(
         {
             "t2m": (
                 ("time", "latitude", "longitude"),
-                np.random.rand(2, 3, 4),
+                rng.random((2, 3, 4)),
             )
         },
         coords={
@@ -307,9 +310,10 @@ def initial_conditions_netcdf_file(tmp_path):
     time = pd.to_datetime(["2023-01-01", "2023-01-02"])
 
     # Create a dataset with variables matching model_variables
+    rng = np.random.default_rng()
     ds = xr.Dataset(
         {
-            "S": (("time", "longitude", "latitude"), np.random.rand(2, 2, 2)),
+            "S": (("time", "longitude", "latitude"), rng.random((2, 2, 2))),
             "E": (("time", "longitude", "latitude"), np.full((2, 2, 2), 0.5)),
             "I": (("time", "longitude", "latitude"), np.ones((2, 2, 2))),
             "R": (("time", "longitude", "latitude"), np.zeros((2, 2, 2))),
@@ -328,9 +332,10 @@ def initial_conditions_netcdf_file(tmp_path):
 def missing_variable_netcdf_file(tmp_path):
     """Fixture that creates a NetCDF file missing a required variable."""
     file_path = tmp_path / "missing_variable.nc"
+    rng = np.random.default_rng()
     ds = xr.Dataset(
         {
-            "S": (("time", "longitude", "latitude"), np.random.rand(2, 2, 2)),
+            "S": (("time", "longitude", "latitude"), rng.random((2, 2, 2))),
             # "E" is intentionally missing
             "I": (("time", "longitude", "latitude"), np.ones((2, 2, 2))),
             "R": (("time", "longitude", "latitude"), np.zeros((2, 2, 2))),
@@ -349,9 +354,10 @@ def missing_variable_netcdf_file(tmp_path):
 def extra_variable_netcdf_file(tmp_path):
     """Fixture that creates a NetCDF file with an extra variable."""
     file_path = tmp_path / "extra_variable.nc"
+    rng = np.random.default_rng()
     ds = xr.Dataset(
         {
-            "S": (("time", "longitude", "latitude"), np.random.rand(2, 2, 2)),
+            "S": (("time", "longitude", "latitude"), rng.random((2, 2, 2))),
             "E": (("time", "longitude", "latitude"), np.full((2, 2, 2), 0.5)),
             "I": (("time", "longitude", "latitude"), np.ones((2, 2, 2))),
             "R": (("time", "longitude", "latitude"), np.zeros((2, 2, 2))),
@@ -409,20 +415,21 @@ def mock_model_inputs():
         "time": [pd.to_datetime("2024-01-01")],
     }
 
+    rng = np.random.default_rng()
     temperature_ds = xr.Dataset(
-        {"t2m": (("time", "longitude", "latitude"), np.random.rand(1, 2, 2))},
+        {"t2m": (("time", "longitude", "latitude"), rng.random((1, 2, 2)))},
         coords=coords,
     )
     rainfall_ds = xr.Dataset(
-        {"tp": (("longitude", "latitude"), np.random.rand(2, 2))}, coords=coords
+        {"tp": (("longitude", "latitude"), rng.random((2, 2)))}, coords=coords
     )
     population_ds = xr.Dataset(
-        {"population_density": (("longitude", "latitude"), np.random.rand(2, 2))},
+        {"population_density": (("longitude", "latitude"), rng.random((2, 2)))},
         coords=coords,
     )
 
     # Mock data returned by processing functions
-    da_temp_daily = xr.DataArray(np.random.rand(730, 2, 2), name="temperature_daily")
+    da_temp_daily = xr.DataArray(rng.random((730, 2, 2)), name="temperature_daily")
     da_temp_mean = temperature_ds["t2m"]
     initial_conditions_arr = np.zeros((2, 2, 4))
 
@@ -768,7 +775,8 @@ def test_postprocess_dataset_alignment_with_identical_grids(alignment_datasets):
     _, reference_ds = alignment_datasets
     # Create a dataset that already has the same grid as the reference
     aligned_ds = reference_ds.copy()
-    aligned_ds["data"] = (("latitude", "longitude"), np.random.rand(3, 3))
+    rng = np.random.default_rng()
+    aligned_ds["data"] = (("latitude", "longitude"), rng.random((3, 3)))
 
     processed_ds = Pmodel_initial.postprocess_dataset(
         aligned_ds, reference_dataset=reference_ds, align_dataset=True
@@ -873,8 +881,9 @@ def test_align_xarray_datasets_wrong_dims_in_misaligned(alignment_datasets):
     """Test for ValueError when misaligned_dataset has wrong dimension names."""
     _, fixed_ds = alignment_datasets
     # Create a dataset with 'x' and 'y' instead of 'latitude' and 'longitude'
+    rng = np.random.default_rng()
     wrong_dims_ds = xr.Dataset(
-        {"data": (("x", "y"), np.random.rand(2, 2))}, coords={"x": [0, 1], "y": [0, 1]}
+        {"data": (("x", "y"), rng.random((2, 2)))}, coords={"x": [0, 1], "y": [0, 1]}
     )
     with pytest.raises(ValueError) as excinfo:
         Pmodel_initial.align_xarray_datasets(wrong_dims_ds, fixed_ds)
@@ -1340,8 +1349,9 @@ def test_create_temperature_daily_dataset_missing_time_dimension(
 ):
     """Test for an error when the input dataset is missing the 'time' dimension."""
     # Create a dataset without a 'time' dimension
+    rng = np.random.default_rng()
     dataset_no_time = xr.Dataset(
-        {"t2m": (("latitude", "longitude"), np.random.rand(3, 4))},
+        {"t2m": (("latitude", "longitude"), rng.random((3, 4)))},
         coords={"latitude": [10, 20, 30], "longitude": [-10, 0, 10, 20]},
     )
     with pytest.raises(ValueError):
@@ -1353,11 +1363,12 @@ def test_create_temperature_daily_dataset_missing_time_dimension(
 def test_create_temperature_daily_multidimensional_data(temperature_daily_etl_settings):
     """Test that the function handles more than 3 dimensions correctly."""
     # Create a 4D dataset
+    rng = np.random.default_rng()
     dataset_4d = xr.Dataset(
         {
             "t2m": (
                 ("time", "level", "latitude", "longitude"),
-                np.random.rand(2, 2, 3, 4),
+                rng.random((2, 2, 3, 4)),
             )
         },
         coords={
