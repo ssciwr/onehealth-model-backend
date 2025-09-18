@@ -148,7 +148,7 @@ def standard_etl_settings(tmp_path):
 def valid_netcdf_file(tmp_path):
     """Fixture to create a valid NetCDF file and return its path and original dataset."""
     file_path = tmp_path / "test_dataset.nc"
-    rng = np.random.default_rng()
+    rng = np.random.default_rng(43)
     original_ds = xr.Dataset(
         {"temperature": (("lat", "lon"), rng.random((2, 3)))},
         coords={"lat": [10, 20], "lon": [100, 110, 120]},
@@ -185,7 +185,7 @@ def empty_file(tmp_path):
 @pytest.fixture
 def sample_dataset():
     """Fixture to create a sample xarray.Dataset for preprocessing tests."""
-    rng = np.random.default_rng()
+    rng = np.random.default_rng(43)
     return xr.Dataset(
         {"data_var": (("x", "y"), rng.random((2, 3)))},
         coords={"x": [1, 2], "y": [10, 20, 30]},
@@ -277,7 +277,7 @@ def temperature_daily_etl_settings():
 @pytest.fixture
 def sample_temperature_dataset():
     """Pytest fixture for a sample temperature xarray Dataset."""
-    rng = np.random.default_rng()
+    rng = np.random.default_rng(43)
     return xr.Dataset(
         {
             "t2m": (
@@ -310,7 +310,7 @@ def initial_conditions_netcdf_file(tmp_path):
     time = pd.to_datetime(["2023-01-01", "2023-01-02"])
 
     # Create a dataset with variables matching model_variables
-    rng = np.random.default_rng()
+    rng = np.random.default_rng(43)
     ds = xr.Dataset(
         {
             "S": (("time", "longitude", "latitude"), rng.random((2, 2, 2))),
@@ -332,7 +332,7 @@ def initial_conditions_netcdf_file(tmp_path):
 def missing_variable_netcdf_file(tmp_path):
     """Fixture that creates a NetCDF file missing a required variable."""
     file_path = tmp_path / "missing_variable.nc"
-    rng = np.random.default_rng()
+    rng = np.random.default_rng(43)
     ds = xr.Dataset(
         {
             "S": (("time", "longitude", "latitude"), rng.random((2, 2, 2))),
@@ -354,7 +354,7 @@ def missing_variable_netcdf_file(tmp_path):
 def extra_variable_netcdf_file(tmp_path):
     """Fixture that creates a NetCDF file with an extra variable."""
     file_path = tmp_path / "extra_variable.nc"
-    rng = np.random.default_rng()
+    rng = np.random.default_rng(43)
     ds = xr.Dataset(
         {
             "S": (("time", "longitude", "latitude"), rng.random((2, 2, 2))),
@@ -415,7 +415,7 @@ def mock_model_inputs():
         "time": [pd.to_datetime("2024-01-01")],
     }
 
-    rng = np.random.default_rng()
+    rng = np.random.default_rng(43)
     temperature_ds = xr.Dataset(
         {"t2m": (("time", "longitude", "latitude"), rng.random((1, 2, 2)))},
         coords=coords,
@@ -775,7 +775,7 @@ def test_postprocess_dataset_alignment_with_identical_grids(alignment_datasets):
     _, reference_ds = alignment_datasets
     # Create a dataset that already has the same grid as the reference
     aligned_ds = reference_ds.copy()
-    rng = np.random.default_rng()
+    rng = np.random.default_rng(43)
     aligned_ds["data"] = (("latitude", "longitude"), rng.random((3, 3)))
 
     processed_ds = Pmodel_initial.postprocess_dataset(
@@ -881,7 +881,7 @@ def test_align_xarray_datasets_wrong_dims_in_misaligned(alignment_datasets):
     """Test for ValueError when misaligned_dataset has wrong dimension names."""
     _, fixed_ds = alignment_datasets
     # Create a dataset with 'x' and 'y' instead of 'latitude' and 'longitude'
-    rng = np.random.default_rng()
+    rng = np.random.default_rng(43)
     wrong_dims_ds = xr.Dataset(
         {"data": (("x", "y"), rng.random((2, 2)))}, coords={"x": [0, 1], "y": [0, 1]}
     )
@@ -895,7 +895,7 @@ def test_load_temperature_dataset_happy_path(
     temperature_etl_settings, monkeypatch, valid_netcdf_file
 ):
     """Test successful loading and preprocessing of the temperature dataset."""
-    file_path, original_ds = valid_netcdf_file
+    file_path, _ = valid_netcdf_file
 
     # Define a dummy preprocessing function
     def mock_preprocess(dataset, **kwargs):
@@ -1136,7 +1136,7 @@ def test_load_population_dataset_happy_path(
     population_etl_settings, monkeypatch, valid_netcdf_file
 ):
     """Test successful loading and preprocessing of the population dataset."""
-    file_path, original_ds = valid_netcdf_file
+    file_path, _ = valid_netcdf_file
     preprocess_called = False
 
     def mock_preprocess(dataset, **kwargs):
@@ -1349,7 +1349,7 @@ def test_create_temperature_daily_dataset_missing_time_dimension(
 ):
     """Test for an error when the input dataset is missing the 'time' dimension."""
     # Create a dataset without a 'time' dimension
-    rng = np.random.default_rng()
+    rng = np.random.default_rng(43)
     dataset_no_time = xr.Dataset(
         {"t2m": (("latitude", "longitude"), rng.random((3, 4)))},
         coords={"latitude": [10, 20, 30], "longitude": [-10, 0, 10, 20]},
@@ -1363,7 +1363,7 @@ def test_create_temperature_daily_dataset_missing_time_dimension(
 def test_create_temperature_daily_multidimensional_data(temperature_daily_etl_settings):
     """Test that the function handles more than 3 dimensions correctly."""
     # Create a 4D dataset
-    rng = np.random.default_rng()
+    rng = np.random.default_rng(43)
     dataset_4d = xr.Dataset(
         {
             "t2m": (
