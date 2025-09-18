@@ -41,7 +41,7 @@ def main():
 
         # Load all data
         model_data = load_all_data(paths=paths, etl_settings=ETL_SETTINGS)
-        model_data.print_attributes()
+        print(model_data)
 
         logger.info(f" >>> END Processing year {year} \n")
 
