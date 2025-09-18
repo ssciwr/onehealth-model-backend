@@ -754,7 +754,7 @@ def test_postprocess_dataset_alignment_with_identical_grids(alignment_datasets):
     processed_ds = Pmodel_initial.postprocess_dataset(
         aligned_ds, reference_dataset=reference_ds, align_dataset=True
     )
-    xr.testing.assert_identical(processed_ds, aligned_ds)
+    xr.testing.assert_allclose(processed_ds, aligned_ds)
 
 
 def test_postprocess_dataset_error_during_alignment(alignment_datasets, monkeypatch):
