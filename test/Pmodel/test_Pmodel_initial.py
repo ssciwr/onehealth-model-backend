@@ -1189,11 +1189,11 @@ def test_load_population_dataset_no_preprocessing(
 def test_load_population_dataset_load_error(population_etl_settings, monkeypatch):
     """Test that an error from load_dataset is propagated."""
     mock_path = "/fake/path/pop.nc"
-    monkeypatch.setattr(
-        Pmodel_initial,
-        "load_dataset",
-        lambda *args, **kwargs: exec('raise FileNotFoundError("File not found")'),
-    )
+
+    def raise_file_not_found(*args, **kwargs):
+        raise FileNotFoundError("File not found")
+
+    monkeypatch.setattr(Pmodel_initial, "load_dataset", raise_file_not_found)
 
     with pytest.raises(FileNotFoundError, match="File not found"):
         Pmodel_initial.load_population_dataset(mock_path, **population_etl_settings)
@@ -1204,10 +1204,12 @@ def test_load_population_dataset_preprocess_error(
 ):
     """Test that an error from preprocess_dataset is propagated."""
     file_path, _ = valid_netcdf_file
+
+    def raise_preprocessing_failed(*args, **kwargs):
+        raise ValueError("Preprocessing failed")
+
     monkeypatch.setattr(
-        Pmodel_initial,
-        "preprocess_dataset",
-        lambda *args, **kwargs: exec('raise ValueError("Preprocessing failed")'),
+        Pmodel_initial, "preprocess_dataset", raise_preprocessing_failed
     )
 
     with pytest.raises(ValueError, match="Preprocessing failed"):
