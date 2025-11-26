@@ -375,10 +375,19 @@ def test_mosq_surv_ed_typical_temperatures(typical_3d_temperature_array):
 
 
 def test_mosq_surv_ed_scalar_input():
-    """Test mosq_surv_ed with a scalar temperature value."""
-    temp = 25.0
+    """Test mosq_surv_ed with scalar and non-array input values."""
+    # Scalar float
     with pytest.raises(ValueError):
-        mosq_surv_ed(temp)
+        mosq_surv_ed(25.0)
+    # Scalar int
+    with pytest.raises(ValueError):
+        mosq_surv_ed(25)
+    # List input
+    with pytest.raises(ValueError):
+        mosq_surv_ed([25.0])
+    # Tuple input
+    with pytest.raises(ValueError):
+        mosq_surv_ed((25.0,))
 
 
 def test_mosq_surv_ed_edge_case_temperatures(edge_case_3d_temperature_array):
