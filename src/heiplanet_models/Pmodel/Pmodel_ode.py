@@ -226,29 +226,3 @@ def call_function(v, Temp, Tmean, LAT, CC, egg_activate, step_t):
                 v_out[..., j, idx_time] = np.maximum(v[..., j], 0)
 
     return v_out
-
-
-if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO)
-
-    from heiplanet_models.Pmodel.Pmodel_initial import load_data
-
-    model_data = load_data(
-        time_step=10,
-        # Uncomment to test with initial conditions
-        # filepath_previous="previous"
-    )
-    logger.info("Model data loaded successfully.")
-
-    logger.info("----------- Model Attributes ------------")
-    model_data.print_attributes()
-
-    logger.info("----------- Data Shapes ------------")
-    logger.info(f"Initial Conditions:\t{model_data.initial_conditions.shape}")
-    logger.info(f"Latitude:\t\t{model_data.latitude.shape}")
-    logger.info(f"Population Density:\t{model_data.population_density.shape}")
-    logger.info(f"Rainfall:\t\t{model_data.rainfall.shape}")
-    logger.info(f"Temperature:\t\t{model_data.temperature.shape}")
-    logger.info(f"Temperature mean: \t{model_data.temperature_mean.shape}")
-
-    logger.info("Data loading complete.")
