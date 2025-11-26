@@ -1,5 +1,9 @@
 import logging
 
+from heiplanet_models.Pmodel.Pmodel_ode import (
+    call_function,
+)
+
 from heiplanet_models.Pmodel.Pmodel_rates_development import carrying_capacity
 from heiplanet_models.Pmodel.Pmodel_rates_birth import water_hatching
 from heiplanet_models.Pmodel.Pmodel_initial import (
@@ -48,11 +52,11 @@ def main():
         print(model_data.population_density)
 
         # 5. Calculate water capacity rates
-        water_hatching_rate = water_hatching(
+        egg_active = water_hatching(
             rainfall_data=model_data.rainfall,
             population_data=model_data.population_density,
         )
-        print(f"Water hatching rate: {water_hatching_rate}")
+        print(f"Water hatching rate: {egg_active}")
 
         # 6. Carrying capacity rates
         carrying_capacity_rate = carrying_capacity(
@@ -60,6 +64,19 @@ def main():
             population_data=model_data.population_density,
         )
         print(f"Carrying capacity rate: {carrying_capacity_rate}")
+
+        # 7. Call function
+        v = call_function(
+            v=model_data.initial_conditions,
+            Temp=model_data.temperature,
+            Tmean=model_data.temperature_mean,
+            LAT=model_data.latitude,
+            CC=carrying_capacity_rate,
+            egg_activate=egg_active,
+            step_t=ETL_SETTINGS["ode_system"]["time_step"],
+        )
+
+        print(v)
 
         logger.info(f" >>> END Processing year {year} \n")
 
