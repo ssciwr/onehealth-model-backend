@@ -1,5 +1,6 @@
 import logging
 
+from heiplanet_models.Pmodel.Pmodel_rates_birth import water_hatching
 from heiplanet_models.Pmodel.Pmodel_initial import (
     read_global_settings,
     assemble_filepaths,
@@ -25,23 +26,30 @@ def main():
     for year in range(INITIAL_YEAR, FINAL_YEAR + 1):
         logger.info(f" >>> START Processing year {year} ")
 
-        # Read ETL settings
+        # 1. Read ETL settings
         ETL_SETTINGS = read_global_settings(
             filepath_configuration_file=FILEPATH_ETL_SETTINGS
         )
 
-        # Assemble paths
+        # 2. Assemble paths
         paths = assemble_filepaths(year, **ETL_SETTINGS)  # OK
 
-        # Verify if all the files exist for a given year
+        # 3. Verify if all the files exist for a given year
         if check_all_paths_exist(path_dict=paths) is False:
             logger.info(f"Year {year} could not be processed.")
             logger.info(f" >>> END Processing year {year} \n")
             continue
 
-        # Load all data
+        # 4. Load all data
         model_data = load_all_data(paths=paths, etl_settings=ETL_SETTINGS)
         print(model_data)
+
+        # 5. Calculate carrying capacity rates
+        water_hatching_rate = water_hatching(
+            rainfall_data=model_data.rainfall,
+            population_data=model_data.population_density,
+        )
+        print(f"Water hatching rate: {water_hatching_rate}")
 
         logger.info(f" >>> END Processing year {year} \n")
 
