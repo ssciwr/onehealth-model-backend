@@ -1,0 +1,83 @@
+# ========================================================================
+# ======                      INGESTION SETTINGS                    ======
+# ========================================================================
+ingestion:
+    path_root_datasets: "data/in/Pratik_datalake"
+    
+    xarray_load_settings:
+        chunks: auto
+    
+    filename_components:
+        temperature_dataset: 
+            prefix: "ERA5land_global_t2m_daily_0.5_"
+            suffix: 
+            extension: ".nc"
+        rainfall_dataset: 
+            prefix: "ERA5land_global_tp_daily_0.5_"
+            suffix: 
+            extension: ".nc"
+        human_population_dataset: 
+            prefix: "pop_dens_"
+            suffix: "_global_0.5"
+            extension: ".nc"
+
+    initial_conditions:
+        file_path_initial_conditions:
+
+
+# ========================================================================
+# ======                   TRANSFORMATION SETTINGS                  ======
+# ========================================================================
+transformation:
+    # # ---- Temperature Data
+    temperature_dataset:
+        data_variable : "t2m"
+        preprocessing:
+            names_dimensions: 
+                "valid_time": "time"
+            dimension_order: 
+                - "longitude"
+                - "latitude"
+                - "time"
+        
+    # # ---- Rainfall Data
+    rainfall_dataset:
+        data_variable : "tp"
+        preprocessing:
+            dimension_order: 
+                - "longitude"
+                - "latitude"
+                - "time"
+    
+    # # ---- Human population Data
+    human_population_dataset:
+        data_variable : "dens"
+        preprocessing:
+            names_dimensions: 
+                "lon": "longitude"
+                "lat": "latitude"
+            dimension_order: 
+                - "longitude"
+                - "latitude"
+                - "time"
+        postprocessing:
+            align_dataset: True
+
+
+# =================================================================
+# ======                   SERVING SETTINGS                  ======
+# =================================================================
+serving: 
+
+
+# =================================================================
+# ======                  ODE SYSTEM SETTINGS                ======
+# =================================================================
+ode_system:
+    time_step: 10
+    model_variables:
+        - "eggs"
+        - "ed"
+        - "juv"
+        - "imm"
+        - "adults"
