@@ -1,5 +1,6 @@
 import logging
 
+from heiplanet_models.Pmodel.Pmodel_rates_development import carrying_capacity
 from heiplanet_models.Pmodel.Pmodel_rates_birth import water_hatching
 from heiplanet_models.Pmodel.Pmodel_initial import (
     read_global_settings,
@@ -43,16 +44,26 @@ def main():
         # 4. Load all data
         model_data = load_all_data(paths=paths, etl_settings=ETL_SETTINGS)
         print(model_data)
+        print(model_data.rainfall)
+        print(model_data.population_density)
 
-        # 5. Calculate carrying capacity rates
+        # 5. Calculate water capacity rates
         water_hatching_rate = water_hatching(
             rainfall_data=model_data.rainfall,
             population_data=model_data.population_density,
         )
         print(f"Water hatching rate: {water_hatching_rate}")
 
+        # 6. Carrying capacity rates
+        carrying_capacity_rate = carrying_capacity(
+            rainfall_data=model_data.rainfall,
+            population_data=model_data.population_density,
+        )
+        print(f"Carrying capacity rate: {carrying_capacity_rate}")
+
         logger.info(f" >>> END Processing year {year} \n")
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.DEBUG)
     main()
