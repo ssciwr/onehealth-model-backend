@@ -21,21 +21,22 @@ Key functions include:
 """
 
 import logging
-from typing import Union
 
 import numpy as np
 import xarray as xr
 
+from heiplanet_models.utils_pmodel.solar_calculations import (
+    revolution_angle,
+    declination_angle,
+    daylight_forsythe,
+)
+
+from heiplanet_models.utils import validate_spatial_alignment
 from heiplanet_models.Pmodel.Pmodel_params import (
-    CONSTANTS_REVOLUTION_ANGLE,
-    CONSTANT_DECLINATION_ANGLE,
     CONSTANTS_MOSQUITO_BIRTH,
     CONSTANTS_MOSQUITO_DIAPAUSE_LAY,
     CONSTANTS_MOSQUITO_DIAPAUSE_HATCHING,
     CONSTANTS_WATER_HATCHING,
-    MIN_LAT_DEGREES,
-    MAX_LAT_DEGREES,
-    HOURS_PER_DAY,
     DAYS_YEAR,
     HALF_DAYS_YEAR,
 )
@@ -46,121 +47,6 @@ logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 
 
-# ---- Helper Functions
-def validate_spatial_alignment(arr1: xr.DataArray, arr2: xr.DataArray) -> None:
-    """Validates that two xarray DataArrays have aligned spatial coordinates.
-
-    Args:
-        arr1 (xr.DataArray): The first DataArray.
-        arr2 (xr.DataArray): The second DataArray.
-
-    Raises:
-        ValueError: If the 'latitude' or 'longitude' coordinates do not match
-                    or if the coordinates are missing.
-    """
-    try:
-        if not np.array_equal(
-            arr1.latitude.values, arr2.latitude.values
-        ) or not np.array_equal(arr1.longitude.values, arr2.longitude.values):
-            raise ValueError(
-                "Spatial coordinates ('latitude', 'longitude') of input arrays "
-                "must be aligned."
-            )
-    except AttributeError:
-        raise ValueError(
-            "Input DataArrays must have 'latitude' and 'longitude' coordinates."
-        )
-
-
-# ---- General functions
-def revolution_angle(days: Union[int, np.ndarray]) -> Union[float, np.ndarray]:
-    """Calculate Earth's revolution angle in radians for given days of the year.
-
-    This function can process both a single integer day or a numpy array of days.
-
-    Args:
-        days (Union[int, np.ndarray]): Day or days of the year (values must be
-            in the range 1-366, inclusive).
-
-    Returns:
-        Union[float, np.ndarray]: Revolution angle or angles in radians.
-            Returns a float for a single day input, and a numpy array for an
-            array input.
-
-    Raises:
-        TypeError: If `days` is not an integer or an array of integers.
-        ValueError: If any day is not in the range 1 to 366.
-    """
-
-    CONST_1 = CONSTANTS_REVOLUTION_ANGLE["CONST_1"]
-    CONST_2 = CONSTANTS_REVOLUTION_ANGLE["CONST_2"]
-    CONST_3 = CONSTANTS_REVOLUTION_ANGLE["CONST_3"]
-    CONST_4 = CONSTANTS_REVOLUTION_ANGLE["CONST_4"]
-    CONST_5 = CONSTANTS_REVOLUTION_ANGLE["CONST_5"]
-
-    days_arr = np.asarray(days)
-
-    if not np.issubdtype(days_arr.dtype, np.integer):
-        raise TypeError("Input 'days' must be an integer or an array of integers.")
-
-    if not np.all((days_arr >= 1) & (days_arr <= 366)):
-        raise ValueError("All 'days' must be in the range 1 to 366.")
-
-    theta = CONST_1 + 2 * np.arctan(
-        CONST_2 * np.tan(CONST_3 * ((days_arr % CONST_4) - CONST_5))
-    )
-
-    return theta.item() if days_arr.ndim == 0 else theta
-
-
-def declination_angle(revolution_angle: float) -> float:
-    """Predict the sun's declination angle in radians.
-
-    Args:
-        revolution_angle (float): Revolution angle in radians.
-
-    Returns:
-        float: Sun's declination angle in radians.
-    """
-
-    phi = np.arcsin(CONSTANT_DECLINATION_ANGLE * np.cos(revolution_angle))
-    return phi
-
-
-def daylight_forsythe(
-    latitude: float, declination_angle: float, daylight_coefficient: float
-) -> float:
-    """Calculate daylight hours using Forsythe's method.
-
-    Args:
-        latitude (float): Latitude in degrees (-90 to 90).
-        declination_angle (float): Declination angle in radians.
-        daylight_coefficient (float): Daylight coefficient in degrees.
-
-    Returns:
-        float: Daylight hours.
-
-    Raises:
-        ValueError: If latitude is not between -90 and 90 degrees.
-    """
-
-    if not MIN_LAT_DEGREES <= latitude <= MAX_LAT_DEGREES:
-        raise ValueError("Latitude must be between -90 and 90 degrees.")
-
-    latitude_rad = np.deg2rad(latitude)
-    daylight_coeff_rad = np.deg2rad(daylight_coefficient).squeeze()
-
-    angle_calculation = (
-        np.sin(daylight_coeff_rad) + np.sin(latitude_rad) * np.sin(declination_angle)
-    ) / (np.cos(latitude_rad) * np.cos(declination_angle))
-
-    daylight = np.real(
-        HOURS_PER_DAY - (HOURS_PER_DAY / np.pi) * np.arccos(angle_calculation + 0j)
-    )
-    return daylight
-
-
-# --- Specific functions
 def mosq_birth(temperature: np.ndarray) -> np.ndarray:
     """Calculates the mosquito birth rate based on temperature.
 
@@ -407,54 +293,3 @@ def water_hatching(
     logger.debug(f"Shape result: {result.shape}")
 
     return result
-
-
-if __name__ == "__main__":
-    # Configure logging
-    logging.basicConfig(level=logging.INFO)
-
-    from heiplanet_models.Pmodel.Pmodel_initial import load_data
-
-    def print_slices(dataset, value):
-
-        for i in range(value):  # for indices 0, 1, 2
-            print(f"Slice at time index {i}:")
-            print(dataset.isel(time=i).values)
-            print()  # Blank line for readability
-
-    model_data = load_data(time_step=10)
-    print("---- Model attributes ")
-    model_data.print_attributes()
-
-    print("\n---- function: revolution_angle()")
-    print(f"\tRevolution angle, day 1: {revolution_angle(1)}")
-    print(f"\tRevolution angle, day 365: {revolution_angle(365)}")
-    print(f"\tRevolution angle, day 366: {revolution_angle(366)}")
-
-    print("\n---- function: declination_angle()")
-    print(f"\tDeclination angle, np.pi/2: {declination_angle(np.pi / 2)}")
-    print(f"\tDeclination angle, -0.409: {declination_angle(-0.409)}")
-
-    print("\n---- function: daylight_forsythe()")
-    result = daylight_forsythe(
-        latitude=89.999, declination_angle=-0.409, daylight_coefficient=0.0
-    )
-    print(f"\tDaylight Forsythe: {result}")
-
-    print("\n---- function: mosquito_birth()")
-    # TODO: test this function
-
-    print("\n---- function: mosquito_diapause_hatch()")
-    result = mosq_dia_hatch(model_data.temperature_mean, model_data.latitude)
-    print(f"{print_slices(result, 3)}")
-
-    print("\n---- function: mosquito_diapause_lay()")
-    # TODO: test this function
-
-    # print("\n---- function: water_hatching()")
-    # hatch = water_hatching(
-    #     rainfall_data=model_data.rainfall,
-    #     population_data=model_data.population_density,
-    # )
-
-    # print_slices(hatch, value=3)

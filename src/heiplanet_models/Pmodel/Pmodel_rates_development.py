@@ -86,9 +86,7 @@ def mosq_dev_e(temperature: np.ndarray) -> np.ndarray:
     Tm = CONSTANTS_MOSQUITO_E["Tm"]
 
     # # New function briere with coeffiecint with initial data collection, for Sandra and Zia model
-    T_out = (
-        q * temperature * (temperature - T0) * ((Tm - temperature) ** (1 / 2))
-    )  # Corrected ^ to **
+    T_out = q * temperature * (temperature - T0) * ((Tm - temperature) ** (1 / 2))
 
     # Found in original code
     # T_out = CONST_1 - CONST_2 * temperatute + CONST_3 * temperatute**2;
@@ -100,106 +98,69 @@ def mosq_dev_e(temperature: np.ndarray) -> np.ndarray:
 def carrying_capacity(
     rainfall_data: xr.DataArray, population_data: xr.DataArray
 ) -> xr.DataArray:
-    """Computes the carrying capacity over time using rainfall and population density.
-
-    This function calculates the juvenile carrying capacity (Ref. Equation #14)
-    based on a recursive formula involving historical rainfall and population
-    density.
+    """
+    Vectorized and clean implementation of the Octave 'capacity' function using xarray.
 
     Args:
-        rainfall_data: A DataArray containing rainfall data with dimensions
-            (time, latitude, longitude).
-        population_data: A DataArray containing population density data. It can
-            be time-dependent with dimensions (time, latitude, longitude) or
-            time-independent with dimensions (latitude, longitude).
+        rainfall_data: xarray DataArray with dimensions ('longitude', 'latitude', 'time').
+        population_data: xarray DataArray with dimensions ('longitude', 'latitude') or ('longitude', 'latitude', 'time').
 
     Returns:
-        An xarray DataArray representing the carrying capacity, with the same
-        shape as the `rainfall_data`.
+        xarray DataArray with the same shape as rainfall_data, representing carrying capacity.
     """
-
     ALPHA_RAIN = CONSTANTS_CARRYING_CAPACITY["ALPHA_RAIN"]
     ALPHA_DENS = CONSTANTS_CARRYING_CAPACITY["ALPHA_DENS"]
     GAMMA = CONSTANTS_CARRYING_CAPACITY["GAMMA"]
     LAMBDA = CONSTANTS_CARRYING_CAPACITY["LAMBDA"]
 
-    logger.debug(f"rainfall_data dims: {rainfall_data.dims}")
-    logger.debug(f"population_data dims: {population_data.dims}")
-
-    logger.debug(f"Rainfall data: {rainfall_data.values}")
-
-    logger.debug(f"Population data: {population_data.values}")
-
-    # Align population_data to rainfall_data if needed (assume population_data is time-invariant if no time dim)
+    # Ensure population_data has a time dimension for broadcasting
     if "time" not in population_data.dims:
         population_data = population_data.expand_dims(time=rainfall_data.time)
 
-    # Initialize A with zeros
-    A = xr.zeros_like(rainfall_data)
+    # Prepare output array
+    rainfall_np = rainfall_data.values  # shape: (longitude, latitude, time)
+    logger.debug(f"Rainfall np shape: {rainfall_np.shape}")
 
-    # Initial condition for Population data
-    population_data_initial_slice = population_data.sel(time=rainfall_data.time[0])
+    population_np = population_data.isel(time=0).values  # shape: (longitude, latitude)
+    logger.debug(f"Population np shape: {population_np.shape}")
 
-    A.loc[dict(time=rainfall_data.time[0])] = (
-        ALPHA_RAIN * rainfall_data.sel(time=rainfall_data.time[0])
-        + ALPHA_DENS * population_data_initial_slice
-    )
+    lon_len, lat_len, time_len = rainfall_np.shape
+    A = np.zeros((lon_len, lat_len, time_len), dtype=np.float64)
 
-    # Recursive computation
-    for k in range(1, len(rainfall_data.time)):
-        prev_rainfall = A.sel(time=rainfall_data.time[k - 1])
-        curr_rainfall = rainfall_data.sel(time=rainfall_data.time[k])
-        A.loc[dict(time=rainfall_data.time[k])] = (
-            GAMMA * prev_rainfall
-            + ALPHA_RAIN * curr_rainfall
-            + ALPHA_DENS * population_data_initial_slice
+    spatial_shape = rainfall_data.isel(time=0).shape
+    logger.debug(f"Spatial shape: {spatial_shape}")
+
+    A = np.zeros(spatial_shape + (time_len,), dtype=np.float64)
+    logger.debug(f"Shape A: {A.shape}")
+
+    # Initial condition
+    A[..., 0] = ALPHA_RAIN * rainfall_np[..., 0] + ALPHA_DENS * population_np
+
+    # Recursive computation (cannot be vectorized due to time dependency)
+    for k in range(1, time_len):
+        A[..., k] = (
+            GAMMA * A[..., k - 1]
+            + ALPHA_RAIN * rainfall_np[..., k]
+            + ALPHA_DENS * population_np
         )
 
-    # Apply scaling factor
-    for k in range(1, len(rainfall_data.time)):
-        factor = (1 - GAMMA) / (1 - GAMMA ** (k + 1))
-        A.loc[dict(time=rainfall_data.time[k])] = factor * A.sel(
-            time=rainfall_data.time[k]
-        )
+    # Vectorized scaling factor for all time steps (except the first)
+    k_idx = np.arange(1, time_len)
+    factors = (1 - GAMMA) / (1 - GAMMA ** (k_idx + 1))
+    A[..., 1:] = factors * A[..., 1:]
+
+    logger.debug(f"shape A after scaling: {A.shape}")
+    logger.debug(f"shape rainfall_data: {rainfall_data.shape}")
 
     # Final scaling
-    result = A * LAMBDA
-    logger.debug("End of the function")
+    result = (
+        xr.DataArray(
+            A,
+            coords=rainfall_data.coords,
+            dims=rainfall_data.dims,
+            name="carrying_capacity",
+        )
+        * LAMBDA
+    )
 
     return result
-
-
-if __name__ == "__main__":
-
-    # Configure logging
-    logging.basicConfig(level=logging.DEBUG)
-
-    from heiplanet_models.Pmodel.Pmodel_initial import load_data
-
-    def print_slices(dataset, value):
-
-        for i in range(value):  # for indices 0, 1, 2
-            print(f"Slice at time index {i}:")
-            print(dataset.isel(time=i).values)
-            print()  # Blank line for readability
-
-    model_data = load_data(time_step=10)
-    print("---- Model attributes ")
-    model_data.print_attributes()
-
-    print("\n---- function: mosq_dev_j()")
-    temperatute = np.array([[15.0, 20.0], [25.0, 30.0]])
-    print(temperatute)
-    print(mosq_dev_j(temperatute))
-
-    print("\n---- function: mosq_dev_i()")
-    print(mosq_dev_i(temperatute))
-
-    print("\n---- function: mosq_dev_e()")
-    print(mosq_dev_e(temperatute))
-
-    print("\n---- function: carrying_capacity()")
-    result = carrying_capacity(
-        rainfall_data=model_data.rainfall, population_data=model_data.population_density
-    )
-    print(f"{print_slices(result, 3)}")

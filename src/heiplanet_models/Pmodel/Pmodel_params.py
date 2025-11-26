@@ -21,6 +21,11 @@ CONSTANTS_REVOLUTION_ANGLE = {
 # Ref: https://doi.org/10.1016/0304-3800(94)00034-F
 CONSTANT_DECLINATION_ANGLE = 0.39795
 
+CONSTANTS_INITIAL_CONDITIONS = {
+    "CONST_K1": 625,
+    "CONST_K2": 100,
+}
+
 # ----------------------------------------------
 # ----      Birth function constants        ----
 # ----------------------------------------------
