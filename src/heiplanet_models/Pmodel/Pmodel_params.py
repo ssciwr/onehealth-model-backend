@@ -21,6 +21,11 @@ CONSTANTS_REVOLUTION_ANGLE = {
 # Ref: https://doi.org/10.1016/0304-3800(94)00034-F
 CONSTANT_DECLINATION_ANGLE = 0.39795
 
+CONSTANTS_INITIAL_CONDITIONS = {
+    "CONST_K1": 625,
+    "CONST_K2": 100,
+}
+
 # ----------------------------------------------
 # ----      Birth function constants        ----
 # ----------------------------------------------
@@ -95,4 +100,43 @@ CONSTANTS_CARRYING_CAPACITY = {
     "ALPHA_DENS": 1e-5,
     "GAMMA": 9e-1,
     "LAMBDA": 1e6 * 625 * 100,
+}
+
+# ----------------------------------------------------
+# ----       Mortality function constants         ----
+# ----------------------------------------------------
+
+CONSTANTS_MORTALITY_MOSQUITO_E = {
+    "CONST_1": 0.955,
+    "CONST_2": -0.5,
+    "CONST_3": 18.8,
+    "CONST_4": 21.53,
+    "CONST_5": 6,
+}
+
+CONSTANTS_MORTALITY_MOSQUITO_J = {
+    "CONST_1": 0.977,
+    "CONST_2": -0.5,
+    "CONST_3": 21.8,
+    "CONST_4": 16.6,
+    "CONST_5": 6,
+}
+
+CONSTANTS_MORTALITY_MOSQUITO_A = {
+    "CONST_1": 0.677,
+    "CONST_2": -0.5,
+    "CONST_3": 20.9,
+    "CONST_4": 13.2,
+    "CONST_5": 6,
+    "CONST_6": 0.1,
+}
+
+
+CONSTANTS_MORTALITY_MOSQUITO_ED = {
+    "ED_SURV_BL": 1.0,
+    "CONST_1": 0.93,
+    "CONST_2": -0.5,
+    "CONST_3": 11.68,
+    "CONST_4": 15.67,
+    "CONST_5": 6,
 }
