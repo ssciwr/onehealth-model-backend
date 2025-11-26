@@ -1,4 +1,5 @@
 import logging
+from typing import Optional
 
 import numpy as np
 
@@ -107,7 +108,7 @@ def mosq_mort_a(temperature: np.ndarray) -> np.ndarray:
     return T_out
 
 
-def mosq_surv_ed(temperature: np.ndarray, step_t: int | None = None) -> np.ndarray:
+def mosq_surv_ed(temperature: np.ndarray, step_t: Optional[int] = None) -> np.ndarray:
     """
     Calculates mosquito survival rate as a function of temperature, following the Octave mosq_surv_ed function.
 
