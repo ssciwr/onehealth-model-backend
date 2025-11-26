@@ -1,4 +1,5 @@
 import logging
+from typing import Optional
 
 import numpy as np
 
@@ -107,7 +108,7 @@ def mosq_mort_a(temperature: np.ndarray) -> np.ndarray:
     return T_out
 
 
-def mosq_surv_ed(temperature: np.ndarray, step_t: int | None = None) -> np.ndarray:
+def mosq_surv_ed(temperature: np.ndarray, step_t: Optional[int] = None) -> np.ndarray:
     """
     Calculates mosquito survival rate as a function of temperature, following the Octave mosq_surv_ed function.
 
@@ -126,13 +127,19 @@ def mosq_surv_ed(temperature: np.ndarray, step_t: int | None = None) -> np.ndarr
     CONST_4 = CONSTANTS_MORTALITY_MOSQUITO_ED["CONST_4"]
     CONST_5 = CONSTANTS_MORTALITY_MOSQUITO_ED["CONST_5"]
 
+    if not isinstance(temperature, np.ndarray):
+        raise ValueError("Input 'temperature' must be a numpy.ndarray.")
+
+    if temperature.ndim != 3:
+        raise ValueError("Input 'temperature' must be a 3D numpy array.")
+
     # Rolling minimum along the time axis (axis=2)
     T_out = np.array(temperature).copy()
     print(T_out.shape)
     n_time = T_out.shape[-1]
 
     for k in range(1, n_time):
-        T_out[:, :, k] = np.minimum(T_out[:, :, k - 1], T_out[:, :, k])
+        T_out[..., k] = np.minimum(T_out[..., k - 1], T_out[..., k])
 
     # Uncomment the following lines if you want to remove the first 90*step_t time steps
     # if step_t is not None:
