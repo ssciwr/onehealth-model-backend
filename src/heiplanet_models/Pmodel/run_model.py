@@ -1,7 +1,18 @@
 import logging
 
-from heiplanet_models.Pmodel.Pmodel_rates_development import carrying_capacity
-from heiplanet_models.Pmodel.Pmodel_rates_birth import water_hatching
+from heiplanet_models.Pmodel.Pmodel_rates_development import (
+    mosq_dev_j,
+    mosq_dev_i,
+    mosq_dev_e,
+    carrying_capacity,
+)
+
+from heiplanet_models.Pmodel.Pmodel_rates_birth import (
+    water_hatching,
+    mosq_birth,
+    mosq_dia_hatch,
+    mosq_dia_lay,
+)
 from heiplanet_models.Pmodel.Pmodel_initial import (
     read_global_settings,
     assemble_filepaths,
@@ -43,27 +54,59 @@ def main():
 
         # 4. Load all data
         model_data = load_all_data(paths=paths, etl_settings=ETL_SETTINGS)
-        print(model_data)
-        print(model_data.rainfall)
-        print(model_data.population_density)
+        logger.info(model_data)
 
-        # 5. Calculate water capacity rates
+        # --------- Manual verification of rates_birth functions -----------
+        # a. mosq_birth
+        mosq_birth_rate = mosq_birth(temperature=model_data.temperature)
+        logger.info(f"Mosquito birth rate: {mosq_birth_rate}")
+
+        # b. mosq dia hatch
+        hatch = mosq_dia_hatch(
+            temperature=model_data.temperature_mean, latitude=model_data.latitude
+        )
+        logger.info(f"Mosquito diapause hatching rate: {hatch}")
+
+        # c. mosq dia lay
+        mosq_dia_lay_rate = mosq_dia_lay(
+            temperature=model_data.temperature_mean, latitude=model_data.latitude
+        )
+        logger.info(f"Mosquito diapause laying rate: {mosq_dia_lay_rate}")
+
+        # d. water hatching
         water_hatching_rate = water_hatching(
             rainfall_data=model_data.rainfall,
             population_data=model_data.population_density,
         )
-        print(f"Water hatching rate: {water_hatching_rate}")
+        logger.info(f"Water hatching rate: {water_hatching_rate}")
 
-        # 6. Carrying capacity rates
+        # e. mosq_dev_j
+        mosq_dev_j_rate = mosq_dev_j(temperature=model_data.temperature)
+        logger.info(f"Mosquito 'j' stage development rate: {mosq_dev_j_rate.values}")
+
+        # f. mosq_dev_i
+        mosq_dev_i_rate = mosq_dev_i(temperature=model_data.temperature)
+        logger.info(f"Mosquito 'i' stage development rate: {mosq_dev_i_rate.values}")
+
+        # g. mosq_dev_e
+        mosq_dev_e_rate = mosq_dev_e(temperature=model_data.temperature)
+        logger.info(f"Mosquito 'e' stage development rate: {mosq_dev_e_rate.values}")
+
+        # h. carrying_capacity
         carrying_capacity_rate = carrying_capacity(
             rainfall_data=model_data.rainfall,
             population_data=model_data.population_density,
         )
-        print(f"Carrying capacity rate: {carrying_capacity_rate}")
+        logger.info(f"Carrying capacity rate: {carrying_capacity_rate.values}")
 
         logger.info(f" >>> END Processing year {year} \n")
 
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.DEBUG)
+    logging.basicConfig(
+        format="{asctime} - {levelname} - {message}",
+        style="{",
+        datefmt="%Y-%m-%d %H:%M",
+        level=logging.INFO,
+    )
     main()
