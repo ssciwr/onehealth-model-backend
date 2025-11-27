@@ -61,23 +61,19 @@ def mosq_mort_a(temperature: xr.DataArray) -> xr.DataArray:
     CONST_5 = CONSTANTS_MORTALITY_MOSQUITO_A["CONST_5"]
     CONST_6 = CONSTANTS_MORTALITY_MOSQUITO_A["CONST_6"]
 
-    T = temperature.data.copy()
+    T = temperature.data
     mask_pos = T > 0
-    mask_zero = ~mask_pos
 
-    T_out = np.empty_like(T)
-    # For T > 0
-    T_out[mask_pos] = (
-        CONST_1
-        * np.exp(CONST_2 * ((T[mask_pos] - CONST_3) / CONST_4) ** CONST_5)
-        * T[mask_pos] ** CONST_6
+    # Compute both branches
+    pos_val = (
+        CONST_1 * np.exp(CONST_2 * ((T - CONST_3) / CONST_4) ** CONST_5) * T**CONST_6
     )
-    # For T <= 0
-    T_out[mask_zero] = CONST_1 * np.exp(
-        CONST_2 * ((T[mask_zero] - CONST_3) / CONST_4) ** CONST_5
-    )
+    zero_val = CONST_1 * np.exp(CONST_2 * ((T - CONST_3) / CONST_4) ** CONST_5)
 
+    # Use np.where to select the correct branch
+    T_out = np.where(mask_pos, pos_val, zero_val)
     T_out = -np.log(T_out)
+
     return xr.DataArray(
         T_out, coords=temperature.coords, dims=temperature.dims, name="mosq_mort_a"
     )
@@ -108,19 +104,33 @@ def mosq_surv_ed(
     CONST_4 = CONSTANTS_MORTALITY_MOSQUITO_ED["CONST_4"]
     CONST_5 = CONSTANTS_MORTALITY_MOSQUITO_ED["CONST_5"]
 
-    T_out = temperature.data.copy()
-    n_time = T_out.shape[-1]
+    # Find the time dimension name
+    time_dim = temperature.dims[-1]
 
-    for k in range(1, n_time):
-        T_out[..., k] = np.minimum(T_out[..., k - 1], T_out[..., k])
+    # Rechunk so that the time dimension is a single chunk (if using Dask)
+    if hasattr(temperature.data, "chunks"):
+        temperature = temperature.chunk({time_dim: -1})
+
+    T_cummin = xr.apply_ufunc(
+        np.minimum.accumulate,
+        temperature,
+        input_core_dims=[[time_dim]],
+        output_core_dims=[[time_dim]],
+        vectorize=True,
+        dask="parallelized",
+        output_dtypes=[temperature.dtype],
+    )
 
     # Apply the survival formula
     T_out = (
         ED_SURV_BL
         * CONST_1
-        * np.exp(CONST_2 * ((T_out - CONST_3) / CONST_4) ** CONST_5)
+        * np.exp(CONST_2 * ((T_cummin - CONST_3) / CONST_4) ** CONST_5)
     )
 
     return xr.DataArray(
-        T_out, coords=temperature.coords, dims=temperature.dims, name="mosq_surv_ed"
+        T_out.values,
+        coords=temperature.coords,
+        dims=temperature.dims,
+        name="mosq_surv_ed",
     )
