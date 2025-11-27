@@ -1,6 +1,11 @@
 import logging
 
-from heiplanet_models.Pmodel.Pmodel_rates_birth import water_hatching
+from heiplanet_models.Pmodel.Pmodel_rates_birth import (
+    water_hatching,
+    mosq_birth,
+    mosq_dia_hatch,
+    mosq_dia_lay,
+)
 from heiplanet_models.Pmodel.Pmodel_initial import (
     read_global_settings,
     assemble_filepaths,
@@ -42,17 +47,40 @@ def main():
 
         # 4. Load all data
         model_data = load_all_data(paths=paths, etl_settings=ETL_SETTINGS)
-        print(model_data)
+        logger.info(model_data)
 
-        # 5. Calculate carrying capacity rates
+        # --------- Manual verification of rates_birth functions -----------
+        # a. mosq_birth
+        mosq_birth_rate = mosq_birth(temperature=model_data.temperature)
+        logger.info(f"Mosquito birth rate: {mosq_birth_rate}")
+
+        # b. mosq dia hatch
+        hatch = mosq_dia_hatch(
+            temperature=model_data.temperature_mean, latitude=model_data.latitude
+        )
+        logger.info(f"Mosquito diapause hatching rate: {hatch}")
+
+        # c. mosq dia lay
+        mosq_dia_lay_rate = mosq_dia_lay(
+            temperature=model_data.temperature_mean, latitude=model_data.latitude
+        )
+        logger.info(f"Mosquito diapause laying rate: {mosq_dia_lay_rate}")
+
+        # d. water hatching
         water_hatching_rate = water_hatching(
             rainfall_data=model_data.rainfall,
             population_data=model_data.population_density,
         )
-        print(f"Water hatching rate: {water_hatching_rate}")
+        logger.info(f"Water hatching rate: {water_hatching_rate}")
 
         logger.info(f" >>> END Processing year {year} \n")
 
 
 if __name__ == "__main__":
+    logging.basicConfig(
+        format="{asctime} - {levelname} - {message}",
+        style="{",
+        datefmt="%Y-%m-%d %H:%M",
+        level=logging.INFO,
+    )
     main()
