@@ -43,43 +43,62 @@ def eqsys(v, vars):
         water_hatch,
     ) = vars
 
+    logger.debug(f"dimension v[...,4]: {v[...,4].shape}")
+    logger.debug(f"\ttype: v[...,4]: {type(v[...,4])}")
+
+    logger.debug(f"dimension birth: {birth.shape}")
+    logger.debug(f"\ttype: birth: {type(birth)}")
+
+    logger.debug(f"dimension dia_lay: {dia_lay.shape}")
+    logger.debug(f"\ttype: dia_lay: {type(dia_lay)}")
+
+    logger.debug(f"dimension mort_e: {mort_e.shape}")
+    logger.debug(f"\ttype: mort_e: {type(mort_e)}")
+
+    logger.debug(f"dimension water_hatch: {water_hatch.shape}")
+    logger.debug(f"\ttype: water_hatch: {type(water_hatch)}")
+
+    logger.debug(f"dimension v[...,0]: {v[...,0].shape}")
+    logger.debug(f"\ttype: v[...,0]: {type(v[...,0])}")
+
     FT = np.zeros_like(v)
+
+    logger.debug(f"dimension FT[...,0]: {FT[...,0].shape}")
 
     # Differential equations (vectorized over grid)
     # Egg compartment (non-diapause)
     FT[..., 0] = (
-        v[..., 4] * birth * (1 - dia_lay)  # Oviposition (non-diapause)
-        - (mort_e + water_hatch * dev_e) * v[..., 0]  # Mortality and hatching
+        # v[..., 4] * birth * (1 - dia_lay) - (mort_e + water_hatch * dev_e) * v[..., 0]
+        v[..., 4].data * birth * (1-dia_lay) - (mort_e + (water_hatch * dev_e)) * v[..., 0].data
     )
 
     # Egg compartment (diapause)
     FT[..., 1] = (
-        v[..., 4] * birth * dia_lay  # Oviposition (diapause)
-        - water_hatch * dia_hatch * v[..., 1]  # Hatching from diapause
+        v[..., 4].data * birth * dia_lay - water_hatch * dia_hatch * v[..., 1].data  # Hatching from diapause
     )
 
     # Juvenile compartment
     FT[..., 2] = (
-        water_hatch * dev_e * v[..., 0]  # Hatching from non-diapause eggs
-        + water_hatch * dia_hatch * ed_surv * v[..., 1]  # Hatching from diapause eggs
-        - (mort_j + dev_j) * v[..., 2]  # Mortality and development
-        - (v[..., 2] ** 2) / CC[..., t_idx - 1]  # Density-dependent mortality
+        water_hatch * dev_e * v[..., 0].values  # Hatching from non-diapause eggs
+        + water_hatch * dia_hatch * ed_surv * v[..., 1].values  # Hatching from diapause eggs
+        - (mort_j + dev_j) * v[..., 2].values  # Mortality and development
+        - (v[..., 2].data ** 2) / CC[..., t_idx - 1]  # Density-dependent mortality
     )
 
     # Immature adult compartment
     FT[..., 3] = (
         0.5 * dev_j * v[..., 2]  # Development from juveniles
-        - (mort_a + dev_i) * v[..., 3]  # Mortality and maturation
+        #- (mort_a + dev_i) * v[..., 3]  # Mortality and maturation
     )
 
     # Mature adult compartment
     FT[..., 4] = (
         dev_i * v[..., 3]  # Maturation from immature adults
-        - mort_a * v[..., 4]  # Adult mortality
+        #- mort_a * v[..., 4]  # Adult mortality
     )
 
     # Replace NaNs
-    FT[np.isnan(-FT)] = -v[np.isnan(-FT)] * step_t
+    FT[np.isnan(-FT)] = -v.values[np.isnan(-FT)] * step_t
     return FT
 
 
@@ -168,10 +187,10 @@ def call_function(v, Temp, Tmean, LAT, CC, egg_activate, step_t):
         int(Temp.shape[2] / step_t),
     )
     v_out = np.zeros(shape=shape_output)
-    print(f"Shape v_out:{v_out.shape}")
+    logger.debug(f"Shape v_out:{v_out.shape}")
 
     for t in range(Temp.shape[2]):
-        # if t == 1:
+        #if t == 3:
         #    break
 
         T = Temp[:, :, t]
@@ -189,40 +208,54 @@ def call_function(v, Temp, Tmean, LAT, CC, egg_activate, step_t):
         water_hatch = egg_activate.values[:, :, idx_time]
         mort_e = mosq_mort_e(T)
         mort_j = mosq_mort_j(T)
-        Tmean_slice = Tmean.values[:, :, idx_time]
+        Tmean_slice = Tmean[:, :, idx_time]
+        logger.info(f"Tmean shape: {Tmean.shape}")
+        logger.info(f"Tmean_slice shape: {Tmean_slice.shape}")
         mort_a = mosq_mort_a(Tmean_slice)
+
+        # Add this block:
+        logger.debug(f"Time step {t}:")
+        logger.debug(f"  T.shape: {T.shape}")
+        logger.debug(f"  birth.shape: {getattr(birth, 'shape', None)}")
+        logger.debug(f"  dia_lay.shape: {getattr(dia_lay, 'shape', None)}")
+        logger.debug(f"  mort_e.shape: {getattr(mort_e, 'shape', None)}")
+        logger.debug(f"  water_hatch.shape: {getattr(water_hatch, 'shape', None)}")
+        logger.debug(f"  dev_e: {dev_e}")
+        logger.debug(f"  v[..., 0].shape: {v[..., 0].shape}")
 
         vars_tuple = (
             idx_time + 1,  # Octave uses 1-based, so pass idx_time+1
             step_t,
             Temp,
-            CC,
-            birth,
+            CC.values,
+            birth.values,
             dia_lay,
             dia_hatch,
-            mort_e,
-            mort_j,
-            mort_a,
-            ed_surv,
-            dev_j,
-            dev_i,
+            mort_e.values,
+            mort_j.values,
+            mort_a.values,
+            ed_surv.values,
+            dev_j.values,
+            dev_i.values,
             dev_e,
             water_hatch,
         )
 
-        v = rk4_step(eqsys, eqsys_log, v, vars_tuple, step_t)
-        print(f"Time step: {t}")
-        # print_slices_numpy(v)
+        va = rk4_step(eqsys, eqsys_log, v, vars_tuple, step_t)
+        logger.info(f"Time step: {t}")
+
 
         # # Zero compartment 2 (Python index 1) if needed
         if (t / step_t) % 365 == 200:
-            v[..., 1] = 0
+            va[..., 1] = 0
 
         # Store output every step_t
-        if (t + 1) % step_t == 0:
-            if ((idx_time + 1) % 30) == 0:
-                print(f"MOY: {(idx_time + 1) / 30}")
+        logger.info(f"time step: {t+1}")
+        if (t + 1) % step_t == 0:            
+            logger.info(f"IDX TIME: {idx_time}")
+            if ((idx_time) % 30) == 0:
+                logger.debug(f"MOY: {int(((t)/step_t) / 30)}")
             for j in range(5):
-                v_out[..., j, idx_time] = np.maximum(v[..., j], 0)
+                v_out[..., j, idx_time] = np.maximum(va[..., j], 0)
 
     return v_out
