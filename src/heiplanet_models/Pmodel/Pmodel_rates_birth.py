@@ -47,19 +47,14 @@ logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 
 
-def mosq_birth(temperature: np.ndarray) -> np.ndarray:
+def mosq_birth(temperature: xr.DataArray) -> xr.DataArray:
     """Calculates the mosquito birth rate based on temperature.
 
-    This function computes the birth rate using a formula that is applied
-    only when the temperature is below a certain threshold (CONST_1).
-    If the temperature is at or above this threshold, the birth rate is
-    considered to be zero.
-
     Args:
-        temperature (np.ndarray): An array of temperature values.
+        temperature (xr.DataArray): An xarray DataArray of temperature values.
 
     Returns:
-        np.ndarray: An array of the same shape as the input, containing
+        xr.DataArray: An xarray DataArray of the same shape as the input, containing
             the calculated mosquito birth rates.
     """
     CONST_1 = CONSTANTS_MOSQUITO_BIRTH["CONST_1"]
@@ -69,17 +64,18 @@ def mosq_birth(temperature: np.ndarray) -> np.ndarray:
     CONST_5 = CONSTANTS_MOSQUITO_BIRTH["CONST_5"]
     CONST_6 = CONSTANTS_MOSQUITO_BIRTH["CONST_6"]
 
-    out = temperature.copy()
+    temp_values = temperature.values
+    out = temp_values.copy()
     mask = out < CONST_1
-    # Only apply the formula where T < CONST_1
     out[mask] = (
         CONST_2
         * np.exp(CONST_3 * ((out[mask] - CONST_4) / CONST_5) ** 2)
         * (CONST_1 - out[mask]) ** CONST_6
     )
-    # Set to zero where T >= CONST_1
     out[~mask] = 0
-    return out
+
+    # Return as xarray.DataArray with same dims/coords as input
+    return xr.DataArray(out, dims=temperature.dims, coords=temperature.coords)
 
 
 def mosq_dia_hatch(temperature: xr.DataArray, latitude: xr.DataArray) -> xr.DataArray:
@@ -267,7 +263,7 @@ def water_hatching(
         population_data = population_data.expand_dims(time=rainfall_data.time)
 
     population_hatch = E_DENS / (E_DENS + np.exp(-E_FAC * population_data))
-    logger.debug(population_hatch.values)
+    logger.debug(f"Population values: {population_hatch.values}")
 
     exp_term = np.exp(-E_VAR * (rainfall_data - E_OPT) ** 2)
     rainfall_hatch = (1 + E_0) * exp_term / (exp_term + E_0)
@@ -290,6 +286,6 @@ def water_hatching(
 
     # Weighted combination (element-wise)
     result = ((1 - E_RAT) * rainfall_hatch) + (E_RAT * population_hatch_broadcasted)
-    logger.debug(f"Shape result: {result.shape}")
+    logger.debug(f"Shape result water hatching: {result.shape}")
 
     return result
