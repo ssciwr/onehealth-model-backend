@@ -281,23 +281,23 @@ def water_hatching(
     logger.debug(f"Dimension population_hatch: {population_hatch.shape}")
     logger.debug(f"Dimension population_hatch: {population_hatch.dims}")
 
-    # Only broadcast if time coordinate dtypes differ
+    # Always use only the first time slice of population data for the population effect
+    population_hatch_no_time = population_hatch.isel(time=0).drop_vars("time")
+
+    # Check dtype of time coordinate
     pop_time_dtype = population_hatch.coords["time"].dtype
     rain_time_dtype = rainfall_hatch.coords["time"].dtype
 
     if pop_time_dtype != rain_time_dtype:
-        try:
-            population_hatch_no_time = population_hatch.isel(time=0).drop_vars("time")
-            population_hatch_broadcasted = population_hatch_no_time.expand_dims(
-                time=rainfall_hatch.coords["time"]
-            )
-        except Exception as e:
-            raise RuntimeError(
-                "Error broadcasting population density adjustment: " + str(e)
-            )
+        # Correction: broadcast using rainfall_hatch's time coordinate
+        population_hatch_broadcasted = population_hatch_no_time.expand_dims(
+            time=rainfall_hatch.coords["time"]
+        )
     else:
-        population_hatch_broadcasted = population_hatch
-
+        # Dtypes match, broadcast using population_hatch's time coordinate
+        population_hatch_broadcasted = population_hatch_no_time.expand_dims(
+            time=population_hatch.coords["time"]
+        )
     # Weighted combination (element-wise)
     result = ((1 - E_RAT) * rainfall_hatch) + (E_RAT * population_hatch_broadcasted)
     logger.debug(f"Shape result water hatching: {result.shape}")
