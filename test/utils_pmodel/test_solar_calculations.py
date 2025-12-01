@@ -161,7 +161,6 @@ def test_daylight_forsythe_polar_night():
     result = daylight_forsythe(
         latitude=89.999, declination_angle=-0.409, daylight_coefficient=0.0
     )
-    print(result)
     assert isinstance(result, float)
     assert math.isclose(result, 0.0, abs_tol=1e-4)
 
