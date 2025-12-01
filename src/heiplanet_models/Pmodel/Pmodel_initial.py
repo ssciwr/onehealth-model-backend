@@ -326,7 +326,9 @@ def load_population_dataset(
     """
     # -- Load dataset
     xarray_params = etl_settings["ingestion"]["xarray_load_settings"]
-    dataset = load_dataset(path_dataset=path_dataset, **xarray_params)
+    dataset = load_dataset(
+        path_dataset=path_dataset, decode_times=False, **xarray_params
+    )
 
     # -- Preprocess dataset
     preprocess_params = etl_settings["transformation"]["human_population_dataset"].get(

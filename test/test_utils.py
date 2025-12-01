@@ -122,7 +122,9 @@ def test_validate_spatial_alignment_missing_latitude():
     lon = np.linspace(-180, 180, 5)
     arr1 = xr.DataArray(np.zeros((5,)), coords={"longitude": lon}, dims=["longitude"])
     arr2 = make_dataarray(np.linspace(-90, 90, 5), lon)
-    with pytest.raises(ValueError, match="must have 'latitude' and 'longitude'"):
+    with pytest.raises(
+        ValueError, match="Input DataArrays must have a 'latitude' coordinate."
+    ):
         validate_spatial_alignment(arr1, arr2)
 
 
@@ -130,5 +132,7 @@ def test_validate_spatial_alignment_missing_longitude():
     lat = np.linspace(-90, 90, 5)
     arr1 = xr.DataArray(np.zeros((5,)), coords={"latitude": lat}, dims=["latitude"])
     arr2 = make_dataarray(lat, np.linspace(-180, 180, 5))
-    with pytest.raises(ValueError, match="must have 'latitude' and 'longitude'"):
+    with pytest.raises(
+        ValueError, match="Input DataArrays must have a 'longitude' coordinate."
+    ):
         validate_spatial_alignment(arr1, arr2)

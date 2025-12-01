@@ -115,9 +115,13 @@ def mosq_dia_hatch(temperature: xr.DataArray, latitude: xr.DataArray) -> xr.Data
     n_longitude, n_latitude, n_time = temperature.shape
 
     # Calculate mean temperature of the last 'PERIOD' days and compare to CTT
-    out = temperature.copy().values
-    for k in range(n_time - 1, PERIOD - 2, -1):
-        out[:, :, k] = np.mean(out[:, :, (k - PERIOD + 1) : (k + 1)], axis=2)
+    # out = temperature.copy().values
+    # for k in range(n_time - 1, PERIOD - 2, -1):
+    #    out[:, :, k] = np.mean(out[:, :, (k - PERIOD + 1) : (k + 1)], axis=2)
+
+    # Efficient rolling mean using xarray
+    temp_rolling = temperature.rolling(time=PERIOD, min_periods=PERIOD).mean().fillna(0)
+    out = temp_rolling.values
 
     # Mask values below critical temperature threshold
     out[out < CTT] = 0
@@ -273,17 +277,23 @@ def water_hatching(
     logger.debug(f"Dimension population_hatch: {population_hatch.shape}")
     logger.debug(f"Dimension population_hatch: {population_hatch.dims}")
 
-    try:
-        # Use the first time slice for density adjustment and broadcast to match rainfall_hatch
-        population_hatch_no_time = population_hatch.isel(time=0).drop_vars("time")
+    # Always use only the first time slice of population data for the population effect
+    population_hatch_no_time = population_hatch.isel(time=0).drop_vars("time")
+
+    # Check dtype of time coordinate
+    pop_time_dtype = population_hatch.coords["time"].dtype
+    rain_time_dtype = rainfall_hatch.coords["time"].dtype
+
+    if pop_time_dtype != rain_time_dtype:
+        # Correction: broadcast using rainfall_hatch's time coordinate
         population_hatch_broadcasted = population_hatch_no_time.expand_dims(
             time=rainfall_hatch.coords["time"]
         )
-    except Exception as e:
-        raise RuntimeError(
-            "Error broadcasting population density adjustment: " + str(e)
+    else:
+        # Dtypes match, broadcast using population_hatch's time coordinate
+        population_hatch_broadcasted = population_hatch_no_time.expand_dims(
+            time=population_hatch.coords["time"]
         )
-
     # Weighted combination (element-wise)
     result = ((1 - E_RAT) * rainfall_hatch) + (E_RAT * population_hatch_broadcasted)
     logger.debug(f"Shape result water hatching: {result.shape}")
