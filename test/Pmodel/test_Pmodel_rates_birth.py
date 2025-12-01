@@ -395,7 +395,6 @@ def test_mosq_dia_hatch_with_dummy_data(temp_dummy_data, monkeypatch):
     # Patch PERIOD to match the dummy data time length
     monkeypatch.setitem(CONSTANTS_MOSQUITO_DIAPAUSE_HATCHING, "PERIOD", 1)
 
-
     # Transpose to (longitude, latitude, time)
     temp_data = temp_dummy_data.transpose("longitude", "latitude", "time")
     latitude = temp_data.latitude
@@ -434,10 +433,10 @@ def test_mosq_dia_hatch_with_dummy_data(temp_dummy_data, monkeypatch):
 
     # Assert that the function's output matches the expected result
     np.testing.assert_allclose(
-    result.values,
-    np.transpose(expected_octave_result, (2, 1, 0)),  # (lon, lat, time)
-    atol=1e-4
-)
+        result.values,
+        np.transpose(expected_octave_result, (2, 1, 0)),  # (lon, lat, time)
+        atol=1e-4,
+    )
 
 
 # ---- mosq_dia_lay()

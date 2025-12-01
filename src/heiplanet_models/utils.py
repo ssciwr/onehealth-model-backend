@@ -110,6 +110,7 @@ def load_name_from_module(module_name: str, file_path: str, name: str):
     module = load_module(module_name, file_path)
     return getattr(module, name)
 
+
 def validate_spatial_alignment(arr1: xr.DataArray, arr2: xr.DataArray) -> None:
     """Validates that two xarray DataArrays have aligned spatial coordinates.
 
@@ -128,9 +129,7 @@ def validate_spatial_alignment(arr1: xr.DataArray, arr2: xr.DataArray) -> None:
                 "Spatial coordinate 'latitude' of input arrays must be aligned."
             )
     except AttributeError:
-        raise ValueError(
-            "Input DataArrays must have a 'latitude' coordinate."
-        )
+        raise ValueError("Input DataArrays must have a 'latitude' coordinate.")
 
     # Check longitude
     try:
@@ -139,6 +138,4 @@ def validate_spatial_alignment(arr1: xr.DataArray, arr2: xr.DataArray) -> None:
                 "Spatial coordinate 'longitude' of input arrays must be aligned."
             )
     except AttributeError:
-        raise ValueError(
-            "Input DataArrays must have a 'longitude' coordinate."
-        )
+        raise ValueError("Input DataArrays must have a 'longitude' coordinate.")
