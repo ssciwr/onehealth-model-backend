@@ -1,4 +1,4 @@
 [flake8]
-extend-ignore = E501,E731
+extend-ignore = E501, E203, E731
 exclude = .git,__pycache__,.ipynb_checkpoints
 max-line-length = 90
