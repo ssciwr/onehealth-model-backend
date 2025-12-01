@@ -34,7 +34,7 @@ def mosq_dev_j(temperature: np.ndarray) -> np.ndarray:
 
     # # New function briere with coeffiecint with initial data collection, for Sandra and Zia model
     # # Commented on purpose
-    # temperature = q*temperatute*(temperatute - T0 )*((Tm - temperatute)**(1/2));
+    # temperature = q*temperature*(temperature - T0 )*((Tm - temperature)**(1/2));
 
     T_out = CONST_1 - CONST_2 * temperature + CONST_3 * temperature**2
     T_out = CONST_4 / T_out
