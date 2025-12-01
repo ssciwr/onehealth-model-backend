@@ -27,7 +27,8 @@ dependencies = [
   "matplotlib",
   "numpy",
   "dask",
-  "jupyter"
+  "jupyter",
+  "cftime>=1.6.4.post1",
 ]
 
 [project.optional-dependencies]
