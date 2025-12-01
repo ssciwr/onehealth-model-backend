@@ -124,10 +124,9 @@ def carrying_capacity(
     population_np = population_data.isel(time=0).values  # shape: (longitude, latitude)
     logger.debug(f"Population np shape: {population_np.shape}")
 
-    spatial_shape = rainfall_data.isel(time=0).shape
-    logger.debug(f"Spatial shape: {spatial_shape}")
+    lon_len, lat_len, time_len = rainfall_np.shape
+    A = np.zeros((lon_len, lat_len, time_len), dtype=np.float64)
 
-    A = np.zeros(spatial_shape + (time_len,), dtype=np.float64)
     logger.debug(f"Shape A: {A.shape}")
 
     # Initial condition
