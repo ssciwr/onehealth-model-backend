@@ -89,7 +89,7 @@ def mosq_dev_e(temperature: np.ndarray) -> np.ndarray:
     T_out = q * temperature * (temperature - T0) * ((Tm - temperature) ** (1 / 2))
 
     # Found in original code
-    # T_out = CONST_1 - CONST_2 * temperatute + CONST_3 * temperatute**2;
+    # T_out = CONST_1 - CONST_2 * temperature + CONST_3 * temperature**2;
     # T_out = CONST_4 ./ T_OUT;
 
     return T_out
