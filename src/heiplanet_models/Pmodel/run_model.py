@@ -1,5 +1,11 @@
 import logging
 
+from heiplanet_models.Pmodel.Pmodel_rates_birth import (
+    water_hatching,
+    mosq_birth,
+    mosq_dia_hatch,
+    mosq_dia_lay,
+)
 from heiplanet_models.Pmodel.Pmodel_initial import (
     read_global_settings,
     assemble_filepaths,
@@ -25,26 +31,56 @@ def main():
     for year in range(INITIAL_YEAR, FINAL_YEAR + 1):
         logger.info(f" >>> START Processing year {year} ")
 
-        # Read ETL settings
+        # 1. Read ETL settings
         ETL_SETTINGS = read_global_settings(
             filepath_configuration_file=FILEPATH_ETL_SETTINGS
         )
 
-        # Assemble paths
+        # 2. Assemble paths
         paths = assemble_filepaths(year, **ETL_SETTINGS)  # OK
 
-        # Verify if all the files exist for a given year
+        # 3. Verify if all the files exist for a given year
         if check_all_paths_exist(path_dict=paths) is False:
             logger.info(f"Year {year} could not be processed.")
             logger.info(f" >>> END Processing year {year} \n")
             continue
 
-        # Load all data
+        # 4. Load all data
         model_data = load_all_data(paths=paths, etl_settings=ETL_SETTINGS)
-        print(model_data)
+        logger.info(model_data)
+
+        # --------- Manual verification of rates_birth functions -----------
+        # a. mosq_birth
+        mosq_birth_rate = mosq_birth(temperature=model_data.temperature)
+        logger.info(f"Mosquito birth rate: {mosq_birth_rate}")
+
+        # b. mosq dia hatch
+        hatch = mosq_dia_hatch(
+            temperature=model_data.temperature_mean, latitude=model_data.latitude
+        )
+        logger.info(f"Mosquito diapause hatching rate: {hatch}")
+
+        # c. mosq dia lay
+        mosq_dia_lay_rate = mosq_dia_lay(
+            temperature=model_data.temperature_mean, latitude=model_data.latitude
+        )
+        logger.info(f"Mosquito diapause laying rate: {mosq_dia_lay_rate}")
+
+        # d. water hatching
+        water_hatching_rate = water_hatching(
+            rainfall_data=model_data.rainfall,
+            population_data=model_data.population_density,
+        )
+        logger.info(f"Water hatching rate: {water_hatching_rate}")
 
         logger.info(f" >>> END Processing year {year} \n")
 
 
 if __name__ == "__main__":
+    logging.basicConfig(
+        format="{asctime} - {levelname} - {message}",
+        style="{",
+        datefmt="%Y-%m-%d %H:%M",
+        level=logging.INFO,
+    )
     main()
