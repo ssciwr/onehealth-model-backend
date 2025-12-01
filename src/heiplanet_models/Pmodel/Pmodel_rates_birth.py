@@ -115,16 +115,12 @@ def mosq_dia_hatch(temperature: xr.DataArray, latitude: xr.DataArray) -> xr.Data
     n_longitude, n_latitude, n_time = temperature.shape
 
     # Calculate mean temperature of the last 'PERIOD' days and compare to CTT
-    #out = temperature.copy().values
-    #for k in range(n_time - 1, PERIOD - 2, -1):
+    # out = temperature.copy().values
+    # for k in range(n_time - 1, PERIOD - 2, -1):
     #    out[:, :, k] = np.mean(out[:, :, (k - PERIOD + 1) : (k + 1)], axis=2)
 
     # Efficient rolling mean using xarray
-    temp_rolling = (
-        temperature.rolling(time=PERIOD, min_periods=PERIOD)
-        .mean()
-        .fillna(0)
-    )
+    temp_rolling = temperature.rolling(time=PERIOD, min_periods=PERIOD).mean().fillna(0)
     out = temp_rolling.values
 
     # Mask values below critical temperature threshold
