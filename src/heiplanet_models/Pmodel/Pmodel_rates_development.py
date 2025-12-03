@@ -17,9 +17,6 @@ logger.addHandler(logging.NullHandler())
 def mosq_dev_j(temperature: np.ndarray) -> np.ndarray:
     """Calculate mosquito juvenile development rate as a function of temperature.
 
-    This function implements the Octave mosq_dev_j formula for mosquito juvenile
-    development rate, using a temperature-dependent mathematical model.
-
     Args:
         temperature (numpy.ndarray): Array of temperature values (°C).
 
@@ -32,6 +29,7 @@ def mosq_dev_j(temperature: np.ndarray) -> np.ndarray:
     CONST_3 = CONSTANTS_MOSQUITO_J["CONST_3"]
     CONST_4 = CONSTANTS_MOSQUITO_J["CONST_4"]
 
+    # TODO: Ask to remove or implement the commented code below in a separate function.
     # # New function briere with coefficient with initial data collection, for Sandra and Zia model
     # # Commented on purpose
     # temperature = q*temperature*(temperature - T0 )*((Tm - temperature)**(1/2));
@@ -59,6 +57,7 @@ def mosq_dev_i(temperature: np.ndarray) -> np.ndarray:
     CONST_3 = CONSTANTS_MOSQUITO_I["CONST_3"]
     CONST_4 = CONSTANTS_MOSQUITO_I["CONST_4"]
 
+    # TODO: Ask to remove or implement the commented code below in a separate function.
     # # New function briere with coeffiecient with initial data collection, for Sandra and Zia model
     # # Commented on purpose
     # temperature = q*temperature*(temperature - T0 )*((Tm - temperature)**(1/2));
@@ -88,6 +87,7 @@ def mosq_dev_e(temperature: np.ndarray) -> np.ndarray:
     # # New function briere with coefficient with initial data collection, for Sandra and Zia model
     T_out = q * temperature * (temperature - T0) * ((Tm - temperature) ** (1 / 2))
 
+    # TODO: Ask to remove or implement the commented code below in a separate function.
     # Found in original code
     # T_out = CONST_1 - CONST_2 * temperature + CONST_3 * temperature**2;
     # T_out = CONST_4 ./ T_OUT;
@@ -99,7 +99,7 @@ def carrying_capacity(
     rainfall_data: xr.DataArray, population_data: xr.DataArray
 ) -> xr.DataArray:
     """
-    Vectorized and clean implementation of the Octave 'capacity' function using xarray.
+    Calculate the juvenile carrying capacity based on rainfall and population data.
 
     Args:
         rainfall_data: xarray DataArray with dimensions ('longitude', 'latitude', 'time').
@@ -125,17 +125,19 @@ def carrying_capacity(
     logger.debug(f"Population np shape: {population_np.shape}")
 
     lon_len, lat_len, time_len = rainfall_np.shape
-    A = np.zeros((lon_len, lat_len, time_len), dtype=np.float64)
+    carrying_capacity_array = np.zeros((lon_len, lat_len, time_len), dtype=np.float64)
 
-    logger.debug(f"Shape A: {A.shape}")
+    logger.debug(f"Shape carrying_capacity_array: {carrying_capacity_array.shape}")
 
     # Initial condition
-    A[..., 0] = ALPHA_RAIN * rainfall_np[..., 0] + ALPHA_DENS * population_np
+    carrying_capacity_array[..., 0] = (
+        ALPHA_RAIN * rainfall_np[..., 0] + ALPHA_DENS * population_np
+    )
 
     # Recursive computation (cannot be vectorized due to time dependency)
     for k in range(1, time_len):
-        A[..., k] = (
-            GAMMA * A[..., k - 1]
+        carrying_capacity_array[..., k] = (
+            GAMMA * carrying_capacity_array[..., k - 1]
             + ALPHA_RAIN * rainfall_np[..., k]
             + ALPHA_DENS * population_np
         )
@@ -143,15 +145,15 @@ def carrying_capacity(
     # Vectorized scaling factor for all time steps (except the first)
     k_idx = np.arange(1, time_len)
     factors = (1 - GAMMA) / (1 - GAMMA ** (k_idx + 1))
-    A[..., 1:] = factors * A[..., 1:]
+    carrying_capacity_array[..., 1:] = factors * carrying_capacity_array[..., 1:]
 
-    logger.debug(f"shape A after scaling: {A.shape}")
+    logger.debug(f"shape A after scaling: {carrying_capacity_array.shape}")
     logger.debug(f"shape rainfall_data: {rainfall_data.shape}")
 
     # Final scaling
     result = (
         xr.DataArray(
-            A,
+            carrying_capacity_array,
             coords=rainfall_data.coords,
             dims=rainfall_data.dims,
             name="carrying_capacity",
