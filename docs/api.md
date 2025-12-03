@@ -1,10 +1,10 @@
 # API Reference
 
 ## Computation graph module
-::: model_backend.computation_graph
+::: src.heiplanet_models.computation_graph
 
 ## Jmodel model implementation
-::: model_backend.Jmodel 
+::: src.heiplanet_models.Jmodel 
 
 ## Utilities used throughout the code
-::: model_backend.utils
+::: src.heiplanet_models.utils
