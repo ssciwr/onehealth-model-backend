@@ -4,6 +4,22 @@
 
 ---
 
+## How to run the model?
+
+1. Locate the file `src/heiplanet_models/global_settings.yaml`.
+
+2. Modify the path where you have the data, for instance:
+```yaml
+ingestion:
+    path_root_datasets: "data/in/"
+```
+3. Run the Python script `src/heiplanet_models/Pmodel/run_model.py`
+```bash
+python run_model.py
+```
+
+---
+
 ## Architecture
 
 ---
@@ -41,6 +57,8 @@
 - [Supplementary material](https://static-content.springer.com/esm/art%3A10.1038%2Fs43247-025-02199-z/MediaObjects/43247_2025_2199_MOESM2_ESM.pdf)
 
 ## Authors & Contact
+
+
 
 
 ---
