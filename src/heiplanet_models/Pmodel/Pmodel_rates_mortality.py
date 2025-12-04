@@ -122,7 +122,7 @@ def mosq_surv_ed(
     if hasattr(temperature.data, "chunks"):
         temperature = temperature.chunk({time_dim: -1})
 
-    T_cummin = xr.apply_ufunc(
+    t_cummin = xr.apply_ufunc(
         np.minimum.accumulate,
         temperature,
         input_core_dims=[[time_dim]],
@@ -136,7 +136,7 @@ def mosq_surv_ed(
     t_out = (
         ED_SURV_BL
         * CONST_1
-        * np.exp(CONST_2 * ((T_cummin - CONST_3) / CONST_4) ** CONST_5)
+        * np.exp(CONST_2 * ((t_cummin - CONST_3) / CONST_4) ** CONST_5)
     )
 
     return xr.DataArray(
