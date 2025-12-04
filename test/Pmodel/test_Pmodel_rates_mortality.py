@@ -84,9 +84,17 @@ def temperature_array_4x3x2():
     return xr.DataArray(arr, dims=["x", "y", "t"])
 
 
+@pytest.fixture
+def chunked_temperature_array():
+    arr = np.random.rand(2, 2, 2)
+    da = xr.DataArray(arr, dims=["x", "y", "t"])
+    # Use xarray's chunk method to create a chunked DataArray (requires dask)
+    # If dask is not used, simulate chunking by adding a 'chunks' attribute
+    da = da.chunk({"t": 1})
+    return da
+
+
 # ---- Unit Tests for mosq_mort_e
-
-
 def test_mosq_mort_e_typical_temperatures(typical_temperature_array):
     result = mosq_mort_e(typical_temperature_array)
     assert result.shape == typical_temperature_array.shape
@@ -361,3 +369,18 @@ def test_mosq_surv_ed_known_matrix_output(temperature_array_4x3x2):
     expected = mosq_surv_ed(T)
     result = mosq_surv_ed(T)
     np.testing.assert_allclose(result.data, expected.data)
+
+
+def test_mosq_surv_ed_raises_on_non_xarray():
+    arr = np.array([1, 2, 3])
+    with pytest.raises(
+        ValueError, match="Input 'temperature' must be an xarray.DataArray."
+    ):
+        mosq_surv_ed(arr)
+
+
+def test_mosq_surv_ed_chunking(chunked_temperature_array):
+    # This will exercise the chunking code path in mosq_surv_ed
+    result = mosq_surv_ed(chunked_temperature_array)
+    assert isinstance(result, xr.DataArray)
+    assert result.shape == chunked_temperature_array.shape
