@@ -34,9 +34,9 @@ def mosq_dev_j(temperature: np.ndarray) -> np.ndarray:
     # # Commented on purpose
     # temperature = q*temperature*(temperature - T0 )*((Tm - temperature)**(1/2));
 
-    T_out = CONST_1 - CONST_2 * temperature + CONST_3 * temperature**2
-    T_out = CONST_4 / T_out
-    return T_out
+    t_out = CONST_1 - CONST_2 * temperature + CONST_3 * temperature**2
+    t_out = CONST_4 / t_out
+    return t_out
 
 
 def mosq_dev_i(temperature: np.ndarray) -> np.ndarray:
@@ -62,9 +62,9 @@ def mosq_dev_i(temperature: np.ndarray) -> np.ndarray:
     # # Commented on purpose
     # temperature = q*temperature*(temperature - T0 )*((Tm - temperature)**(1/2));
 
-    T_out = CONST_1 - CONST_2 * temperature + CONST_3 * temperature**2
-    T_out = CONST_4 / T_out
-    return T_out
+    t_out = CONST_1 - CONST_2 * temperature + CONST_3 * temperature**2
+    t_out = CONST_4 / t_out
+    return t_out
 
 
 def mosq_dev_e(temperature: np.ndarray) -> np.ndarray:
@@ -85,14 +85,14 @@ def mosq_dev_e(temperature: np.ndarray) -> np.ndarray:
     Tm = CONSTANTS_MOSQUITO_E["Tm"]
 
     # # New function briere with coefficient with initial data collection, for Sandra and Zia model
-    T_out = q * temperature * (temperature - T0) * ((Tm - temperature) ** (1 / 2))
+    t_out = q * temperature * (temperature - T0) * ((Tm - temperature) ** (1 / 2))
 
     # TODO: Ask to remove or implement the commented code below in a separate function.
     # Found in original code
-    # T_out = CONST_1 - CONST_2 * temperature + CONST_3 * temperature**2;
-    # T_out = CONST_4 ./ T_OUT;
+    # t_out = CONST_1 - CONST_2 * temperature + CONST_3 * temperature**2;
+    # t_out = CONST_4 ./ t_out;
 
-    return T_out
+    return t_out
 
 
 def carrying_capacity(
