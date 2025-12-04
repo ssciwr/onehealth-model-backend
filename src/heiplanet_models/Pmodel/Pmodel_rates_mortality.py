@@ -23,13 +23,16 @@ def mosq_mort_e(temperature: xr.DataArray) -> xr.DataArray:
     CONST_4 = CONSTANTS_MORTALITY_MOSQUITO_E["CONST_4"]
     CONST_5 = CONSTANTS_MORTALITY_MOSQUITO_E["CONST_5"]
 
-    T_out = CONST_1 * np.exp(
+    mortality_rate_egg = CONST_1 * np.exp(
         CONST_2 * ((temperature.data - CONST_3) / CONST_4) ** CONST_5
     )
-    T_out = -np.log(T_out)
+    mortality_rate_egg = -np.log(mortality_rate_egg)
 
     return xr.DataArray(
-        T_out, coords=temperature.coords, dims=temperature.dims, name="mosq_mort_e"
+        mortality_rate_egg,
+        coords=temperature.coords,
+        dims=temperature.dims,
+        name="mosq_mort_e",
     )
 
 
@@ -41,14 +44,19 @@ def mosq_mort_j(temperature: xr.DataArray) -> xr.DataArray:
     CONST_4 = CONSTANTS_MORTALITY_MOSQUITO_J["CONST_4"]
     CONST_5 = CONSTANTS_MORTALITY_MOSQUITO_J["CONST_5"]
 
-    T_out = CONST_1 * np.exp(
+    mortality_rate_juvenile = CONST_1 * np.exp(
         CONST_2 * ((temperature.data - CONST_3) / CONST_4) ** CONST_5
     )
-    T_out = np.where(T_out > 0, T_out, 1e-12)
-    T_out = -np.log(T_out)
+    mortality_rate_juvenile = np.where(
+        mortality_rate_juvenile > 0, mortality_rate_juvenile, 1e-12
+    )
+    mortality_rate_juvenile = -np.log(mortality_rate_juvenile)
 
     return xr.DataArray(
-        T_out, coords=temperature.coords, dims=temperature.dims, name="mosq_mort_j"
+        mortality_rate_juvenile,
+        coords=temperature.coords,
+        dims=temperature.dims,
+        name="mosq_mort_j",
     )
 
 
@@ -71,11 +79,14 @@ def mosq_mort_a(temperature: xr.DataArray) -> xr.DataArray:
     zero_val = CONST_1 * np.exp(CONST_2 * ((T - CONST_3) / CONST_4) ** CONST_5)
 
     # Use np.where to select the correct branch
-    T_out = np.where(mask_pos, pos_val, zero_val)
-    T_out = -np.log(T_out)
+    mortality_rate_adult = np.where(mask_pos, pos_val, zero_val)
+    mortality_rate_adult = -np.log(mortality_rate_adult)
 
     return xr.DataArray(
-        T_out, coords=temperature.coords, dims=temperature.dims, name="mosq_mort_a"
+        mortality_rate_adult,
+        coords=temperature.coords,
+        dims=temperature.dims,
+        name="mosq_mort_a",
     )
 
 
@@ -83,7 +94,7 @@ def mosq_surv_ed(
     temperature: xr.DataArray, step_t: Optional[int] = None
 ) -> xr.DataArray:
     """
-    Calculates mosquito survival rate as a function of temperature, following the Octave mosq_surv_ed function.
+    Calculates mosquito survival rate as a function of temperature.
 
     Args:
         temperature (xr.DataArray): 3D DataArray of temperature values (e.g., (x, y, t)).
@@ -122,14 +133,14 @@ def mosq_surv_ed(
     )
 
     # Apply the survival formula
-    T_out = (
+    t_out = (
         ED_SURV_BL
         * CONST_1
         * np.exp(CONST_2 * ((T_cummin - CONST_3) / CONST_4) ** CONST_5)
     )
 
     return xr.DataArray(
-        T_out.values,
+        t_out.values,
         coords=temperature.coords,
         dims=temperature.dims,
         name="mosq_surv_ed",
