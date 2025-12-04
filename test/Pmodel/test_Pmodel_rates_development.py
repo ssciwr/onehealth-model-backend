@@ -265,7 +265,7 @@ def test_mosq_dev_i_large_temperatures():
     temps = np.array([100, 1000], dtype=float)
     result = mosq_dev_i(temps)
     assert result.shape == temps.shape
-    assert np.all(np.isfinite(result) | np.isinf(result))
+    assert np.all(np.isfinite(result))
 
 
 def test_mosq_dev_i_non_numeric_input():
@@ -363,7 +363,7 @@ def test_mosq_dev_e_multidimensional_input():
     with np.errstate(invalid="ignore"):
         result = mosq_dev_e(temps)
     assert result.shape == temps.shape
-    assert np.all(np.isfinite(result[np.where(temps <= CONSTANTS_MOSQUITO_E["Tm"])]))
+    assert np.all(np.isfinite(result[np.nonzero(temps <= CONSTANTS_MOSQUITO_E["Tm"])]))
 
 
 def test_mosq_dev_e_output_consistency():
