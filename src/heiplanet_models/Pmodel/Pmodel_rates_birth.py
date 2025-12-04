@@ -195,7 +195,7 @@ def mosq_dia_lay(temperature: xr.DataArray, latitude: xr.DataArray) -> xr.DataAr
     # Prepare output array
     out = temperature.copy().values
 
-    # Conversion fromn degrees to radians
+    # Conversion from degrees to radians
     latitude_degrees = latitude.values
 
     for k in range(n_latitude):
