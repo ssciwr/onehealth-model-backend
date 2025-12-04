@@ -1,10 +1,27 @@
 # PModel (Aedes Albopictus)
 
-## Model Overview
+
+## 1. Overview
+
+**Model name**: `am_aedes_albopictus`
+
+**Description**: `am_aedes_albopictus` is as climate-driven model designed to...
+
+Key features
+
+- Uses climate and population datasets as inputs.
+- Implements a system of differential equations representing mosquito development, mortality, and hatching rates.
+- Outputs gridded estimates of adult mosquito abundance in NetCDF4 format.
+
+**Reference Publication:**
+
+- DOI: [https://doi.org/10.1038/s43247-025-02199-z](https://doi.org/10.1038/s43247-025-02199-z)
 
 ---
 
-## How to run the model?
+## 2. Quickstart
+
+How to run the model
 
 1. Locate the file `src/heiplanet_models/global_settings.yaml`.
 
@@ -20,9 +37,7 @@ python run_model.py
 
 ---
 
-## Architecture
-
----
+## 3. Model Architecture
 
 ### Inputs
 | Dataset                  | Description              | Format  |
@@ -39,44 +54,80 @@ python run_model.py
 | Mosquito Abundance | Gridded mosquito abundance for the Aedes Albopictus specie | NetCDF4 |
 
 
+### Workflow
+
+You can find a dataflow diagram [here](https://drive.google.com/file/d/1gM3l2zmaGbskOAXglsi1K4jml-LpqiR4/view?usp=drive_link).
+
+
+## 4. Mathematical Model
+
+Categories:
+
+- Development
+- Birth
+- Mortality
+- <another>
+- <another one>
+
+### Equations
+
+!!! warning
+    This is just a demo table.
+
+| Stage       | Symbol                                 | Description                               | Python Function     | Units           |
+| ----------- | -------------------------------------- | ----------------------------------------- | ------------------- | --------------- |
+| Birth       | $\omega(\underline{T}, \underline{S})$ | Diapausing egg proportion                 | `mosq_dia_lay`      | N/A             |
+| Birth       | $\sigma(\underline{T}, S)$             | Spring hatching rate                      | `mosq_dia_hatch`    | $\frac{1}{day}$ |
+| Birth       | $Q(W,P)$                               | Hatching fraction (rainfall & population) | `water_hatching`    | N/A             |
+| Development | $K_L(W,P)$                             | Juvenile carrying capacity                | `carrying_capacity` | N/A             |
+| Development | $\delta_J(T)$                          | Juvenile development rate                 | `mosq_dev_j`        | $\frac{1}{day}$ |
+| Development | $\delta_{Aem}(T)$                      | Emerging adult development rate           | `mosq_dev_i`        | $\frac{1}{day}$ |
+| Mortality   | $m_E(T)$                               | Egg mortality rate                        | `mosq_mort_e`       | $\frac{1}{day}$ |
+| Mortality   | $m_J(T)$                               | Juvenile mortality rate                   | `mosq_mort_j`       | $\frac{1}{day}$ |
+| Mortality   | $m_A(T_{mean})$                        | Adult mortality rate                      | `mosq_mort_a`       | $\frac{1}{day}$ |
+
+
+
+---
+## 5. Examples
+
+TODO: Add some plots
+
 ---
 
-### Model Structure
-#### Equations
+## References
 
-#### Workflow
-
----
-### Examples
-
----
-
-## References:
-- Barman, S., Semenza, J.C., Singh, P. et al. A climate and population dependent diffusion model forecasts the spread of Aedes Albopictus mosquitoes in Europe. Commun Earth Environ 6, 276 (2025). [https://doi.org/10.1038/s43247-025-02199-z](https://doi.org/10.1038/s43247-025-02199-z)
-- [List of equations]()
+- [List of equations](https://www.overleaf.com/read/snpvmqqthnmc#1d0b97)
 - [Supplementary material](https://static-content.springer.com/esm/art%3A10.1038%2Fs43247-025-02199-z/MediaObjects/43247_2025_2199_MOESM2_ESM.pdf)
 
 ## Authors & Contact
 
+Here is a markdown table template for author information:
 
+| Author      | GitHub Username   | Email                                                                  | Affiliation                                 |
+| ----------- | ----------------- | ---------------------------------------------------------------------- | ------------------------------------------- |
+| Robert Koch | @rkochdeutschland | [robert.koch@koch-institute.de](mailito:robert.koch@koch-institute.de) | [Robert Koch Institute](https://www.rki.de) |
+|             |                   |                                                                        |                                             |
 
 
 ---
 
 
 
-## [deprecated] How the original Octave/Matlab code works
+## [LegacyCode]
 
-### Entry point name: `aedes_albopictus_model.m`
+### Workflow description
 
-1. Create variables to assign the prefix of each dataset that will be used
+a. Entry point name: `aedes_albopictus_model.m`
+
+  1. Create variables to assign the prefix of each dataset that will be used
    ```matlab
    tmean_prefix = 'ERA5land_global_t2m_daily_0.5_';
    pr_prefix = 'ERA5land_global_tp_daily_0.5_';
    dens_prefix = 'pop_dens_';
    ```
 
-2. Create a `for` loop to iterate over years. The following operations are done in each loop:
+  2. Create a `for` loop to iterate over years. The following operations are done in each loop:
     
     a. The name for each dataset is completed with the year and extension:
     ```matlab
@@ -103,126 +154,127 @@ python run_model.py
     model_run(tmean, pr,dens,year);            % for tmean only with NO DTR (Tmax or Tmin is not present)
     disp(['Year done: ', num2str(years)]);
     ```  
-3. End the program
+  3. End the program
 
-### Name: `model_run.m`
-1. Create a variable name for the output file.
-```matlab
-outfile = strcat('Mosquito_abundance_Global_', num2str(year), '.nc')      % change the output file name as required
+b. Name: `model_run.m`
 
-if exist(outfile) == 2
-    delete(outfile)
-end
-```
-2. Copy the dataset that contains the precipitation (one of the ERA5*.nc) and store this copy using the variable name for the output file.
-```matlab
-copyfile(pr, outfile);   % overwriting the file gives us advantage that we can loose the ;latitude and longitude information of Tmax,
-% Tmin file and only work with time varible in 3rd dimension and then rewrite this over same nc file
-```
-3. Rename the internal variable (`pr`) of this copy with the name `adults`. It means, we have a new .nc file that contains
-`longitude`, `latitude` and the variable name `adults`. With this we can just overwrite the variable adult with the calculations we intend to do.
-```matlab
-ncid = netcdf.open(outfile,'NC_WRITE');
-netcdf.reDef(ncid)
-netcdf.renameVar(ncid,3,'adults');
-netcdf.endDef(ncid);
-netcdf.close(ncid);
-```
+  1. Create a variable name for the output file.
+  ```matlab
+  outfile = strcat('Mosquito_abundance_Global_', num2str(year), '.nc')      % change the output file name as required
 
-4. Defines a delta time step that will be important for solving the system of differential equations.
-```matlab
-step_t = 10;
-```
+  if exist(outfile) == 2
+      delete(outfile)
+  end
+  ```
+  2. Copy the dataset that contains the precipitation (one of the ERA5*.nc) and store this copy using the variable name for the output file.
+  ```matlab
+  copyfile(pr, outfile);   % overwriting the file gives us advantage that we can loose the ;latitude and longitude information of Tmax,
+  % Tmin file and only work with time varible in 3rd dimension and then rewrite this over same nc file
+  ```
+  3. Rename the internal variable (`pr`) of this copy with the name `adults`. It means, we have a new .nc file that contains
+  `longitude`, `latitude` and the variable name `adults`. With this we can just overwrite the variable adult with the calculations we intend to do.
+  ```matlab
+  ncid = netcdf.open(outfile,'NC_WRITE');
+  netcdf.reDef(ncid)
+  netcdf.renameVar(ncid,3,'adults');
+  netcdf.endDef(ncid);
+  netcdf.close(ncid);
+  ```
 
-5. Load variables from each dataset involved (`tmean`, `pr`, `dens`)
-   
-    a. Load temperature variables and applies some preprocessing steps with `load_temp2(tmean, step_t)` function
+  4. Defines a delta time step that will be important for solving the system of differential equations.
+  ```matlab
+  step_t = 10;
+  ```
+
+  5. Load variables from each dataset involved (`tmean`, `pr`, `dens`)
+     
+      a. Load temperature variables and applies some preprocessing steps with `load_temp2(tmean, step_t)` function
+      ```matlab
+      [Temp, Tmean] = load_temp2(tmean, step_t);       % Without DTR if Tmean is only available, no Tmax or Tmin
+      ```
+
+      b. Load population density variables and applies some preprocessing steps with `load_hdp(dens)`
+      ```matlab
+      DENS = load_hpd(dens);
+      ```
+
+      c. Load Precipitation variable with `load_rainfall(pr)` function
+      ```matlab
+      PR = load_rainfall(pr);    
+      ```
+
+      d. Load Latitude variable from the `tmean` dataset with the function `load_latitude(tmean)`
+      ```matlab
+      LAT = load_latitude(tmean);
+      ```
+
+  6. Calculate **Juvenile Carrying Capacity**: $K_{L}(W,P)$
+
+      - $W$: Rainfall accumulation, this the information we get from `PR`
+
+      - $P$: Human density, this is the information we get from `DENS`
+
+      ```matlab
+      CC = capacity(PR, DENS);
+      ```
+
+        - file associated: `capacity.m`
+
+        - Equation in Supplement Information: 14
+
+  7. Calculate **Hatching fraction depending in human density and rainfall**: $Q(W,P)$
+      $$
+      Q(W,P) = (1 - E_{rat}) \left( \frac{(1+E_{0})e^{\left(-E_{var}(W(t)-E_{opt})\right)^2}}{e^{\left( -E_{var} (W(t)-E_{opt})^2 \right)}} \right) + E_{rat} \left( \frac{E_{dens}}{E_{dens} + e^{-E_{fac}P}} \right)
+      $$
+
+      Where:
+
+      - $W$: Precipitation, we get this information from `PR`
+
+      - $P$: Human density, we get this information from `DENS`
+      - $E_{opt}$ = 8;
+      - $E_{var}$ = 0.05;
+      - $E_{0}$ = 1.5;
+      - $E_{rat}$= 0.2;
+      - $E_{dens}$ = 0.01;
+      - $E_{fac}$ = 0.01;
+      
+      ```matlab
+      egg_active = water_hatch(PR, DENS);
+      ```
+      - file associated: `water_hatch.m`
+      - Equation in Supplementary Information: 13
+
+  8. Create a **Vector Initial population**: $V_{0}$
+      ```matlab
+      previous = 'no_previous';
+      v0 = load_initial(previous, size(Temp));
+      ```
+      - File associated: `load_initial.m`
+      - TODO: Ask about the name and meaning of this variable.
+
+  9. Calculate the parameters for each time step and run ODEs
+      ```matlab
+      v = call_func(v0, Temp, Tmean, LAT, CC, egg_active, step_t);
+      ```
+
+      Input variables:
+
+      - initial vector: `v0`
+      - temperature: `Temp`
+      - mean temperature: `Tmean`
+      - latitude: `LAT`
+      - juvenile carrying capacity: `CC`
+      - hatching fraction depending in human density and rainfall: `egg_active`
+      - time step: `step_time`
+      - File associated: `call_func.m`
+
+    10. Once all the variables are calculated, write to the output file.
     ```matlab
-    [Temp, Tmean] = load_temp2(tmean, step_t);       % Without DTR if Tmean is only available, no Tmax or Tmin
+    ncwrite(outfile,'adults', permute(v(:,:,5,:),[1,2,4,3]));
     ```
 
-    b. Load population density variables and applies some preprocessing steps with `load_hdp(dens)`
-    ```matlab
-    DENS = load_hpd(dens);
-    ```
-
-    c. Load Precipitation variable with `load_rainfall(pr)` function
-    ```matlab
-    PR = load_rainfall(pr);    
-    ```
-
-    d. Load Latitude variable from the `tmean` dataset with the function `load_latitude(tmean)`
-    ```matlab
-    LAT = load_latitude(tmean);
-    ```
-
-6. Calculate **Juvenile Carrying Capacity**: $K_{L}(W,P)$
-
-    - $W$: Rainfall accumulation, this the information we get from `PR`
-
-    - $P$: Human density, this is the information we get from `DENS`
-
-    ```matlab
-    CC = capacity(PR, DENS);
-    ```
-
-      - file associated: `capacity.m`
-
-      - Equation in Supplement Information: 14
-
-7. Calculate **Hatching fraction depending in human density and rainfall**: $Q(W,P)$
-    $$
-    Q(W,P) = (1 - E_{rat}) \left( \frac{(1+E_{0})e^{\left(-E_{var}(W(t)-E_{opt})\right)^2}}{e^{\left( -E_{var} (W(t)-E_{opt})^2 \right)}} \right) + E_{rat} \left( \frac{E_{dens}}{E_{dens} + e^{-E_{fac}P}} \right)
-    $$
-
-    Where:
-
-    - $W$: Precipitation, we get this information from `PR`
-
-    - $P$: Human density, we get this information from `DENS`
-    - $E_{opt}$ = 8;
-    - $E_{var}$ = 0.05;
-    - $E_{0}$ = 1.5;
-    - $E_{rat}$= 0.2;
-    - $E_{dens}$ = 0.01;
-    - $E_{fac}$ = 0.01;
-    
-    ```matlab
-    egg_active = water_hatch(PR, DENS);
-    ```
-    - file associated: `water_hatch.m`
-    - Equation in Supplementary Information: 13
-
-8. Create a **Vector Initial population**: $V_{0}$
-    ```matlab
-    previous = 'no_previous';
-    v0 = load_initial(previous, size(Temp));
-    ```
-    - File associated: `load_initial.m`
-    - TODO: Ask about the name and meaning of this variable.
-
-9. Calculate the parameters for each time step and run ODEs
-    ```matlab
-    v = call_func(v0, Temp, Tmean, LAT, CC, egg_active, step_t);
-    ```
-
-    Input variables:
-
-    - initial vector: `v0`
-    - temperature: `Temp`
-    - mean temperature: `Tmean`
-    - latitude: `LAT`
-    - juvenile carrying capacity: `CC`
-    - hatching fraction depending in human density and rainfall: `egg_active`
-    - time step: `step_time`
-    - File associated: `call_func.m`
-
-1.   Once all the variables are calculated, write to the output file.
-```matlab
-ncwrite(outfile,'adults', permute(v(:,:,5,:),[1,2,4,3]));
-```
-
-### Name: `call_func.m`
+c. Name: `call_func.m`
 
 Description: This file the main file that contains the ODEs to calculate the 6 differential equations
 proposed in the paper.
@@ -350,48 +402,57 @@ Process:
     ```
 ---
 
-## Table 1. Mapping Equations from Octave/Matlab code to Python code
+### Table 1. Mapping Equations from Octave/Matlab code to Python code
 
 !!! note
 
     Numbers in brackets refer to the corresponding row numbers in [Table S11 from the Supplementary Material](https://static-content.springer.com/esm/art%3A10.1038%2Fs43247-025-02199-z/MediaObjects/43247_2025_2199_MOESM2_ESM.pdf).
 
-| Octave Function  | Python Function     | Equation Number in Paper |
-| ---------------- | ------------------- | ------------------------ |
-| `mosq_dev_j.m`   | `mosq_dev_j`        | [5]                      |
-| `mosq_dev_i.m`   | `mosq_dev_i`        | [6]                      |
-| `mosq_dev_e.m`   | `mosq_dev_e`        | `[NR 1]`                 |
-| `capacity.m`     | `carrying_capacity` | [14]                     |
-| `mosq_mort_e.m`  | `mosq_mort_e`       | [9]                      |
-| `mosq_mort_j.m`  | `mosq_mort_j`       | [10]                     |
-| `mosq_mort_a.m`  | `mosq_mort_a`       | [11]                     |
-| `mosq_surv_ed.m` | `mosq_surv_ed`      | `[NR 2]`                 |
+| Octave Function    | Python Function     | Equation Number in Paper |
+| ------------------ | ------------------- | ------------------------ |
+| `mosq_dev_j.m`     | `mosq_dev_j`        | [5]                      |
+| `mosq_dev_i.m`     | `mosq_dev_i`        | [6]                      |
+| `mosq_dev_e.m`     | `mosq_dev_e`        | `[NR 1]`                 |
+| `capacity.m`       | `carrying_capacity` | [14]                     |
+| `mosq_mort_e.m`    | `mosq_mort_e`       | [9]                      |
+| `mosq_mort_j.m`    | `mosq_mort_j`       | [10]                     |
+| `mosq_mort_a.m`    | `mosq_mort_a`       | [11]                     |
+| `mosq_surv_ed.m`   | `mosq_surv_ed`      | `[NR 2]`                 |
+| `mosq_birth.m`     | `mosq_birth`        | `[NR 3]`                 |
+| `mosq_dia_hatch.m` | `mosq_dia_hatch`    | [3]                      |
+| `mosq_dia_lay.m`   | `mosq_dia_lay`      | [2]                      |
+| `water_hatch.m`    | `water_hatching`    | [13]                     |
 
 
 
-## Table 2. Climate sensitive parameter description and functions (inspired on Table S11 in Supplementary information)
+### Table 2. Climate sensitive parameter description and functions (inspired on Table S11 in Supplementary information)
 
 !!! warning
 
     Put special attention to the Not Reported (`[NR <number>]`) equations and the Not Reported units (`[NA]`).
 
 
-| Number   | Description                                          | Symbol         | Unit            |
-| -------- | ---------------------------------------------------- | -------------- | --------------- |
-| [5]      | Juvenile development rate                            |                | $\frac{1}{day}$ |
-| [6]      | Emerging adult development                           |                | $\frac{1}{day}$ |
-| `[NR 1]` | (tentative) Emerging adult development Briere model. |                | `[NR 1]`        |
-| [14]     | Juvenile carrying capacity                           |                | `NA`            |
-| [9]      | Egg mortality rate                                   | $m_{E}(T)$     | $\frac{1}{day}$ |
-| [10]     | Juvenile mortality rate                              | $m_{J}(T)$     | $\frac{1}{day}$ |
-| [11]     | Adult mortality rate                                 | $m_{A}(Tmean)$ | $\frac{1}{day}$ |
-| `[NR 2]` | (tentative) Diapausing egg mortality rate            | $m_{Ed}(T)$    | $\frac{1}{day}$ |
+| Number   | Description                                               | Symbol                                 | Unit            |
+| -------- | --------------------------------------------------------- | -------------------------------------- | --------------- |
+| [5]      | Juvenile development rate                                 |                                        | $\frac{1}{day}$ |
+| [6]      | Emerging adult development                                |                                        | $\frac{1}{day}$ |
+| `[NR 1]` | (tentative) Emerging adult development Briere model.      |                                        | `[NR 1]`        |
+| [14]     | Juvenile carrying capacity                                |                                        | `NA`            |
+| [9]      | Egg mortality rate                                        | $m_{E}(T)$                             | $\frac{1}{day}$ |
+| [10]     | Juvenile mortality rate                                   | $m_{J}(T)$                             | $\frac{1}{day}$ |
+| [11]     | Adult mortality rate                                      | $m_{A}(Tmean)$                         | $\frac{1}{day}$ |
+| `[NR 2]` | (tentative) Diapausing egg mortality rate                 | $m_{Ed}(T)$                            | $\frac{1}{day}$ |
+| `[NR 3]` | `Not reported`                                            | `Not reported`                         | `[NR 3]`        |
+| [3]      | (tentative) Spring hatching rate                          | $\sigma(\underline{T},S)$              | $\frac{1}{day}$ |
+| [2]      | (tentative) Diapausing egg proportion                     | $\omega(\underline{T}, \underline{S})$ | `NA`            |
+| [13]     | Hatching fraction depending in human density and rainfall | $Q(W,P)$                               | `NA`            |
 
 
 
 
 
-## List of equations
+### List of equations
+
 - [5] Juvenile development rate: $\delta_{J}(T)$
 $$
 \delta_{J}(T) = \frac{1}{0.08T^{2} - 4.89T + 83.85}
@@ -499,4 +560,79 @@ $$
 | Parameter | Description      |
 | --------- | ---------------- |
 | $T$       | Temperature (°C) |
+
+
+
+- `[NR 3]` 
+!!! warning
+    **Missing name**
+    
+    The following formula has been deducted from octave code
+
+    $$
+    b(T) =
+    \begin{cases}
+    33.2\, \exp\left(-0.5 \left(\frac{T - 70.3}{14.1}\right)^2\right)\, (38.8 - T)^{1.5}, & \text{if } T < 38.8 \\[1.5ex]
+    0, & \text{if } T \geq 38.8
+    \end{cases}
+    $$
+
+
+- [3] Spring hatching rate
+
+!!! warning 
+    The equation in Octave should look like this.
+
+    $$
+    \begin{cases}
+    \text{ratio}_{\text{dia\_hatch}}, & \text{if } \overline{T}_{\text{last 7 days}} \geq \text{CTT} \text{ and } D(\text{lat}, t) \geq \text{CPP} \\
+    0, & \text{otherwise}
+    \end{cases}
+    $$
+
+$$
+\sigma(\underline{T}, S) = 0.1 \times f(\check{T} - \underline{T})\, f(-\check{S}_{s} - S)
+$$
+
+| Parameter       | Description                                   |
+| --------------- | --------------------------------------------- |
+| $\check{T}$     | **missing description**                       |
+| $\underline{T}$ | **missing description**                       |
+| $\check{S}_{s}$ | Critical day-light length in spring   (hours) |
+| $S$             | Day-light (hours)                             |
+
+- [2] (tentative) Diapausing egg proportion
+!!! warning 
+    The equation in Octave should look like this.
+
+    $$
+    \omega(T, \text{lat}, t) =
+    \begin{cases}
+    0.5, & \text{if } S(\text{lat}, t) \leq \text{CPP}(\text{lat}) \text{ and } t > 183 \\
+    0,   & \text{otherwise}
+    \end{cases}
+    $$
+
+$$
+\omega(\underline{T}, \underline{S}) = 0.5 \times f\left(\underline{S} - \check{S}_{a}\right)\, f\left(-\underline{T} - \check{T}_{D}\right)
+$$
+
+| Parameter       | Description                                                                                          |
+| --------------- | ---------------------------------------------------------------------------------------------------- |
+| $\underline{T}$ | **missing description**                                                                              |
+| $\underline{S}$ | **missing description**                                                                              |
+| $\check{S}_{a}$ | Critical day-light length in autumn, $\check{S}_{a}=10.058+0.08965 \times Latitude(degrees)$ (hours) |
+| $\check{T}_{D}$ | Critical diapause temperature (°C)                                                                   |
+
+- [13] Hatching fraction depending in human density and rainfall:
+
+$$
+Q(W, P) = 0.8 \left( \frac{2.5\, e^{-0.05\,(W(t)-8)^2}}{e^{-0.05\,(W(t)-8)^2} + 1.5} \right) + 0.2 \left( \frac{0.01}{0.01 + e^{-0.01 P(t)}} \right)
+$$
+
+
+| Parameter | Description                                                    |
+| --------- | -------------------------------------------------------------- |
+| $W$       | Precipitation or Rainfall (mm)                                 |
+| $P$       | Human population density ($\frac{\text{people}}{\text{km}^2}$) |
 
