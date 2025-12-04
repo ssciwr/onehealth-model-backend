@@ -70,9 +70,9 @@ CONSTANTS_MOSQUITO_J = {
     "CONST_2": 4.87,
     "CONST_3": 8e-2,
     "CONST_4": 1.0,
-    "q": 5.116230e-5,
-    "T0": 7.628991e00,
-    "Tm": 4.086981e01,
+    "q": 5.116230e-5,  # TODO: Ask to remove.
+    "T0": 7.628991e00,  # TODO: Ask to remove.
+    "Tm": 4.086981e01,  # TODO: Ask to remove.
 }
 
 CONSTANTS_MOSQUITO_I = {
@@ -80,16 +80,16 @@ CONSTANTS_MOSQUITO_I = {
     "CONST_2": 3.574,
     "CONST_3": 0.069,
     "CONST_4": 1.0,
-    "q": 1.695638e-04,
-    "T0": 3.750303e00,
-    "Tm": 3.553575e01,
+    "q": 1.695638e-04,  # TODO: Ask to remove.
+    "T0": 3.750303e00,  # TODO: Ask to remove.
+    "Tm": 3.553575e01,  # TODO: Ask to remove.
 }
 
 CONSTANTS_MOSQUITO_E = {
-    "CONST_1": 50.1,
-    "CONST_2": 3.574,
-    "CONST_3": 0.069,
-    "CONST_4": 1.0,
+    "CONST_1": 50.1,  # TODO: Ask to remove.
+    "CONST_2": 3.574,  # TODO: Ask to remove.
+    "CONST_3": 0.069,  # TODO: Ask to remove.
+    "CONST_4": 1.0,  # TODO: Ask to remove.
     "q": 0.0001246068,
     "T0": -7.0024634748,
     "Tm": 34.1519214674,

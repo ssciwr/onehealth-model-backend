@@ -1,5 +1,12 @@
 import logging
 
+from heiplanet_models.Pmodel.Pmodel_rates_development import (
+    mosq_dev_j,
+    mosq_dev_i,
+    mosq_dev_e,
+    carrying_capacity,
+)
+
 from heiplanet_models.Pmodel.Pmodel_rates_birth import (
     water_hatching,
     mosq_birth,
@@ -72,6 +79,25 @@ def main():
             population_data=model_data.population_density,
         )
         logger.info(f"Water hatching rate: {water_hatching_rate}")
+
+        # e. mosq_dev_j
+        mosq_dev_j_rate = mosq_dev_j(temperature=model_data.temperature)
+        logger.info(f"Mosquito 'j' stage development rate: {mosq_dev_j_rate.values}")
+
+        # f. mosq_dev_i
+        mosq_dev_i_rate = mosq_dev_i(temperature=model_data.temperature)
+        logger.info(f"Mosquito 'i' stage development rate: {mosq_dev_i_rate.values}")
+
+        # g. mosq_dev_e
+        mosq_dev_e_rate = mosq_dev_e(temperature=model_data.temperature)
+        logger.info(f"Mosquito 'e' stage development rate: {mosq_dev_e_rate.values}")
+
+        # h. carrying_capacity
+        carrying_capacity_rate = carrying_capacity(
+            rainfall_data=model_data.rainfall,
+            population_data=model_data.population_density,
+        )
+        logger.info(f"Carrying capacity rate: {carrying_capacity_rate.values}")
 
         logger.info(f" >>> END Processing year {year} \n")
 
