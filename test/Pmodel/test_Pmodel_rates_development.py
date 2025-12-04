@@ -363,7 +363,7 @@ def test_mosq_dev_e_multidimensional_input():
     with np.errstate(invalid="ignore"):
         result = mosq_dev_e(temps)
     assert result.shape == temps.shape
-    assert np.all(np.isfinite(result[np.where(temps <= CONSTANTS_MOSQUITO_E["Tm"])]))
+    assert np.all(np.isfinite(result[np.nonzero(temps <= CONSTANTS_MOSQUITO_E["Tm"])]))
 
 
 def test_mosq_dev_e_output_consistency():
