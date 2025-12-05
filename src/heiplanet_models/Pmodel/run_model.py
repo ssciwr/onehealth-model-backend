@@ -1,5 +1,12 @@
 import logging
 
+from heiplanet_models.Pmodel.Pmodel_rates_mortality import (
+    mosq_mort_e,
+    mosq_mort_j,
+    mosq_mort_a,
+    mosq_surv_ed,
+)
+
 from heiplanet_models.Pmodel.Pmodel_rates_development import (
     mosq_dev_j,
     mosq_dev_i,
@@ -98,6 +105,25 @@ def main():
             population_data=model_data.population_density,
         )
         logger.info(f"Carrying capacity rate: {carrying_capacity_rate.values}")
+
+        # i. mosq_mort_e
+        mosq_mort_e_rate = mosq_mort_e(temperature=model_data.temperature)
+        logger.info(f"Mosquito egg mortality rate: {mosq_mort_e_rate.values}")
+
+        # j. mosq_mort_j
+        mosq_mort_j_rate = mosq_mort_j(temperature=model_data.temperature)
+        logger.info(f"Mosquito 'j' stage mortality rate: {mosq_mort_j_rate.values}")
+
+        # k. mosq_mort_a
+        mosq_mort_a_rate = mosq_mort_a(temperature=model_data.temperature_mean)
+        logger.info(f"Mosquito adult mortality rate: {mosq_mort_a_rate.values}")
+
+        # l. mosq_surv_ed
+        mosq_surv_ed_rate = mosq_surv_ed(
+            temperature=model_data.temperature,
+            step_t=ETL_SETTINGS["ode_system"]["time_step"],
+        )
+        logger.info(f"Mosquito survival rate: {mosq_surv_ed_rate.values}")
 
         logger.info(f" >>> END Processing year {year} \n")
 
