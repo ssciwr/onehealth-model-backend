@@ -1,5 +1,6 @@
 import logging
-from re import A
+import logging
+from pathlib import Path
 
 import xarray as xr
 
@@ -35,39 +36,89 @@ from heiplanet_models.Pmodel.Pmodel_initial import (
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 
-FILEPATH_TEMPERATURE_DATA = "data/in/Pratik_datalake/dataset_temperature_dummy.nc"
-FILEPATH_RAINFALL_DATA = "data/in/Pratik_datalake/dataset_rainfall_dummy.nc"
-FILEPATH_POPULATION_DATA = "data/in/Pratik_datalake/dataset_population_dummy.nc"
+FILEPATH_ETL_SETTINGS = "./src/heiplanet_models/Pmodel/global_settings_dummy.yaml"
 
+INITIAL_YEAR = 2023
+FINAL_YEAR = 2024
+
+def assemble_filepaths_no_year(**etl_settings) -> dict[str, Path]:
+    """Assemble file paths for datasets for a given year based on ETL settings.
+
+    Args:
+        year (int): The year for which to assemble dataset file paths.
+        **etl_settings: Arbitrary keyword arguments containing ETL configuration, must include
+            'ingestion' with 'path_root_datasets' and 'filename_components'.
+
+    Returns:
+        dict[str, Path]: Dictionary mapping dataset names to their corresponding file paths as Path objects.
+
+    Raises:
+        KeyError: If required keys are missing in etl_settings.
+        TypeError: If the year is not an integer or settings are malformed.
+    """
+    # TODO: move to utils.py in the future
+
+
+
+    path_root = Path(etl_settings["ingestion"]["path_root_datasets"])
+    filename_components = etl_settings["ingestion"]["filename_components"]
+
+    dict_paths = {
+        dataset_name: path_root
+        / f"{comp['prefix']}{comp['suffix'] or ''}{comp['extension']}"
+        for dataset_name, comp in filename_components.items()
+    }
+    return dict_paths
+
+def print_time_slices(dataarray):
+    """
+    Print each time slice of a DataArray.
+    """
+    for i, t in enumerate(dataarray.time):
+        print(f"Time slice {i}:")
+        print(dataarray.sel(time=t).values)
+        print("-" * 40)
+        print("\n")
 
 def main():
-    
-    # 1. Load Datasets
-    temperature_dataset = xr.open_dataset(FILEPATH_TEMPERATURE_DATA)
-    logger.info(f"Temperature dataset info: \n{temperature_dataset}")
+    # Set logger
+    logging.basicConfig(level=logging.INFO)
 
-    rainfall_dataset = xr.open_dataset(FILEPATH_RAINFALL_DATA)
-    logger.info(f"Precipitation dataset info: \n{rainfall_dataset}")
+    # Main processor
+    for year in range(INITIAL_YEAR, FINAL_YEAR + 1):
+        logger.info(f" >>> START Processing year {year} ")
 
-    population_dataset = xr.open_dataset(FILEPATH_POPULATION_DATA)
-    logger.info(f"Population dataset info: \n{population_dataset}")
+        # 1. Read ETL settings
+        ETL_SETTINGS = read_global_settings(
+            filepath_configuration_file=FILEPATH_ETL_SETTINGS
+        )
 
-    # 2. Verify dimensions input data
-    dimensions_temperature = (3, 2, 4) # (longitude, latitude, time)
-    dimensions_rainfall = (3, 2, 4) # (longitude, latitude, time)
-    dimensions_population = (3, 2, 1) # (longitude, latitude, time)
-    
-    assert temperature_dataset.temperature.shape == dimensions_temperature, "Temperature dataset dimensions are incorrect"
-    assert rainfall_dataset.rainfall.shape == dimensions_rainfall, "Rainfall dataset dimensions are incorrect"
-    assert population_dataset.population.shape == dimensions_population, "Population dataset dimensions are incorrect"
+        # 2. Assemble paths
+        paths = assemble_filepaths_no_year(**ETL_SETTINGS)  # OK
 
 
+        # 3. Verify if all the files exist for a given year
+        if check_all_paths_exist(path_dict=paths) is False:
+            logger.info(f"Year {year} could not be processed.")
+            logger.info(f" >>> END Processing year {year} \n")
+            continue
+
+        # # 4. Load all data
+        model_data = load_all_data(paths=paths, etl_settings=ETL_SETTINGS)
+        logger.info(model_data)
 
 
+        # Verify carrying capacity function
+        CC = carrying_capacity(
+            rainfall_data=model_data.rainfall,
+            population_data=model_data.population_density,
+        )
 
-        # 4. Load all data
-        # model_data = load_all_data(paths=paths, etl_settings=ETL_SETTINGS)
-        # logger.info(model_data)
+        logger.info(f"Dim. Carrying capacity data: {CC.values.shape}")
+        logger.info(f"Carrying capacity data: \n{print_time_slices(CC)}")
+        logger.info(f"Carrying capacity data: \n{CC[:,:,2].values}")
+
+
 
         # --------- Manual verification of rates_birth functions -----------
         # # a. mosq_birth
@@ -187,6 +238,6 @@ if __name__ == "__main__":
         format="{asctime} - {levelname} - {message}",
         style="{",
         datefmt="%Y-%m-%d %H:%M",
-        level=logging.INFO,
+        level=logging.DEBUG,
     )
     main()
