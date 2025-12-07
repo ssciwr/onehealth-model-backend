@@ -1,4 +1,5 @@
 import logging
+from re import A
 
 import xarray as xr
 
@@ -34,37 +35,38 @@ from heiplanet_models.Pmodel.Pmodel_initial import (
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 
-FILEPATH_ETL_SETTINGS = "./src/heiplanet_models/Pmodel/global_settings.yaml"
-
-INITIAL_YEAR = 2023
-FINAL_YEAR = 2024
+FILEPATH_TEMPERATURE_DATA = "data/in/Pratik_datalake/dataset_temperature_dummy.nc"
+FILEPATH_RAINFALL_DATA = "data/in/Pratik_datalake/dataset_rainfall_dummy.nc"
+FILEPATH_POPULATION_DATA = "data/in/Pratik_datalake/dataset_population_dummy.nc"
 
 
 def main():
-    # Set logger
-    logging.basicConfig(level=logging.INFO)
+    
+    # 1. Load Datasets
+    temperature_dataset = xr.open_dataset(FILEPATH_TEMPERATURE_DATA)
+    logger.info(f"Temperature dataset info: \n{temperature_dataset}")
 
-    # Main processor
-    for year in range(INITIAL_YEAR, FINAL_YEAR + 1):
-        logger.info(f" >>> START Processing year {year} ")
+    rainfall_dataset = xr.open_dataset(FILEPATH_RAINFALL_DATA)
+    logger.info(f"Precipitation dataset info: \n{rainfall_dataset}")
 
-        # 1. Read ETL settings
-        ETL_SETTINGS = read_global_settings(
-            filepath_configuration_file=FILEPATH_ETL_SETTINGS
-        )
+    population_dataset = xr.open_dataset(FILEPATH_POPULATION_DATA)
+    logger.info(f"Population dataset info: \n{population_dataset}")
 
-        # 2. Assemble paths
-        paths = assemble_filepaths(year, **ETL_SETTINGS)  # OK
+    # 2. Verify dimensions
+    dimensions_temperature = (3, 2, 4) # (longitude, latitude, time)
+    dimensions_rainfall = (3, 2, 4) # (longitude, latitude, time)
+    dimensions_population = (3, 2, 1) # (longitude, latitude, time)
+    
+    
 
-        # 3. Verify if all the files exist for a given year
-        if check_all_paths_exist(path_dict=paths) is False:
-            logger.info(f"Year {year} could not be processed.")
-            logger.info(f" >>> END Processing year {year} \n")
-            continue
+    assert temperature_dataset.temperature.shape == dimensions_temperature, "Temperature dataset dimensions are incorrect"
+    #assert rainfall_dataset.dims == ("longitude", "latitude", "time"), "Rainfall dataset dimensions are incorrect"
+    #assert population_dataset.dims == ("longitude", "latitude", "time"), "Population dataset dimensions are incorrect"
+
 
         # 4. Load all data
-        model_data = load_all_data(paths=paths, etl_settings=ETL_SETTINGS)
-        logger.info(model_data)
+        # model_data = load_all_data(paths=paths, etl_settings=ETL_SETTINGS)
+        # logger.info(model_data)
 
         # --------- Manual verification of rates_birth functions -----------
         # # a. mosq_birth
@@ -184,6 +186,6 @@ if __name__ == "__main__":
         format="{asctime} - {levelname} - {message}",
         style="{",
         datefmt="%Y-%m-%d %H:%M",
-        level=logging.DEBUG,
+        level=logging.INFO,
     )
     main()
