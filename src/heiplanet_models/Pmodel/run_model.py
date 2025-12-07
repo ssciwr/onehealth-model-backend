@@ -130,52 +130,53 @@ def main():
 
 
 
-        CC  = carrying_capacity(
-            rainfall_data=model_data.rainfall,
-            population_data=model_data.population_density,
-        )
+        # CC  = carrying_capacity(
+        #     rainfall_data=model_data.rainfall,
+        #     population_data=model_data.population_density,
+        # )
 
-        egg_active = water_hatching(
-            rainfall_data=model_data.rainfall,
-            population_data=model_data.population_density,
-        )
+        # egg_active = water_hatching(
+        #     rainfall_data=model_data.rainfall,
+        #     population_data=model_data.population_density,
+        # )
 
-        v = call_function(
-            v=model_data.initial_conditions,
-            Temp=model_data.temperature,
-            Tmean=model_data.temperature_mean,
-            LAT=model_data.latitude,
-            CC=CC,
-            egg_activate=egg_active,
-            step_t=ETL_SETTINGS["ode_system"]["time_step"],
-        )
+        # v = call_function(
+        #     v=model_data.initial_conditions,
+        #     Temp=model_data.temperature,
+        #     Tmean=model_data.temperature_mean,
+        #     LAT=model_data.latitude,
+        #     CC=CC,
+        #     egg_activate=egg_active,
+        #     step_t=ETL_SETTINGS["ode_system"]["time_step"],
+        # )
 
-        print(v.shape)
+        # print(v.shape)
 
-        compartments = ['egg_non_diapause', 'egg_diapause', 'juvenile', 'immature_adult', 'adult']
+        # compartments = ['egg_non_diapause', 'egg_diapause', 'juvenile', 'immature_adult', 'adult']
 
-        # Create a dict of DataArrays, one for each compartment
-        data_vars = {}
-        for i, name in enumerate(compartments):
-            data_vars[name] = xr.DataArray(
-                v[..., i, :],  # shape: (longitude, latitude, time)
-                dims=('longitude', 'latitude', 'time'),
-                coords={
-                    'longitude': model_data.temperature_mean['longitude'],
-                    'latitude': model_data.temperature_mean['latitude'],
-                    'time': model_data.temperature_mean['time'],
-                },
-                name=name
-            )
+        # # Create a dict of DataArrays, one for each compartment
+        # data_vars = {}
+        # for i, name in enumerate(compartments):
+        #     data_vars[name] = xr.DataArray(
+        #         v[..., i, :],  # shape: (longitude, latitude, time)
+        #         dims=('longitude', 'latitude', 'time'),
+        #         coords={
+        #             'longitude': model_data.temperature_mean['longitude'],
+        #             'latitude': model_data.temperature_mean['latitude'],
+        #             'time': model_data.temperature_mean['time'],
+        #         },
+        #         name=name
+        #     )
 
-        # Combine into a Dataset
-        v_ds = xr.Dataset(data_vars)
+        # # Combine into a Dataset
+        # v_ds = xr.Dataset(data_vars)
 
-        # Save to NetCDF if desired
-        v_ds.to_netcdf(f'mosquito_population_year_{year}.nc')
+        # # Save to NetCDF if desired
+        # v_ds.to_netcdf(f'mosquito_population_year_{year}.nc')
 
-        logger.info(f" >>> END Processing year {year} \n")
+        # logger.info(f" >>> END Processing year {year} \n")
 
+        model_data.
 
 
 if __name__ == "__main__":
