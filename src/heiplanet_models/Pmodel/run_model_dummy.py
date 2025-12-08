@@ -1,5 +1,3 @@
-from copy import deepcopy
-import logging
 import logging
 
 from pathlib import Path
@@ -18,7 +16,6 @@ from heiplanet_models.Pmodel.Pmodel_rates_mortality import (
 from heiplanet_models.Pmodel.Pmodel_rates_development import (
     mosq_dev_j,
     mosq_dev_i,
-    mosq_dev_e,
     carrying_capacity,
 )
 
@@ -30,7 +27,6 @@ from heiplanet_models.Pmodel.Pmodel_rates_birth import (
 )
 from heiplanet_models.Pmodel.Pmodel_initial import (
     read_global_settings,
-    assemble_filepaths,
     check_all_paths_exist,
     load_all_data,
 )
@@ -325,7 +321,7 @@ def main():
                 v[..., 1] = 0
 
             if (t + 1) % step_t == 0:
-                logger.debug(f"Time in if:  {(t + 1) % step_t }")
+                logger.debug(f"Time in if:  {(t + 1) % step_t}")
                 if ((idx_time) % 30) == 0:
                     logger.debug(f"MOY: {int(((t)/step_t) / 30)}")
                 for j in range(5):
@@ -334,7 +330,7 @@ def main():
         # logger.debug(f" >>> END Processing year {year} \n")
         logger.debug(f"Shape of final output v_out for year {year}: {v_out.shape}")
         logger.debug(
-            f"Value of final output v_out for year {year}:\n{print_time_slices(v_out[:,:,4,:])}"
+            f"Value of final output v_out for year {year}:\n{print_time_slices(v_out[:, :, 4, :])}"
         )
 
 

@@ -95,7 +95,7 @@ def albopictus_ode_system(
     # Initialize output array
     derivatives = np.zeros_like(state)
 
-    logger.debug(f"dimension FT[...,0]: {derivatives[...,0].shape}")
+    logger.debug(f"dimension FT[...,0]: {derivatives[..., 0].shape}")
 
     # Differential equations (vectorized over grid)
     # 1. Egg compartment (non-diapause)
@@ -309,120 +309,120 @@ def rk4_step(
     return rk4_step_out_array
 
 
-# def call_function(
-#     state: np.ndarray,
-#     temperature: np.ndarray,
-#     temperature_mean: np.ndarray,
-#     latitudes: np.ndarray,
-#     carrying_capacity: xr.DataArray,
-#     egg_activate: xr.DataArray,
-#     time_step: float,
-# ) -> np.ndarray:
-#     """
-#     Runs the ODE solver for the mosquito population model over a time series of temperature and environmental data.
+def call_function(
+    state: np.ndarray,
+    temperature: np.ndarray,
+    temperature_mean: np.ndarray,
+    latitudes: np.ndarray,
+    carrying_capacity: xr.DataArray,
+    egg_activate: xr.DataArray,
+    time_step: float,
+) -> np.ndarray:
+    """
+    Runs the ODE solver for the mosquito population model over a time series of temperature and environmental data.
 
-#     This function iterates over time steps, computes all necessary model rates and parameters,
-#     and applies the Runge-Kutta 4th order (RK4) integration method to update the population state.
-#     The results for each compartment and time step are stored in the output array.
+    This function iterates over time steps, computes all necessary model rates and parameters,
+    and applies the Runge-Kutta 4th order (RK4) integration method to update the population state.
+    The results for each compartment and time step are stored in the output array.
 
-#     Args:
-#         state (np.ndarray): Initial state array representing the population in each compartment.
-#         temperature (np.ndarray): 3D array of temperature values over space and time.
-#         temperature_mean (np.ndarray): 3D array of mean temperature values over space and time.
-#         latitudes (np.ndarray): Array of latitude values for each spatial location.
-#         carrying_capacity (xr.DataArray): Carrying capacity for each spatial location and time.
-#         egg_activate (xr.DataArray): Egg activation rates for each spatial location and time.
-#         time_step (float): Time step size for the integration.
+    Args:
+        state (np.ndarray): Initial state array representing the population in each compartment.
+        temperature (np.ndarray): 3D array of temperature values over space and time.
+        temperature_mean (np.ndarray): 3D array of mean temperature values over space and time.
+        latitudes (np.ndarray): Array of latitude values for each spatial location.
+        carrying_capacity (xr.DataArray): Carrying capacity for each spatial location and time.
+        egg_activate (xr.DataArray): Egg activation rates for each spatial location and time.
+        time_step (float): Time step size for the integration.
 
-#     Returns:
-#         np.ndarray: 4D array containing the population state for each compartment, spatial location, and time step.
-#     """
+    Returns:
+        np.ndarray: 4D array containing the population state for each compartment, spatial location, and time step.
+    """
 
-#     diapause_lay = mosq_dia_lay(temperature_mean, latitudes)
-#     diapause_hatch = mosq_dia_hatch(temperature_mean, latitudes)
-#     ed_survival = mosq_surv_ed(temperature, time_step)
+    diapause_lay = mosq_dia_lay(temperature_mean, latitudes)
+    diapause_hatch = mosq_dia_hatch(temperature_mean, latitudes)
+    ed_survival = mosq_surv_ed(temperature, time_step)
 
-#     shape_output = (
-#         state.shape[0],
-#         state.shape[1],
-#         5,
-#         int(temperature.shape[2] / time_step),
-#     )
-#     v_out = np.zeros(shape=shape_output)
-#     logger.debug(f"Shape v_out:{v_out.shape}")
+    shape_output = (
+        state.shape[0],
+        state.shape[1],
+        5,
+        int(temperature.shape[2] / time_step),
+    )
+    v_out = np.zeros(shape=shape_output)
+    logger.debug(f"Shape v_out:{v_out.shape}")
 
-#     for t in range(temperature.shape[2]):
-#         # if t == 3:
-#         #    break
+    for t in range(temperature.shape[2]):
+        # if t == 3:
+        #    break
 
-#         T = temperature[:, :, t]
-#         birth = mosq_birth(T)
-#         dev_j = mosq_dev_j(T)
-#         dev_i = mosq_dev_i(T)
-#         dev_e = 1.0 / 7.1  # original model
+        T = temperature[:, :, t]
+        birth = mosq_birth(T)
+        dev_j = mosq_dev_j(T)
+        dev_i = mosq_dev_i(T)
+        dev_e = 1.0 / 7.1  # original model
 
-#         # Octave: ceil(t/step_t), Python: int(np.ceil((t+1)/step_t)) - 1
-#         idx_time = int(np.ceil((t + 1) / time_step)) - 1
+        # Octave: ceil(t/step_t), Python: int(np.ceil((t+1)/step_t)) - 1
+        idx_time = int(np.ceil((t + 1) / time_step)) - 1
 
-#         dia_lay = diapause_lay.values[:, :, idx_time]
-#         dia_hatch = diapause_hatch.values[:, :, idx_time]
-#         ed_surv = ed_survival[:, :, t]
-#         water_hatch = egg_activate.values[:, :, idx_time]
-#         mort_e = mosq_mort_e(T)
-#         mort_j = mosq_mort_j(T)
-#         Tmean_slice = temperature_mean[:, :, idx_time]
-#         logger.debug(f"Tmean shape: {temperature_mean.shape}")
-#         logger.debug(f"Tmean_slice shape: {Tmean_slice.shape}")
-#         mort_a = mosq_mort_a(Tmean_slice)
+        dia_lay = diapause_lay.values[:, :, idx_time]
+        dia_hatch = diapause_hatch.values[:, :, idx_time]
+        ed_surv = ed_survival[:, :, t]
+        water_hatch = egg_activate.values[:, :, idx_time]
+        mort_e = mosq_mort_e(T)
+        mort_j = mosq_mort_j(T)
+        Tmean_slice = temperature_mean[:, :, idx_time]
+        logger.debug(f"Tmean shape: {temperature_mean.shape}")
+        logger.debug(f"Tmean_slice shape: {Tmean_slice.shape}")
+        mort_a = mosq_mort_a(Tmean_slice)
 
-#         # Add this block:
-#         logger.debug(f"Time step {t}:")
-#         logger.debug(f"  T.shape: {T.shape}")
-#         logger.debug(f"  birth.shape: {getattr(birth, 'shape', None)}")
-#         logger.debug(f"  dia_lay.shape: {getattr(dia_lay, 'shape', None)}")
-#         logger.debug(f"  mort_e.shape: {getattr(mort_e, 'shape', None)}")
-#         logger.debug(f"  water_hatch.shape: {getattr(water_hatch, 'shape', None)}")
-#         logger.debug(f"  dev_e: {dev_e}")
-#         logger.debug(f"  v[..., 0].shape: {state[..., 0].shape}")
+        # Add this block:
+        logger.debug(f"Time step {t}:")
+        logger.debug(f"  T.shape: {T.shape}")
+        logger.debug(f"  birth.shape: {getattr(birth, 'shape', None)}")
+        logger.debug(f"  dia_lay.shape: {getattr(dia_lay, 'shape', None)}")
+        logger.debug(f"  mort_e.shape: {getattr(mort_e, 'shape', None)}")
+        logger.debug(f"  water_hatch.shape: {getattr(water_hatch, 'shape', None)}")
+        logger.debug(f"  dev_e: {dev_e}")
+        logger.debug(f"  v[..., 0].shape: {state[..., 0].shape}")
 
-#         model_params = (
-#             idx_time + 1,  # Octave uses 1-based, so pass idx_time+1
-#             time_step,
-#             temperature,
-#             carrying_capacity.values,
-#             birth.values,
-#             dia_lay,
-#             dia_hatch,
-#             mort_e.values,
-#             mort_j.values,
-#             mort_a.values,
-#             ed_surv.values,
-#             dev_j.values,
-#             dev_i.values,
-#             dev_e,
-#             water_hatch,
-#         )
+        model_params = (
+            idx_time + 1,  # Octave uses 1-based, so pass idx_time+1
+            time_step,
+            temperature,
+            carrying_capacity.values,
+            birth.values,
+            dia_lay,
+            dia_hatch,
+            mort_e.values,
+            mort_j.values,
+            mort_a.values,
+            ed_surv.values,
+            dev_j.values,
+            dev_i.values,
+            dev_e,
+            water_hatch,
+        )
 
-#         va = rk4_step(
-#             albopictus_ode_system,
-#             albopictus_log_ode_system,
-#             state,
-#             model_params,
-#             time_step
-#         )
-#         logger.debug(f"Time step: {t}")
+        va = rk4_step(
+            albopictus_ode_system,
+            albopictus_log_ode_system,
+            state,
+            model_params,
+            time_step,
+        )
+        logger.debug(f"Time step: {t}")
 
-#         # # Zero compartment 2 (Python index 1) if needed
-#         if (t / time_step) % 365 == 200:
-#             va[..., 1] = 0
+        # # Zero compartment 2 (Python index 1) if needed
+        if (t / time_step) % 365 == 200:
+            va[..., 1] = 0
 
-#         # Store output every step_t
-#         logger.debug(f"time step: {t+1}")
-#         if (t + 1) % time_step == 0:
-#             logger.debug(f"IDX TIME: {idx_time}")
-#             if ((idx_time) % 30) == 0:
-#                 logger.debug(f"MOY: {int(((t)/time_step) / 30)}")
-#             for j in range(5):
-#                 v_out[..., j, idx_time] = np.maximum(va[..., j], 0)
+        # Store output every step_t
+        logger.debug(f"time step: {t+1}")
+        if (t + 1) % time_step == 0:
+            logger.debug(f"IDX TIME: {idx_time}")
+            if ((idx_time) % 30) == 0:
+                logger.debug(f"MOY: {int(((t)/time_step) / 30)}")
+            for j in range(5):
+                v_out[..., j, idx_time] = np.maximum(va[..., j], 0)
 
-#     return v_out
+    return v_out
