@@ -1,4 +1,5 @@
 import logging
+from typing import Callable
 
 import numpy as np
 
@@ -23,12 +24,59 @@ logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 
 
-def eqsys(v, vars):
+def albopictus_ode_system(
+    state: np.ndarray,
+    model_params: tuple[
+        int,         # time_index
+        float,       # time_step
+        np.ndarray,  # carrying_capacity
+        np.ndarray,  # birth_rate
+        np.ndarray,  # diapause_laying_fraction
+        np.ndarray,  # diapause_hatching_fraction
+        np.ndarray,  # egg_mortality
+        np.ndarray,  # juvenile_mortality
+        np.ndarray,  # adult_mortality
+        np.ndarray,  # egg_diapause_survival
+        np.ndarray,  # juvenile_development
+        np.ndarray,  # immature_development
+        float,       # egg_development
+        np.ndarray   # water_hatching_rate
+    ]
+) -> np.ndarray:
+    """
+    Computes the derivatives of the mosquito aedes albopictud population compartments for the ODE system.
+
+    This function calculates the rates of change for each compartment (non-diapause eggs, diapause eggs,
+    juveniles, immature adults, and mature adults) based on the current state and model parameters.
+
+    Args:
+        state (np.ndarray): Current state array of the system, representing the population in each compartment.
+        model_params (tuple): Tuple containing model parameters and environmental variables in the following order:
+            time_index (int): Current time index.
+            time_step (float): Time step size.
+            carrying_capacity (np.ndarray): Carrying capacity array.
+            birth_rate (np.ndarray): Birth rate array.
+            diapause_laying_fraction (np.ndarray): Fraction of eggs laid in diapause.
+            diapause_hatching_fraction (np.ndarray): Fraction of diapause eggs hatching.
+            egg_mortality (np.ndarray): Egg mortality rate array.
+            juvenile_mortality (np.ndarray): Juvenile mortality rate array.
+            adult_mortality (np.ndarray): Adult mortality rate array.
+            egg_diapause_survival (np.ndarray): Survival rate of diapause eggs.
+            juvenile_development (np.ndarray): Juvenile development rate array.
+            immature_development (np.ndarray): Immature adult development rate array.
+            egg_development (float): Egg development rate (scalar).
+            water_hatching_rate (np.ndarray): Water-dependent hatching rate array.
+
+    Returns:
+        np.ndarray: Array of derivatives for each compartment, representing the rates of change.
+    """
+
+    # TODO: ask what is the preference, mentioning explict parameter or using kwargs.
+    
     # Unpack variables
     (
         t_idx,
         step_t,
-        Temp,
         CC,
         birth,
         dia_lay,
@@ -41,72 +89,104 @@ def eqsys(v, vars):
         dev_i,
         dev_e,
         water_hatch,
-    ) = vars
+    ) = model_params
 
-    logger.debug(f"dimension v[...,4]: {v[...,4].shape}")
-    logger.debug(f"\ttype: v[...,4]: {type(v[...,4])}")
+    # Initialize output array
+    derivatives = np.zeros_like(state)
 
-    logger.debug(f"dimension birth: {birth.shape}")
-    logger.debug(f"\ttype: birth: {type(birth)}")
-
-    logger.debug(f"dimension dia_lay: {dia_lay.shape}")
-    logger.debug(f"\ttype: dia_lay: {type(dia_lay)}")
-
-    logger.debug(f"dimension mort_e: {mort_e.shape}")
-    logger.debug(f"\ttype: mort_e: {type(mort_e)}")
-
-    logger.debug(f"dimension water_hatch: {water_hatch.shape}")
-    logger.debug(f"\ttype: water_hatch: {type(water_hatch)}")
-
-    logger.debug(f"dimension v[...,0]: {v[...,0].shape}")
-    logger.debug(f"\ttype: v[...,0]: {type(v[...,0])}")
-
-    FT = np.zeros_like(v)
-
-    logger.debug(f"dimension FT[...,0]: {FT[...,0].shape}")
+    logger.debug(f"dimension FT[...,0]: {derivatives[...,0].shape}")
 
     # Differential equations (vectorized over grid)
-    # Egg compartment (non-diapause)
-    FT[..., 0] = (
-        v[..., 4] * birth * (1-dia_lay) - (mort_e + (water_hatch * dev_e)) * v[..., 0]
+    # 1. Egg compartment (non-diapause)
+    derivatives[..., 0] = (
+        state[..., 4] * birth * (1-dia_lay) - (mort_e + (water_hatch * dev_e)) * state[..., 0]
     )
 
-    # Egg compartment (diapause)
-    FT[..., 1] = (
-        v[..., 4] * birth * dia_lay - water_hatch * dia_hatch * v[..., 1]  # Hatching from diapause
+    # 2. Egg compartment (diapause)
+    derivatives[..., 1] = (
+        state[..., 4] * birth * dia_lay - water_hatch * dia_hatch * state[..., 1]  # Hatching from diapause
     )
 
-    # Juvenile compartment
-    FT[..., 2] = (
-        water_hatch * dev_e * v[..., 0]  # Hatching from non-diapause eggs
-        + water_hatch * dia_hatch * ed_surv * v[..., 1]  # Hatching from diapause eggs
-        - (mort_j + dev_j) * v[..., 2]  # Mortality and development
-        - (v[..., 2] ** 2) / CC[..., t_idx - 1]  # Density-dependent mortality
+    # 3. Juvenile compartment
+    derivatives[..., 2] = (
+        water_hatch * dev_e * state[..., 0]  # Hatching from non-diapause eggs
+        + water_hatch * dia_hatch * ed_surv * state[..., 1]  # Hatching from diapause eggs
+        - (mort_j + dev_j) * state[..., 2]  # Mortality and development
+        - (state[..., 2] ** 2) / CC[..., t_idx - 1]  # Density-dependent mortality
     )
 
-    # Immature adult compartment
-    FT[..., 3] = (
-        0.5 * dev_j * v[..., 2]  # Development from juveniles
-        - (mort_a + dev_i) * v[..., 3]  # Mortality and maturation
+    # 4. Immature adult compartment
+    derivatives[..., 3] = (
+        0.5 * dev_j * state[..., 2]  # Development from juveniles
+        - (mort_a + dev_i) * state[..., 3]  # Mortality and maturation
     )
 
-    # Mature adult compartment
-    FT[..., 4] = (
-        dev_i * v[..., 3]  # Maturation from immature adults
-        - mort_a * v[..., 4]  # Adult mortality
+    # 5. Mature adult compartment
+    derivatives[..., 4] = (
+        dev_i * state[..., 3]  # Maturation from immature adults
+        - mort_a * state[..., 4]  # Adult mortality
     )
 
     # Replace NaNs
-    FT[np.isnan(-FT)] = -v[np.isnan(-FT)] * step_t
-    return FT
+    derivatives[np.isnan(-derivatives)] = -state[np.isnan(-derivatives)] * step_t
+
+    return derivatives
 
 
-def eqsys_log(v, vars):
+def albopictus_log_ode_system(
+    state: np.ndarray,
+    model_params: tuple[
+        int,         # time_index
+        float,       # time_step
+        np.ndarray,  # carrying_capacity
+        np.ndarray,  # birth_rate
+        np.ndarray,  # diapause_laying_fraction
+        np.ndarray,  # diapause_hatching_fraction
+        np.ndarray,  # egg_mortality
+        np.ndarray,  # juvenile_mortality
+        np.ndarray,  # adult_mortality
+        np.ndarray,  # egg_diapause_survival
+        np.ndarray,  # juvenile_development
+        np.ndarray,  # immature_development
+        float,       # egg_development
+        np.ndarray   # water_hatching_rate
+    ]
+) -> np.ndarray:
+    """
+    Computes the derivatives of the mosquito Aedes albopictus population compartments in log-transformed space for the ODE system.
+
+    This function calculates the rates of change for each compartment (non-diapause eggs, diapause eggs,
+    juveniles, immature adults, and mature adults) in log space, which helps to handle negative or very small values
+    during numerical integration.
+
+    Args:
+        state (np.ndarray): Current state array of the system in log-transformed space, representing the population in each compartment.
+        model_params (tuple): Tuple containing model parameters and environmental variables in the following order:
+            time_index (int): Current time index.
+            time_step (float): Time step size.
+            carrying_capacity (np.ndarray): Carrying capacity array.
+            birth_rate (np.ndarray): Birth rate array.
+            diapause_laying_fraction (np.ndarray): Fraction of eggs laid in diapause.
+            diapause_hatching_fraction (np.ndarray): Fraction of diapause eggs hatching.
+            egg_mortality (np.ndarray): Egg mortality rate array.
+            juvenile_mortality (np.ndarray): Juvenile mortality rate array.
+            adult_mortality (np.ndarray): Adult mortality rate array.
+            egg_diapause_survival (np.ndarray): Survival rate of diapause eggs.
+            juvenile_development (np.ndarray): Juvenile development rate array.
+            immature_development (np.ndarray): Immature adult development rate array.
+            egg_development (float): Egg development rate (scalar).
+            water_hatching_rate (np.ndarray): Water-dependent hatching rate array.
+
+    Returns:
+        np.ndarray: Array of derivatives for each compartment in log-transformed space, representing the rates of change.
+    """
+
+    # TODO: ask what is the preference, mentioning explict parameter or using kwargs.
+
     # Unpack variables
     (
         t_idx,
         step_t,
-        Temp,
         CC,
         birth,
         dia_lay,
@@ -119,68 +199,100 @@ def eqsys_log(v, vars):
         dev_i,
         dev_e,
         water_hatch,
-    ) = vars
+    ) = model_params
 
-    FT = np.zeros_like(v)
+    # Initialize output array
+    log_derivatives = np.zeros_like(state)
 
-    FT[..., 0] = v[..., 4] * birth * (1 - dia_lay) / v[..., 0] - (
+    # 1. Egg compartment (non-diapause)
+    log_derivatives[..., 0] = state[..., 4] * birth * (1 - dia_lay) / state[..., 0] - (
         mort_e + water_hatch * dev_e
     )
 
-    
-    FT[..., 1] = v[..., 4] * birth * dia_lay / v[..., 1] - water_hatch * dia_hatch
+    # 2. Egg compartment (diapause)
+    log_derivatives[..., 1] = state[..., 4] * birth * dia_lay / state[..., 1] - water_hatch * dia_hatch
 
-    
-    FT[..., 2] = (
-        water_hatch * dev_e * v[..., 0] / v[..., 2]
-        + water_hatch * dia_hatch * ed_surv * v[..., 1] / v[..., 2]
+    # 3. Juvenile compartment
+    log_derivatives[..., 2] = (
+        water_hatch * dev_e * state[..., 0] / state[..., 2]
+        + water_hatch * dia_hatch * ed_surv * state[..., 1] / state[..., 2]
         - (mort_j + dev_j)
-        - v[..., 2] / CC[..., t_idx - 1]
+        - state[..., 2] / CC[..., t_idx - 1]
     )
 
-    
-    FT[..., 3] = 0.5 * dev_j * v[..., 2] / v[..., 3] - (mort_a + dev_i)
+    # 4. Immature adult compartment
+    log_derivatives[..., 3] = 0.5 * dev_j * state[..., 2] / state[..., 3] - (mort_a + dev_i)
 
-    
-    FT[..., 4] = dev_i * v[..., 3] / v[..., 4] - mort_a
+    # 5. Mature adult compartment
+    log_derivatives[..., 4] = dev_i * state[..., 3] / state[..., 4] - mort_a
 
-    FT[np.isnan(-FT)] = -v[np.isnan(-FT)] * step_t
-    return FT
+    log_derivatives[np.isnan(-log_derivatives)] = -state[np.isnan(-log_derivatives)] * step_t
+
+    return log_derivatives
 
 
-def rk4_step(f, flog, v, vars, step_t):
+def rk4_step(
+    ode_func: Callable[[np.ndarray, tuple], np.ndarray],
+    log_ode_func: Callable[[np.ndarray, tuple], np.ndarray],
+    state: np.ndarray,
+    model_params: tuple,
+    time_step: float
+) -> np.ndarray:
+    """
+    Perform a single Runge-Kutta 4th order (RK4) integration step with negative value correction.
+
+    Advances the system state by one time step using the RK4 method. If any negative values
+    are detected in the output or intermediate steps, a log-transformed ODE system is used
+    to correct those values.
+
+    Args:
+        ode_func (Callable[[np.ndarray, Tuple], np.ndarray]): Function that computes the ODE derivatives in natural scale.
+        log_ode_func (Callable[[np.ndarray, Tuple], np.ndarray]): Function that computes the ODE derivatives in log scale.
+        state (np.ndarray): Current state vector or array of the system.
+        model_params (Tuple): Model parameters and environmental inputs required by the ODE functions.
+        time_step (float): Time step size for integration.
+
+    Returns:
+        np.ndarray: Updated state vector or array after one RK4 integration step.
+    """
+
     # Octave-style RK4 with negative value correction using log-form ODEs
-    k1 = f(v, vars)
-    logger.info(f"k1 min: {np.min(k1)}, max: {np.max(k1)}")
+    # k1, k2, k3, k4 computations follow the RK4 notation.
 
-    k2 = f(v + 0.5 * k1 / step_t, vars)
-    logger.info(f"k2 min: {np.min(k2)}, max: {np.max(k2)}")
+    # TODO: implementation works, but is inconsistent with the RK4 definition. Review and refactor.
+    # TODO: create tests once this model has been reviewed.
 
-    k3 = f(v + 0.5 * k2 / step_t, vars)
-    logger.info(f"k3 min: {np.min(k3)}, max: {np.max(k3)}")
+    k1 = ode_func(state, model_params)
+    logger.debug(f"k1 min: {np.min(k1)}, max: {np.max(k1)}")
 
-    k4 = f(v + k3 / step_t, vars)
-    logger.info(f"k4 min: {np.min(k4)}, max: {np.max(k4)}")
+    k2 = ode_func(state + 0.5 * k1 / time_step, model_params)
+    logger.debug(f"k2 min: {np.min(k2)}, max: {np.max(k2)}")
 
-    v1 = v + (k1 + 2 * k2 + 2 * k3 + k4) / (step_t * 6.0)
-    logger.info(f"v1 min: {np.min(v1)}, max: {np.max(v1)}")
+    k3 = ode_func(state + 0.5 * k2 / time_step, model_params)
+    logger.debug(f"k3 min: {np.min(k3)}, max: {np.max(k3)}")
+
+    k4 = ode_func(state + k3 / time_step, model_params)
+    logger.debug(f"k4 min: {np.min(k4)}, max: {np.max(k4)}")
+
+    rk4_step_out_array = state + (k1 + 2 * k2 + 2 * k3 + k4) / (time_step * 6.0)
+    
+    logger.debug(f"RK4 step min: {np.min(rk4_step_out_array)}, max: {np.max(rk4_step_out_array)}")
 
     # Check for negative values in all RK4 steps
     neg_mask = (
-        (v1 < 0)
-        | ((v + 0.5 * k1 / step_t) < 0)
-        | ((v + 0.5 * k2 / step_t) < 0)
-        | ((v + k3 / step_t) < 0)
+        (rk4_step_out_array < 0)
+        | ((state + 0.5 * k1 / time_step) < 0)
+        | ((state + 0.5 * k2 / time_step) < 0)
+        | ((state + k3 / time_step) < 0)
     )
 
     if np.any(neg_mask):
-        v2 = np.log(np.clip(v, 1e-26, None))  # avoid log(0)
-        #v2 = np.log(v)  # avoid log(0)
-        FT2 = flog(v2, vars)
-        v2 = v2 + FT2 / step_t
-        v1[neg_mask] = np.exp(v2[neg_mask], dtype=np.float64)
+        v2 = np.log(np.clip(state, 1e-26, None))  # clip to avoid ~log(0)
+        FT2 = log_ode_func(v2, model_params)
+        v2 = v2 + FT2 / time_step
+        rk4_step_out_array[neg_mask] = np.exp(v2[neg_mask], dtype=np.float64)
 
-    return v1
+    return rk4_step_out_array
 
 
 def call_function(v, Temp, Tmean, LAT, CC, egg_activate, step_t):
@@ -249,7 +361,7 @@ def call_function(v, Temp, Tmean, LAT, CC, egg_activate, step_t):
             water_hatch,
         )
 
-        va = rk4_step(eqsys, eqsys_log, v, vars_tuple, step_t)
+        va = rk4_step(albopictus_ode_system, albopictus_log_ode_system, v, vars_tuple, step_t)
         logger.info(f"Time step: {t}")
 
 

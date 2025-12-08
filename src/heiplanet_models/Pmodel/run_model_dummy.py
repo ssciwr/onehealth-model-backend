@@ -35,8 +35,8 @@ from heiplanet_models.Pmodel.Pmodel_initial import (
 )
 
 from heiplanet_models.Pmodel.Pmodel_ode import (
-    eqsys,
-    eqsys_log,
+    albopictus_ode_system,
+    albopictus_log_ode_system,
     rk4_step
 )
 
@@ -89,22 +89,22 @@ def print_time_slices(arr):
     if isinstance(arr, xr.DataArray):
         if "time" in arr.dims:
             for i, t in enumerate(arr.time):
-                logger.debug(f"Time slice {i} (time={str(t.values)}):")
-                logger.debug(arr.sel(time=t).values)
-                logger.debug("-" * 40)
+                print(f"Time slice {i} (time={str(t.values)}):")
+                print(arr.sel(time=t).values)
+                print("-" * 40)
         else:
             last_dim = arr.dims[-1]
             for i in range(arr.shape[-1]):
-                logger.debug(f"Slice {i} ({last_dim}={i}):")
-                logger.debug(arr.isel({last_dim: i}).values)
-                logger.debug("-" * 40)
+                print(f"Slice {i} ({last_dim}={i}):")
+                print(arr.isel({last_dim: i}).values)
+                print("-" * 40)
     elif isinstance(arr, np.ndarray):
         for i in range(arr.shape[-1]):
-            logger.debug(f"Slice {i} (last axis={i}):")
-            logger.debug(arr[..., i])
-            logger.debug("-" * 40)
+            print(f"Slice {i} (last axis={i}):")
+            print(arr[..., i])
+            print("-" * 40)
     else:
-        logger.debug("Input must be an xarray.DataArray or numpy.ndarray")
+        logger.info("Input must be an xarray.DataArray or numpy.ndarray")
 
 def main():
     # Set logger
@@ -187,10 +187,11 @@ def main():
         logger.debug(f"Dim. ED survival data: {ed_survival.values.shape}")
         logger.debug(f"ED survival data: \n{print_time_slices(ed_survival)}")
 
-        # Verify the output array shape
+        # Assign this variable to maintain compatibility with the octave code. Just a rename.
         Temp = model_data.temperature
         step_t=ETL_SETTINGS["ode_system"]["time_step"]
 
+        # Verify the output array shape
         shape_output = (
             model_data.initial_conditions.shape[0],
             model_data.initial_conditions.shape[1],
@@ -284,7 +285,6 @@ def main():
             vars_tuple = (
                 idx_time,  # Octave uses 1-based, so pass idx_time+1
                 step_t,
-                Temp.compute().values,
                 CC.compute().values,
                 birth.compute().values,
                 dia_lay.compute().values,
@@ -304,7 +304,7 @@ def main():
                 logger.debug(f"  Var {i} shape: {getattr(var, 'shape', None)}")
                 
             # Line o. Call the ODE solver step (call_function)
-            v = rk4_step(eqsys, eqsys_log, v, vars_tuple, step_t)
+            v = rk4_step(albopictus_ode_system, albopictus_log_ode_system, v, vars_tuple, step_t)
             logger.debug(f"Shape after rk4_step at time {t}: {v.shape}")
             logger.debug(f"Value after rk4_step at time {t}:\n{print_time_slices(v)}")
 
@@ -313,10 +313,6 @@ def main():
             if (t / step_t) % 365 == 200:
                 v[..., 1] = 0
 
-            # Store output every step_t
-            logger.debug(f"time step: {t+1}")
-            logger.debug(f"IDX TIME: {idx_time}")
-
             if (t+1) % step_t == 0:            
                 logger.debug(f"Time in if:  {(t + 1) % step_t }")
                 if ((idx_time) % 30) == 0:
@@ -324,10 +320,9 @@ def main():
                 for j in range(5):
                     v_out[..., j, idx_time] = np.maximum(v[..., j], 0)
         
-        logger.debug(f" >>> END Processing year {year} \n") 
+        logger.info(f" >>> END Processing year {year} \n") 
         logger.info(f"Shape of final output v_out for year {year}: {v_out.shape}")
-        #logger.debug(f"Shape of final output v_out for year {year}: {v_out[:,:,4,:].shape}")
-        logger.debug(f"Value of final output v_out for year {year}:\n{print_time_slices(v_out[:,:,4,:])}")
+        logger.info(f"Value of final output v_out for year {year}:\n{print_time_slices(v_out[:,:,4,:])}")
 
 
 if __name__ == "__main__":
