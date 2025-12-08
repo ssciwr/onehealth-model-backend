@@ -127,13 +127,13 @@ def main():
         )
 
         v = call_function(
-            v=model_data.initial_conditions,
-            Temp=model_data.temperature,
-            Tmean=model_data.temperature_mean,
-            LAT=model_data.latitude,
-            CC=CC,
+            state=model_data.initial_conditions,
+            temperature=model_data.temperature,
+            temperature_mean=model_data.temperature_mean,
+            latitudes=model_data.latitude,
+            carrying_capacity=CC,
             egg_activate=egg_active,
-            step_t=ETL_SETTINGS["ode_system"]["time_step"],
+            time_step=ETL_SETTINGS["ode_system"]["time_step"],
         )
 
         print(v.shape)
