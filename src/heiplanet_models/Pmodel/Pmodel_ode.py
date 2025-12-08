@@ -370,10 +370,10 @@ def call_function(
         water_hatch = egg_activate.values[:, :, idx_time]
         mort_e = mosq_mort_e(T)
         mort_j = mosq_mort_j(T)
-        Tmean_slice = temperature_mean[:, :, idx_time]
+        temperature_mean_slice = temperature_mean[:, :, idx_time]
         logger.debug(f"Tmean shape: {temperature_mean.shape}")
-        logger.debug(f"Tmean_slice shape: {Tmean_slice.shape}")
-        mort_a = mosq_mort_a(Tmean_slice)
+        logger.debug(f"Tmean_slice shape: {temperature_mean_slice.shape}")
+        mort_a = mosq_mort_a(temperature_mean_slice)
 
         # Add this block:
         logger.debug(f"Time step {t}:")
@@ -388,7 +388,6 @@ def call_function(
         model_params = (
             idx_time + 1,  # Octave uses 1-based, so pass idx_time+1
             time_step,
-            temperature,
             carrying_capacity.values,
             birth.values,
             dia_lay,
@@ -412,7 +411,7 @@ def call_function(
         )
         logger.debug(f"Time step: {t}")
 
-        # # Zero compartment 2 (Python index 1) if needed
+        # Zero compartment 2 (Python index 1) if needed
         if (t / time_step) % 365 == 200:
             va[..., 1] = 0
 

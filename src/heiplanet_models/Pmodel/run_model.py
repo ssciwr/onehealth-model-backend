@@ -55,61 +55,61 @@ def main():
         logger.info(model_data)
 
         # --------- Manual verification of rates_birth functions -----------
-        # # a. mosq_birth
+        # a. mosq_birth
         # mosq_birth_rate = mosq_birth(temperature=model_data.temperature)
         # logger.info(f"Mosquito birth rate: {mosq_birth_rate}")
 
-        # # b. mosq dia hatch
+        # b. mosq dia hatch
         # hatch = mosq_dia_hatch(
         #     temperature=model_data.temperature_mean, latitude=model_data.latitude
         # )
         # logger.info(f"Mosquito diapause hatching rate: {hatch}")
 
-        # # c. mosq dia lay
+        # c. mosq dia lay
         # mosq_dia_lay_rate = mosq_dia_lay(
         #     temperature=model_data.temperature_mean, latitude=model_data.latitude
         # )
         # logger.info(f"Mosquito diapause laying rate: {mosq_dia_lay_rate}")
 
-        # # d. water hatching
+        # d. water hatching
         # water_hatching_rate = water_hatching(
         #     rainfall_data=model_data.rainfall,
         #     population_data=model_data.population_density,
         # )
         # logger.info(f"Water hatching rate: {water_hatching_rate}")
 
-        # # e. mosq_dev_j
+        # e. mosq_dev_j
         # mosq_dev_j_rate = mosq_dev_j(temperature=model_data.temperature)
         # logger.info(f"Mosquito 'j' stage development rate: {mosq_dev_j_rate.values}")
 
-        # # f. mosq_dev_i
+        # f. mosq_dev_i
         # mosq_dev_i_rate = mosq_dev_i(temperature=model_data.temperature)
         # logger.info(f"Mosquito 'i' stage development rate: {mosq_dev_i_rate.values}")
 
-        # # g. mosq_dev_e
+        # g. mosq_dev_e
         # mosq_dev_e_rate = mosq_dev_e(temperature=model_data.temperature)
         # logger.info(f"Mosquito 'e' stage development rate: {mosq_dev_e_rate.values}")
 
-        # # h. carrying_capacity
+        # h. carrying_capacity
         # carrying_capacity_rate = carrying_capacity(
         #     rainfall_data=model_data.rainfall,
         #     population_data=model_data.population_density,
         # )
         # logger.info(f"Carrying capacity rate: {carrying_capacity_rate.values}")
 
-        # # i. mosq_mort_e
+        # i. mosq_mort_e
         # mosq_mort_e_rate = mosq_mort_e(temperature=model_data.temperature)
         # logger.info(f"Mosquito egg mortality rate: {mosq_mort_e_rate.values}")
 
-        # # j. mosq_mort_j
+        # j. mosq_mort_j
         # mosq_mort_j_rate = mosq_mort_j(temperature=model_data.temperature)
         # logger.info(f"Mosquito 'j' stage mortality rate: {mosq_mort_j_rate.values}")
 
-        # # k. mosq_mort_a
+        # k. mosq_mort_a
         # mosq_mort_a_rate = mosq_mort_a(temperature=model_data.temperature_mean)
         # logger.info(f"Mosquito adult mortality rate: {mosq_mort_a_rate.values}")
 
-        # # l. mosq_surv_ed
+        # l. mosq_surv_ed
         # mosq_surv_ed_rate = mosq_surv_ed(
         #     temperature=model_data.temperature,
         #     step_t=ETL_SETTINGS["ode_system"]["time_step"],
