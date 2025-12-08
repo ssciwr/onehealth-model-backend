@@ -27,8 +27,8 @@ logger.addHandler(logging.NullHandler())
 def albopictus_ode_system(
     state: np.ndarray,
     model_params: tuple[
-        int,         # time_index
-        float,       # time_step
+        int,  # time_index
+        float,  # time_step
         np.ndarray,  # carrying_capacity
         np.ndarray,  # birth_rate
         np.ndarray,  # diapause_laying_fraction
@@ -39,9 +39,9 @@ def albopictus_ode_system(
         np.ndarray,  # egg_diapause_survival
         np.ndarray,  # juvenile_development
         np.ndarray,  # immature_development
-        float,       # egg_development
-        np.ndarray   # water_hatching_rate
-    ]
+        float,  # egg_development
+        np.ndarray,  # water_hatching_rate
+    ],
 ) -> np.ndarray:
     """
     Computes the derivatives of the mosquito aedes albopictud population compartments for the ODE system.
@@ -72,7 +72,7 @@ def albopictus_ode_system(
     """
 
     # TODO: ask what is the preference, mentioning explict parameter or using kwargs.
-    
+
     # Unpack variables
     (
         t_idx,
@@ -99,18 +99,23 @@ def albopictus_ode_system(
     # Differential equations (vectorized over grid)
     # 1. Egg compartment (non-diapause)
     derivatives[..., 0] = (
-        state[..., 4] * birth * (1-dia_lay) - (mort_e + (water_hatch * dev_e)) * state[..., 0]
+        state[..., 4] * birth * (1 - dia_lay)
+        - (mort_e + (water_hatch * dev_e)) * state[..., 0]
     )
 
     # 2. Egg compartment (diapause)
     derivatives[..., 1] = (
-        state[..., 4] * birth * dia_lay - water_hatch * dia_hatch * state[..., 1]  # Hatching from diapause
+        state[..., 4] * birth * dia_lay
+        - water_hatch * dia_hatch * state[..., 1]  # Hatching from diapause
     )
 
     # 3. Juvenile compartment
     derivatives[..., 2] = (
         water_hatch * dev_e * state[..., 0]  # Hatching from non-diapause eggs
-        + water_hatch * dia_hatch * ed_surv * state[..., 1]  # Hatching from diapause eggs
+        + water_hatch
+        * dia_hatch
+        * ed_surv
+        * state[..., 1]  # Hatching from diapause eggs
         - (mort_j + dev_j) * state[..., 2]  # Mortality and development
         - (state[..., 2] ** 2) / CC[..., t_idx - 1]  # Density-dependent mortality
     )
@@ -136,8 +141,8 @@ def albopictus_ode_system(
 def albopictus_log_ode_system(
     state: np.ndarray,
     model_params: tuple[
-        int,         # time_index
-        float,       # time_step
+        int,  # time_index
+        float,  # time_step
         np.ndarray,  # carrying_capacity
         np.ndarray,  # birth_rate
         np.ndarray,  # diapause_laying_fraction
@@ -148,9 +153,9 @@ def albopictus_log_ode_system(
         np.ndarray,  # egg_diapause_survival
         np.ndarray,  # juvenile_development
         np.ndarray,  # immature_development
-        float,       # egg_development
-        np.ndarray   # water_hatching_rate
-    ]
+        float,  # egg_development
+        np.ndarray,  # water_hatching_rate
+    ],
 ) -> np.ndarray:
     """
     Computes the derivatives of the mosquito Aedes albopictus population compartments in log-transformed space for the ODE system.
@@ -210,7 +215,9 @@ def albopictus_log_ode_system(
     )
 
     # 2. Egg compartment (diapause)
-    log_derivatives[..., 1] = state[..., 4] * birth * dia_lay / state[..., 1] - water_hatch * dia_hatch
+    log_derivatives[..., 1] = (
+        state[..., 4] * birth * dia_lay / state[..., 1] - water_hatch * dia_hatch
+    )
 
     # 3. Juvenile compartment
     log_derivatives[..., 2] = (
@@ -221,12 +228,16 @@ def albopictus_log_ode_system(
     )
 
     # 4. Immature adult compartment
-    log_derivatives[..., 3] = 0.5 * dev_j * state[..., 2] / state[..., 3] - (mort_a + dev_i)
+    log_derivatives[..., 3] = 0.5 * dev_j * state[..., 2] / state[..., 3] - (
+        mort_a + dev_i
+    )
 
     # 5. Mature adult compartment
     log_derivatives[..., 4] = dev_i * state[..., 3] / state[..., 4] - mort_a
 
-    log_derivatives[np.isnan(-log_derivatives)] = -state[np.isnan(-log_derivatives)] * step_t
+    log_derivatives[np.isnan(-log_derivatives)] = (
+        -state[np.isnan(-log_derivatives)] * step_t
+    )
 
     return log_derivatives
 
@@ -236,7 +247,7 @@ def rk4_step(
     log_ode_func: Callable[[np.ndarray, tuple], np.ndarray],
     state: np.ndarray,
     model_params: tuple,
-    time_step: float
+    time_step: float,
 ) -> np.ndarray:
     """
     Perform a single Runge-Kutta 4th order (RK4) integration step with negative value correction.
@@ -275,8 +286,10 @@ def rk4_step(
     logger.debug(f"k4 min: {np.min(k4)}, max: {np.max(k4)}")
 
     rk4_step_out_array = state + (k1 + 2 * k2 + 2 * k3 + k4) / (time_step * 6.0)
-    
-    logger.debug(f"RK4 step min: {np.min(rk4_step_out_array)}, max: {np.max(rk4_step_out_array)}")
+
+    logger.debug(
+        f"RK4 step min: {np.min(rk4_step_out_array)}, max: {np.max(rk4_step_out_array)}"
+    )
 
     # Check for negative values in all RK4 steps
     neg_mask = (
@@ -310,7 +323,7 @@ def call_function(v, Temp, Tmean, LAT, CC, egg_activate, step_t):
     logger.debug(f"Shape v_out:{v_out.shape}")
 
     for t in range(Temp.shape[2]):
-        #if t == 3:
+        # if t == 3:
         #    break
 
         T = Temp[:, :, t]
@@ -361,9 +374,10 @@ def call_function(v, Temp, Tmean, LAT, CC, egg_activate, step_t):
             water_hatch,
         )
 
-        va = rk4_step(albopictus_ode_system, albopictus_log_ode_system, v, vars_tuple, step_t)
+        va = rk4_step(
+            albopictus_ode_system, albopictus_log_ode_system, v, vars_tuple, step_t
+        )
         logger.info(f"Time step: {t}")
-
 
         # # Zero compartment 2 (Python index 1) if needed
         if (t / step_t) % 365 == 200:
@@ -371,7 +385,7 @@ def call_function(v, Temp, Tmean, LAT, CC, egg_activate, step_t):
 
         # Store output every step_t
         logger.info(f"time step: {t+1}")
-        if (t + 1) % step_t == 0:            
+        if (t + 1) % step_t == 0:
             logger.info(f"IDX TIME: {idx_time}")
             if ((idx_time) % 30) == 0:
                 logger.debug(f"MOY: {int(((t)/step_t) / 30)}")

@@ -129,8 +129,6 @@ def main():
         # )
         # logger.info(f"Mosquito survival rate: {mosq_surv_ed_rate.values}")
 
-
-
         # CC  = carrying_capacity(
         #     rainfall_data=model_data.rainfall,
         #     population_data=model_data.population_density,
@@ -176,8 +174,6 @@ def main():
         # v_ds.to_netcdf(f'mosquito_population_year_{year}.nc')
 
         # logger.info(f" >>> END Processing year {year} \n")
-
-        
 
 
 if __name__ == "__main__":
