@@ -68,37 +68,36 @@ def eqsys(v, vars):
     # Differential equations (vectorized over grid)
     # Egg compartment (non-diapause)
     FT[..., 0] = (
-        # v[..., 4] * birth * (1 - dia_lay) - (mort_e + water_hatch * dev_e) * v[..., 0]
-        v[..., 4].data * birth * (1-dia_lay) - (mort_e + (water_hatch * dev_e)) * v[..., 0].data
+        v[..., 4] * birth * (1-dia_lay) - (mort_e + (water_hatch * dev_e)) * v[..., 0]
     )
 
     # Egg compartment (diapause)
     FT[..., 1] = (
-        v[..., 4].data * birth * dia_lay - water_hatch * dia_hatch * v[..., 1].data  # Hatching from diapause
+        v[..., 4] * birth * dia_lay - water_hatch * dia_hatch * v[..., 1]  # Hatching from diapause
     )
 
     # Juvenile compartment
     FT[..., 2] = (
-        water_hatch * dev_e * v[..., 0].values  # Hatching from non-diapause eggs
-        + water_hatch * dia_hatch * ed_surv * v[..., 1].values  # Hatching from diapause eggs
-        - (mort_j + dev_j) * v[..., 2].values  # Mortality and development
-        - (v[..., 2].data ** 2) / CC[..., t_idx - 1]  # Density-dependent mortality
+        water_hatch * dev_e * v[..., 0]  # Hatching from non-diapause eggs
+        + water_hatch * dia_hatch * ed_surv * v[..., 1]  # Hatching from diapause eggs
+        - (mort_j + dev_j) * v[..., 2]  # Mortality and development
+        - (v[..., 2] ** 2) / CC[..., t_idx - 1]  # Density-dependent mortality
     )
 
     # Immature adult compartment
     FT[..., 3] = (
         0.5 * dev_j * v[..., 2]  # Development from juveniles
-        #- (mort_a + dev_i) * v[..., 3]  # Mortality and maturation
+        - (mort_a + dev_i) * v[..., 3]  # Mortality and maturation
     )
 
     # Mature adult compartment
     FT[..., 4] = (
         dev_i * v[..., 3]  # Maturation from immature adults
-        #- mort_a * v[..., 4]  # Adult mortality
+        - mort_a * v[..., 4]  # Adult mortality
     )
 
     # Replace NaNs
-    FT[np.isnan(-FT)] = -v.values[np.isnan(-FT)] * step_t
+    FT[np.isnan(-FT)] = -v[np.isnan(-FT)] * step_t
     return FT
 
 
@@ -123,15 +122,15 @@ def eqsys_log(v, vars):
     ) = vars
 
     FT = np.zeros_like(v)
-    # Revisited
+
     FT[..., 0] = v[..., 4] * birth * (1 - dia_lay) / v[..., 0] - (
         mort_e + water_hatch * dev_e
     )
 
-    # Revisited
+    
     FT[..., 1] = v[..., 4] * birth * dia_lay / v[..., 1] - water_hatch * dia_hatch
 
-    # Revisited
+    
     FT[..., 2] = (
         water_hatch * dev_e * v[..., 0] / v[..., 2]
         + water_hatch * dia_hatch * ed_surv * v[..., 1] / v[..., 2]
@@ -139,10 +138,10 @@ def eqsys_log(v, vars):
         - v[..., 2] / CC[..., t_idx - 1]
     )
 
-    # Revisited
+    
     FT[..., 3] = 0.5 * dev_j * v[..., 2] / v[..., 3] - (mort_a + dev_i)
 
-    # Revisited
+    
     FT[..., 4] = dev_i * v[..., 3] / v[..., 4] - mort_a
 
     FT[np.isnan(-FT)] = -v[np.isnan(-FT)] * step_t
@@ -152,10 +151,19 @@ def eqsys_log(v, vars):
 def rk4_step(f, flog, v, vars, step_t):
     # Octave-style RK4 with negative value correction using log-form ODEs
     k1 = f(v, vars)
+    logger.info(f"k1 min: {np.min(k1)}, max: {np.max(k1)}")
+
     k2 = f(v + 0.5 * k1 / step_t, vars)
+    logger.info(f"k2 min: {np.min(k2)}, max: {np.max(k2)}")
+
     k3 = f(v + 0.5 * k2 / step_t, vars)
+    logger.info(f"k3 min: {np.min(k3)}, max: {np.max(k3)}")
+
     k4 = f(v + k3 / step_t, vars)
+    logger.info(f"k4 min: {np.min(k4)}, max: {np.max(k4)}")
+
     v1 = v + (k1 + 2 * k2 + 2 * k3 + k4) / (step_t * 6.0)
+    logger.info(f"v1 min: {np.min(v1)}, max: {np.max(v1)}")
 
     # Check for negative values in all RK4 steps
     neg_mask = (
@@ -166,11 +174,11 @@ def rk4_step(f, flog, v, vars, step_t):
     )
 
     if np.any(neg_mask):
-        # v2 = np.log(np.clip(v, 1e-26, None))  # avoid log(0)
-        v2 = np.log(v)  # avoid log(0)
+        v2 = np.log(np.clip(v, 1e-26, None))  # avoid log(0)
+        #v2 = np.log(v)  # avoid log(0)
         FT2 = flog(v2, vars)
         v2 = v2 + FT2 / step_t
-        v1[neg_mask] = np.exp(v2[neg_mask])
+        v1[neg_mask] = np.exp(v2[neg_mask], dtype=np.float64)
 
     return v1
 
