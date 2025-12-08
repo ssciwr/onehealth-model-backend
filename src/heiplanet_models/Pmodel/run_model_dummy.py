@@ -139,7 +139,7 @@ def main():
             population_data=model_data.population_density,
         )
         logger.debug(f"Dim. Carrying capacity data: {CC.values.shape}")
-        #logger.debug(f"Carrying capacity data: \n{print_time_slices(CC)}")
+        # logger.debug(f"Carrying capacity data: \n{print_time_slices(CC)}")
 
         # Verify water hatching function. OK
         egg_active = water_hatching(
@@ -147,15 +147,15 @@ def main():
             population_data=model_data.population_density,
         )
         logger.debug(f"Dim. Egg active data: {egg_active.values.shape}")
-        #logger.debug(f"Egg active data: \n{print_time_slices(egg_active)}")
+        # logger.debug(f"Egg active data: \n{print_time_slices(egg_active)}")
 
         # Verify initial conditions. OK
         logger.debug(
             f"Dim. initial conditions: {model_data.initial_conditions.values.shape}"
         )
-        #logger.debug(
+        # logger.debug(
         #    f"Egg active data: \n{print_time_slices(model_data.initial_conditions)}"
-        #)
+        # )
 
         # ----------------------------------------------------------------------------------
         # ------    Entering to the second level: `call_function` function (octave)   ------
@@ -166,7 +166,7 @@ def main():
             latitude=model_data.latitude,
         )
         logger.info(f"Dim. Diapause laying data: {diapause_lay.values.shape}")
-        #logger.debug(f"Diapause laying data: \n{print_time_slices(diapause_lay)}")
+        # logger.debug(f"Diapause laying data: \n{print_time_slices(diapause_lay)}")
 
         # Verify diapause hatch. OK
         diapause_hatch = mosq_dia_hatch(
@@ -174,7 +174,7 @@ def main():
             latitude=model_data.latitude,
         )
         logger.debug(f"Dim. Diapause hatching data: {diapause_hatch.values.shape}")
-        #logger.debug(f"Diapause hatching data: \n{print_time_slices(diapause_hatch)}")
+        # logger.debug(f"Diapause hatching data: \n{print_time_slices(diapause_hatch)}")
 
         # Verify ed survival
         ed_survival = mosq_surv_ed(
@@ -182,7 +182,7 @@ def main():
             step_t=ETL_SETTINGS["ode_system"]["time_step"],
         )
         logger.debug(f"Dim. ED survival data: {ed_survival.values.shape}")
-        #logger.debug(f"ED survival data: \n{print_time_slices(ed_survival)}")
+        # logger.debug(f"ED survival data: \n{print_time_slices(ed_survival)}")
 
         # Assign this variable to maintain compatibility with the octave code. Just a rename.
         Temp = model_data.temperature
@@ -202,7 +202,7 @@ def main():
         v = v0.copy()
 
         for t in range(model_data.temperature.shape[2]):
-            #if t == 2: # Just to run a portion of the code
+            # if t == 2: # Just to run a portion of the code
             #    break
 
             logger.debug(f"--- Time step {t} ---")
@@ -305,7 +305,7 @@ def main():
             #     eqsys,
             #     eqsys_log,
             #     v,
-            #     vars_tuple, 
+            #     vars_tuple,
             #     step_t
             # )
             v = rk4_step(
@@ -316,9 +316,9 @@ def main():
                 step_t,
             )
 
-            #logger.debug(f"Shape after rk4_step at time {t}: {v.shape}")
+            # logger.debug(f"Shape after rk4_step at time {t}: {v.shape}")
             logger.debug(f"Array: {v}")
-            #logger.debug(f"Value after rk4_step at time {t}:\n{print_time_slices(v)}")
+            # logger.debug(f"Value after rk4_step at time {t}:\n{print_time_slices(v)}")
 
             # # Zero compartment 2 (Python index 1) if needed
             if (t / step_t) % 365 == 200:
@@ -331,23 +331,24 @@ def main():
                 for j in range(5):
                     v_out[..., j, idx_time] = np.maximum(v[..., j], 0)
 
-        #logger.debug(f" >>> END Processing year {year} \n")
+        # logger.debug(f" >>> END Processing year {year} \n")
         logger.debug(f"Shape of final output v_out for year {year}: {v_out.shape}")
         logger.debug(
             f"Value of final output v_out for year {year}:\n{print_time_slices(v_out[:,:,4,:])}"
         )
 
+
 if __name__ == "__main__":
-    
+
     # More complete loggger
-    #logging.basicConfig(
+    # logging.basicConfig(
     #    format="{asctime} {name}  {levelname} - {message}",
     #    style="{",
     #    datefmt="%Y-%m-%d %H:%M",
     #    level=logging.INFO,
-    #)
+    # )
 
     # Very basic logger
     logging.basicConfig(level=logging.INFO)
-    
+
     main()
