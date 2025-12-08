@@ -8,7 +8,7 @@
 %
 % MAIN STEPS:
 % 1. Loads datasets for temperature, rainfall, and population density.
-% 2. Computes and #displays initial conditions and first-level model outputs
+% 2. Computes and displays initial conditions and first-level model outputs
 %    (carrying capacity, water hatching).
 % 3. Computes and #displays second-level model outputs (diapause, survival, etc.).
 % 4. Iterates over time steps, printing slices and shapes of all relevant
@@ -70,8 +70,8 @@ v0 = load_initial(previous, size(Temp));
 disp(['Dimension of Initial Conditions: ', mat2str(size(v0))]);
 disp(['Dimension of Latitudes: ', mat2str(size(LAT))]);
 disp(['Dimension of Population density: ', mat2str(size(DENS))]);
-#disp(['Dimension of Temperature: ', mat2str(size(Temp))]);
-#disp(['Dimension of Temperature mean: ', mat2str(size(Tmean))]);
+disp(['Dimension of Temperature: ', mat2str(size(Temp))]);
+disp(['Dimension of Temperature mean: ', mat2str(size(Tmean))]);
 
 
 %----------------------------------------------------------------------------
@@ -98,8 +98,8 @@ egg_active = water_hatch(PR, DENS);
 %----------------------------------------------------------------------------
 % Verify diapause lay
 diapause_lay = mosq_dia_lay(Tmean, LAT, step_t);
-#disp(['Dimension of diapause_lay: ', mat2str(size(diapause_lay))]);
-#disp(diapause_lay)
+disp(['Dimension of diapause_lay: ', mat2str(size(diapause_lay))]);
+disp(diapause_lay)
 
 % Verify diapause_hatch
 diapause_hatch = mosq_dia_hatch(Tmean, LAT, step_t);
@@ -118,11 +118,11 @@ v = v0;
 v_out = zeros(size(v, 1), size(v, 2), 5, size(Temp, 3)/step_t);
 
 for t = 1:size(Temp, 3)
-    #if t == 12  # Just to run a portion of the code
+    #if t == 3  # Just to run a portion of the code
     #  break;
     #end
 
-    disp(['--- Time Step ', mat2str(t), ' ---']);
+    #disp(['--- Time Step ', mat2str(t), ' ---']);
 
     # Line a. Verify this slice
     T = Temp(:,:,t);
@@ -227,7 +227,7 @@ for t = 1:size(Temp, 3)
     #disp(['Dimension of ODE step: ', mat2str(size(v))]);
     #disp(v)
 
-     disp(mod(ceil(t/step_t),30))
+     #disp(mod(ceil(t/step_t),30))
 
     if mod(t/step_t,365) == 200
 
@@ -236,7 +236,7 @@ for t = 1:size(Temp, 3)
 
     if mod(t,step_t) == 0
         if mod(ceil(t/step_t),30) == 0
-          disp(['MOY: ', num2str(t/step_t/30)]);
+          #disp(['MOY: ', num2str(t/step_t/30)]);
         end
 
         for j = 1:5

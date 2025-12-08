@@ -1,12 +1,13 @@
+from copy import deepcopy
 import logging
 import logging
-from math import log
+
 from pathlib import Path
 
 import numpy as np
 import xarray as xr
 
-from heiplanet_models.Pmodel.Pmodel_ode import call_function
+
 from heiplanet_models.Pmodel.Pmodel_rates_mortality import (
     mosq_mort_e,
     mosq_mort_j,
@@ -88,7 +89,7 @@ def print_time_slices(arr):
     if isinstance(arr, xr.DataArray):
         if "time" in arr.dims:
             for i, t in enumerate(arr.time):
-                print(f"Time slice {i} (time={str(t.values)}):")
+                print(f"Time slice {i}):")
                 print(arr.sel(time=t).values)
                 print("-" * 40)
         else:
@@ -107,12 +108,9 @@ def print_time_slices(arr):
 
 
 def main():
-    # Set logger
-    logging.basicConfig(level=logging.INFO)
-
     # Main processor
     for year in range(INITIAL_YEAR, FINAL_YEAR + 1):
-        logger.debug(f" >>> START Processing year {year} ")
+        logger.info(f" >>> START Processing year {year} ")
 
         # 1. Read ETL settings
         ETL_SETTINGS = read_global_settings(
@@ -124,60 +122,59 @@ def main():
 
         # 3. Verify if all the files exist for a given year
         if check_all_paths_exist(path_dict=paths) is False:
-            logger.debug(f"Year {year} could not be processed.")
-            logger.debug(f" >>> END Processing year {year} \n")
+            logger.info(f"Year {year} could not be processed.")
+            logger.info(f" >>> END Processing year {year} \n")
             continue
 
-        # # 4. Load all data
+        # 4. Load all data
         model_data = load_all_data(paths=paths, etl_settings=ETL_SETTINGS)
-        logger.debug(model_data)
+        logger.info(model_data)
 
         # ----------------------------------------------------------------------------
         # ------    Entering to the first level: `model_run` function (octave)   ------
         # ----------------------------------------------------------------------------
-        # Verify carrying capacity function
+        # Verify carrying capacity function. OK
         CC = carrying_capacity(
             rainfall_data=model_data.rainfall,
             population_data=model_data.population_density,
         )
-
         logger.debug(f"Dim. Carrying capacity data: {CC.values.shape}")
-        logger.debug(f"Carrying capacity data: \n{print_time_slices(CC)}")
+        #logger.debug(f"Carrying capacity data: \n{print_time_slices(CC)}")
 
-        # Verify water hatching function
+        # Verify water hatching function. OK
         egg_active = water_hatching(
             rainfall_data=model_data.rainfall,
             population_data=model_data.population_density,
         )
         logger.debug(f"Dim. Egg active data: {egg_active.values.shape}")
-        logger.debug(f"Egg active data: \n{print_time_slices(egg_active)}")
+        #logger.debug(f"Egg active data: \n{print_time_slices(egg_active)}")
 
-        # Verify initial conditions
+        # Verify initial conditions. OK
         logger.debug(
             f"Dim. initial conditions: {model_data.initial_conditions.values.shape}"
         )
-        logger.debug(
-            f"Egg active data: \n{print_time_slices(model_data.initial_conditions)}"
-        )
+        #logger.debug(
+        #    f"Egg active data: \n{print_time_slices(model_data.initial_conditions)}"
+        #)
 
         # ----------------------------------------------------------------------------------
         # ------    Entering to the second level: `call_function` function (octave)   ------
         # ----------------------------------------------------------------------------------
-        # Verify diapause lay
+        # Verify diapause lay. OK
         diapause_lay = mosq_dia_lay(
             temperature=model_data.temperature_mean,
             latitude=model_data.latitude,
         )
-        logger.debug(f"Dim. Diapause laying data: {diapause_lay.values.shape}")
-        logger.debug(f"Diapause laying data: \n{print_time_slices(diapause_lay)}")
+        logger.info(f"Dim. Diapause laying data: {diapause_lay.values.shape}")
+        #logger.debug(f"Diapause laying data: \n{print_time_slices(diapause_lay)}")
 
-        # Verify diapause hatch
+        # Verify diapause hatch. OK
         diapause_hatch = mosq_dia_hatch(
             temperature=model_data.temperature_mean,
             latitude=model_data.latitude,
         )
         logger.debug(f"Dim. Diapause hatching data: {diapause_hatch.values.shape}")
-        logger.debug(f"Diapause hatching data: \n{print_time_slices(diapause_hatch)}")
+        #logger.debug(f"Diapause hatching data: \n{print_time_slices(diapause_hatch)}")
 
         # Verify ed survival
         ed_survival = mosq_surv_ed(
@@ -185,7 +182,7 @@ def main():
             step_t=ETL_SETTINGS["ode_system"]["time_step"],
         )
         logger.debug(f"Dim. ED survival data: {ed_survival.values.shape}")
-        logger.debug(f"ED survival data: \n{print_time_slices(ed_survival)}")
+        #logger.debug(f"ED survival data: \n{print_time_slices(ed_survival)}")
 
         # Assign this variable to maintain compatibility with the octave code. Just a rename.
         Temp = model_data.temperature
@@ -205,7 +202,7 @@ def main():
         v = v0.copy()
 
         for t in range(model_data.temperature.shape[2]):
-            # if t == 11: # Just to run a portion of the code
+            #if t == 2: # Just to run a portion of the code
             #    break
 
             logger.debug(f"--- Time step {t} ---")
@@ -240,7 +237,7 @@ def main():
 
             # Line f. Verify dia_lay slice
             idx_time = int(np.ceil((t + 1) / step_t)) - 1
-            logger.info(f"Idx_time at time {t}: {idx_time}")
+            logger.debug(f"Idx_time at time {t}: {idx_time}")
 
             dia_lay = diapause_lay[:, :, idx_time]
             logger.debug(f"Dim. Diapause laying slice at time {t}: {dia_lay.shape}")
@@ -278,8 +275,8 @@ def main():
 
             # Line m. Verify mort_a rate
             mort_a = mosq_mort_a(Tmean_slice)
-            logger.debug(f"Dim. mort_a rate at time {t}: {mort_a.values.shape}")
-            logger.debug(f"mort_a rate at time {t}:\n{mort_a.values}")
+            # logger.info(f"Dim. mort_a rate at time {t}: {mort_a.values.shape}")
+            # logger.info(f"mort_a rate at time {t}:\n{mort_a.values}")
 
             # Line n. Verify the variables that will passed to the ODE solver step
             vars_tuple = (
@@ -304,11 +301,24 @@ def main():
                 logger.debug(f"  Var {i} shape: {getattr(var, 'shape', None)}")
 
             # Line o. Call the ODE solver step (call_function)
+            # v = rk4_step(
+            #     eqsys,
+            #     eqsys_log,
+            #     v,
+            #     vars_tuple, 
+            #     step_t
+            # )
             v = rk4_step(
-                albopictus_ode_system, albopictus_log_ode_system, v, vars_tuple, step_t
+                albopictus_ode_system,
+                albopictus_log_ode_system,
+                v,
+                vars_tuple,
+                step_t,
             )
-            logger.debug(f"Shape after rk4_step at time {t}: {v.shape}")
-            logger.debug(f"Value after rk4_step at time {t}:\n{print_time_slices(v)}")
+
+            #logger.debug(f"Shape after rk4_step at time {t}: {v.shape}")
+            logger.debug(f"Array: {v}")
+            #logger.debug(f"Value after rk4_step at time {t}:\n{print_time_slices(v)}")
 
             # # Zero compartment 2 (Python index 1) if needed
             if (t / step_t) % 365 == 200:
@@ -321,18 +331,23 @@ def main():
                 for j in range(5):
                     v_out[..., j, idx_time] = np.maximum(v[..., j], 0)
 
-        logger.info(f" >>> END Processing year {year} \n")
-        logger.info(f"Shape of final output v_out for year {year}: {v_out.shape}")
-        logger.info(
+        #logger.debug(f" >>> END Processing year {year} \n")
+        logger.debug(f"Shape of final output v_out for year {year}: {v_out.shape}")
+        logger.debug(
             f"Value of final output v_out for year {year}:\n{print_time_slices(v_out[:,:,4,:])}"
         )
 
-
 if __name__ == "__main__":
-    logging.basicConfig(
-        format="{asctime} {name}  {levelname} - {message}",
-        style="{",
-        datefmt="%Y-%m-%d %H:%M",
-        level=logging.INFO,
-    )
+    
+    # More complete loggger
+    #logging.basicConfig(
+    #    format="{asctime} {name}  {levelname} - {message}",
+    #    style="{",
+    #    datefmt="%Y-%m-%d %H:%M",
+    #    level=logging.INFO,
+    #)
+
+    # Very basic logger
+    logging.basicConfig(level=logging.INFO)
+    
     main()
