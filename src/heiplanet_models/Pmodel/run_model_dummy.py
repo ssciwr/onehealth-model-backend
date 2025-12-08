@@ -205,7 +205,7 @@ def main():
             # if t == 2: # Just to run a portion of the code
             #    break
 
-            logger.debug(f"--- Time step {t} ---")
+            logger.info(f"--- Time step {t} ---")
 
             # Line a. Verify this slice
             T = Temp[:, :, t]
@@ -256,7 +256,7 @@ def main():
             # Line i. Verify water_hatch slice
             water_hatch = egg_active[:, :, idx_time]
             logger.debug(f"Dim. Water hatching slice at time {t}: {water_hatch.shape}")
-            logger.debug(f"Water hatching slice at time {t}:\n{water_hatch.values}")
+            logger.debug(f"Water hatching slice at time {t}:\n{water_hatch}")
 
             # Line j. Verify mort_e rate
             mort_e = mosq_mort_e(T)

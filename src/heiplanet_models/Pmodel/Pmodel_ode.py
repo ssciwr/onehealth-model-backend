@@ -275,20 +275,20 @@ def rk4_step(
     # TODO: create tests once this model has been reviewed.
 
     k1 = ode_func(state, model_params)
-    logger.info(f"k1 min: {np.min(k1)}, max: {np.max(k1)}")
+    logger.debug(f"k1 min: {np.min(k1)}, max: {np.max(k1)}")
 
     k2 = ode_func(state + 0.5 * k1 / time_step, model_params)
-    logger.info(f"k2 min: {np.min(k2)}, max: {np.max(k2)}")
+    logger.debug(f"k2 min: {np.min(k2)}, max: {np.max(k2)}")
 
     k3 = ode_func(state + 0.5 * k2 / time_step, model_params)
-    logger.info(f"k3 min: {np.min(k3)}, max: {np.max(k3)}")
+    logger.debug(f"k3 min: {np.min(k3)}, max: {np.max(k3)}")
 
     k4 = ode_func(state + k3 / time_step, model_params)
-    logger.info(f"k4 min: {np.min(k4)}, max: {np.max(k4)}")
+    logger.debug(f"k4 min: {np.min(k4)}, max: {np.max(k4)}")
 
     rk4_step_out_array = state + (k1 + 2 * k2 + 2 * k3 + k4) / (time_step * 6.0)
 
-    logger.info(
+    logger.debug(
         f"RK4 step min: {np.min(rk4_step_out_array)}, max: {np.max(rk4_step_out_array)}"
     )
 
