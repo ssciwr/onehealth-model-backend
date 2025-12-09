@@ -175,7 +175,8 @@ def test_rk4_step_parameter_passing():
     x0 = np.ones(3)
     time_step = 0.1
     test_key = 42
-    params = test_key
+    another_test_key = 100
+    params = (test_key, another_test_key)
     called = {}
 
     def mock_ode(state, model_params):
