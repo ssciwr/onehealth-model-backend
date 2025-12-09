@@ -10,6 +10,7 @@ from heiplanet_models.Pmodel.Pmodel_ode import (
 )
 
 
+# ---- Pytest Fixtures
 @pytest.fixture
 def call_function_test_arrays():
     coords = {
@@ -49,10 +50,8 @@ def call_function_initial_state():
 
 @pytest.fixture
 def call_function_random_state():
-    return np.random.rand(2, 2, 5)
-
-
-# ---- Pytest Fixtures
+    rng = np.random.default_rng(12345)
+    return rng.random((2, 2, 5))
 
 
 # ---- Helper Functions
@@ -89,11 +88,6 @@ def shape_log_ode(state, params):
 
 
 # ---- Tests RK4 Method
-# TODO: add an small integration test (unit test) for rk4_step here, it should solve the ODE dx/dt = a * x with known analytical solution
-def test_rk4_step_basic_integration():
-    pass
-
-
 # Test: Negative value correction in rk4_step
 def test_rk4_step_negative_value_correction():
     # Initial state is positive
@@ -726,7 +720,9 @@ def test_call_function_shape_preservation():
 # Test: Initial state propagation in call_function
 def test_call_function_initial_state_propagation():
     # Minimal 2x2 grid, 4 time steps, 5 compartments
-    state = np.random.rand(2, 2, 5)
+    rng = np.random.default_rng(12345)
+    state = rng.random((2, 2, 5))
+
     coords = {
         "longitude": [0, 1],
         "latitude": [10, 20],
@@ -806,11 +802,11 @@ def test_call_function_integration_progression(
 def test_call_function_zero_state(call_function_test_arrays):
     (
         coords,
-        temperature,
-        temperature_mean,
+        _,
+        _,
         latitudes,
-        carrying_capacity,
-        egg_activate,
+        _,
+        _,
         time_step,
     ) = call_function_test_arrays
     # All inputs and initial state are zeros

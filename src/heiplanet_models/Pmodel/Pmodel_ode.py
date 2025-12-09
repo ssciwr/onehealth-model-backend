@@ -76,8 +76,6 @@ def albopictus_ode_system(
         np.ndarray: Array of derivatives for each compartment, representing the rates of change.
     """
 
-    # TODO: ask what is the preference, mentioning explict parameter or using kwargs.
-
     # Unpack variables
     (
         t_idx,
@@ -191,8 +189,6 @@ def albopictus_log_ode_system(
         np.ndarray: Array of derivatives for each compartment in log-transformed space, representing the rates of change.
     """
 
-    # TODO: ask what is the preference, mentioning explict parameter or using kwargs.
-
     # Unpack variables
     (
         t_idx,
@@ -274,8 +270,6 @@ def rk4_step(
 
     # Octave-style RK4 with negative value correction using log-form ODEs
     # k1, k2, k3, k4 computations follow the RK4 notation.
-
-    # TODO: implementation works, but is inconsistent with the RK4 definition. Review and refactor.
 
     k1 = ode_func(state, model_params)
     logger.debug(f"k1 min: {np.min(k1)}, max: {np.max(k1)}")
