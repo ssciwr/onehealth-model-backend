@@ -20,9 +20,13 @@ from heiplanet_models.Pmodel.Pmodel_rates_mortality import (
     mosq_mort_j,
 )
 
+
 # ---- Logger
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
+
+
+MODEL_VARIABLES = 5  # eggs, diapause eggs, juveniles, immature adults, mature adults
 
 
 def albopictus_ode_system(
@@ -272,7 +276,6 @@ def rk4_step(
     # k1, k2, k3, k4 computations follow the RK4 notation.
 
     # TODO: implementation works, but is inconsistent with the RK4 definition. Review and refactor.
-    # TODO: create tests once this model has been reviewed.
 
     k1 = ode_func(state, model_params)
     logger.debug(f"k1 min: {np.min(k1)}, max: {np.max(k1)}")
@@ -337,45 +340,64 @@ def call_function(
     Returns:
         np.ndarray: 4D array containing the population state for each compartment, spatial location, and time step.
     """
-
+    # Precompute temperature-dependent rates
     diapause_lay = mosq_dia_lay(temperature_mean, latitudes)
     diapause_hatch = mosq_dia_hatch(temperature_mean, latitudes)
     ed_survival = mosq_surv_ed(temperature, time_step)
 
+    # Prepare output array
     shape_output = (
-        state.shape[0],
-        state.shape[1],
-        5,
-        int(temperature.shape[2] / time_step),
+        state.shape[0],  # spatial dimension 1: longitudes
+        state.shape[1],  # spatial dimension 2: latitudes
+        MODEL_VARIABLES,  # compartments: eggs, diapause eggs, juveniles, immature adults, mature adults
+        int(temperature.shape[2] / time_step),  # time steps
     )
     v_out = np.zeros(shape=shape_output)
     logger.debug(f"Shape v_out:{v_out.shape}")
 
+    # Time loop
     for t in range(temperature.shape[2]):
-        # if t == 3:
+        logger.debug(f"-----    Time step: {t}    -----")
+
+        # if t == 3: # DEBUGGING ONLY
         #    break
 
+        # Extract temperature slice and compute rates
         T = temperature[:, :, t]
         birth = mosq_birth(T)
         dev_j = mosq_dev_j(T)
         dev_i = mosq_dev_i(T)
-        dev_e = 1.0 / 7.1  # original model
+        dev_e = np.array([1.0 / 7.1])  # original model
 
         # Octave: ceil(t/step_t), Python: int(np.ceil((t+1)/step_t)) - 1
         idx_time = int(np.ceil((t + 1) / time_step)) - 1
 
+        # Extract time-dependent parameters
         dia_lay = diapause_lay.values[:, :, idx_time]
+
+        # diapause_hatch at current time index
         dia_hatch = diapause_hatch.values[:, :, idx_time]
+
+        #  egg_diapause_survival at current time index
         ed_surv = ed_survival[:, :, t]
+
+        # water_hatch at current time index
         water_hatch = egg_activate.values[:, :, idx_time]
+
+        # egg_mortality at current time index
         mort_e = mosq_mort_e(T)
+
+        # juvenile_mortality at current time index
         mort_j = mosq_mort_j(T)
+
         temperature_mean_slice = temperature_mean[:, :, idx_time]
         logger.debug(f"Tmean shape: {temperature_mean.shape}")
         logger.debug(f"Tmean_slice shape: {temperature_mean_slice.shape}")
+
+        # adult_mortality at current time index
         mort_a = mosq_mort_a(temperature_mean_slice)
 
-        # Add this block:
+        # Dimension checks for debugging
         logger.debug(f"Time step {t}:")
         logger.debug(f"  T.shape: {T.shape}")
         logger.debug(f"  birth.shape: {getattr(birth, 'shape', None)}")
@@ -385,6 +407,7 @@ def call_function(
         logger.debug(f"  dev_e: {dev_e}")
         logger.debug(f"  v[..., 0].shape: {state[..., 0].shape}")
 
+        # Pack model parameters
         model_params = (
             idx_time + 1,  # Octave uses 1-based, so pass idx_time+1
             time_step,
@@ -402,6 +425,7 @@ def call_function(
             water_hatch,
         )
 
+        # Calculate next state using RK4 step
         state = rk4_step(
             albopictus_ode_system,
             albopictus_log_ode_system,
@@ -409,19 +433,18 @@ def call_function(
             model_params,
             time_step,
         )
-        logger.debug(f"Time step: {t}")
 
-        # Zero compartment 2 (Python index 1) if needed
-        if (t / time_step) % 365 == 200:
+        # Reset diapause eggs to zero on day 200 of each year (to mimic seasonal behavior)
+        if (t / time_step) % 365 == 200:  # Mid-July approx., assuming time_step in days
             state[..., 1] = 0
 
-        # Store output every step_t
-        logger.debug(f"time step: {t+1}")
-        if (t + 1) % time_step == 0:
-            logger.debug(f"IDX TIME: {idx_time}")
-            if ((idx_time) % 30) == 0:
-                logger.debug(f"MOY: {int(((t)/time_step) / 30)}")
-            for j in range(5):
+        # Store results at specified time steps
+        if (t + 1) % time_step == 0:  # Store every 'time_step' steps
+            logger.debug(f"Storing results at time step: {t}")
+            if ((idx_time) % 30) == 0:  # Trigger every 30 time steps (approx. monthly)
+                logger.debug(f"Month Of Year: {int(((t)/time_step) / 30)}")
+            # Store non-negative values only in all the compartments
+            for j in range(v_out.shape[2]):
                 v_out[..., j, idx_time] = np.maximum(state[..., j], 0)
 
     return v_out
