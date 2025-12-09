@@ -280,7 +280,7 @@ Process:
     - File associated: `mosq_birth.m`
   
     - Comments:
-        - TODO: This equation is not present in the suplement material.
+        - TODO: This equation is not present in the supplementary material.
 
     ```octave
     T = Temp(:,:,t);
@@ -356,23 +356,36 @@ Process:
 
     Numbers in brackets refer to the corresponding row numbers in [Table S11 from the Supplementary Material](https://static-content.springer.com/esm/art%3A10.1038%2Fs43247-025-02199-z/MediaObjects/43247_2025_2199_MOESM2_ESM.pdf).
 
-| Octave Function | Python Function     | Equation Number in Paper |
-| --------------- | ------------------- | ------------------------ |
-| `mosq_dev_j.m`  | `mosq_dev_j`        | [5]                      |
-| `mosq_dev_i.m`  | `mosq_dev_i`        | [6]                      |
-| `mosq_dev_e.m`  | `mosq_dev_e`        | `[not reported 1]`       |
-| `capacity.m`    | `carrying_capacity` | [14]                     |
+| Octave Function  | Python Function     | Equation Number in Paper |
+| ---------------- | ------------------- | ------------------------ |
+| `mosq_dev_j.m`   | `mosq_dev_j`        | [5]                      |
+| `mosq_dev_i.m`   | `mosq_dev_i`        | [6]                      |
+| `mosq_dev_e.m`   | `mosq_dev_e`        | `[NR 1]`                 |
+| `capacity.m`     | `carrying_capacity` | [14]                     |
+| `mosq_mort_e.m`  | `mosq_mort_e`       | [9]                      |
+| `mosq_mort_j.m`  | `mosq_mort_j`       | [10]                     |
+| `mosq_mort_a.m`  | `mosq_mort_a`       | [11]                     |
+| `mosq_surv_ed.m` | `mosq_surv_ed`      | `[NR 2]`                 |
 
 
 
 ## Table 2. Climate sensitive parameter description and functions (inspired on Table S11 in Supplementary information)
 
-| Number             | Description                                          | Unit               |
-| ------------------ | ---------------------------------------------------- | ------------------ |
-| [5]                | Juvenile development rate                            | $\frac{1}{day}$    |
-| [6]                | Emerging adult development                           | $\frac{1}{day}$    |
-| `[not reported 1]` | (tentative) Emerging adult development Briere model. | `[not reported 1]` |
-| [14]               | Juvenile carrying capacity                           | `NA`               |
+!!! warning
+
+    Put special attention to the Not Reported (`[NR <number>]`) equations and the Not Reported units (`[NA]`).
+
+
+| Number   | Description                                          | Symbol         | Unit            |
+| -------- | ---------------------------------------------------- | -------------- | --------------- |
+| [5]      | Juvenile development rate                            |                | $\frac{1}{day}$ |
+| [6]      | Emerging adult development                           |                | $\frac{1}{day}$ |
+| `[NR 1]` | (tentative) Emerging adult development Briere model. |                | `[NR 1]`        |
+| [14]     | Juvenile carrying capacity                           |                | `NA`            |
+| [9]      | Egg mortality rate                                   | $m_{E}(T)$     | $\frac{1}{day}$ |
+| [10]     | Juvenile mortality rate                              | $m_{J}(T)$     | $\frac{1}{day}$ |
+| [11]     | Adult mortality rate                                 | $m_{A}(Tmean)$ | $\frac{1}{day}$ |
+| `[NR 2]` | (tentative) Diapausing egg mortality rate            | $m_{Ed}(T)$    | $\frac{1}{day}$ |
 
 
 
@@ -397,7 +410,7 @@ $$
     | --------- | ---------------- |
     | $T$       | Temperature (°C) |
 
-- `[not reported 1]` Emerging adult development Briere model
+- `[NR 1]` (tentative) Emerging adult development Briere model
 $$
     BM = q \cdot T \cdot (T - T_0) \cdot \sqrt{T_m - T}
 $$
@@ -423,3 +436,67 @@ $$
     | $W(x)$                 | Rainfall at time step $x$          |
     | $\alpha_{\text{dens}}$ | Weight for population contribution |
     | $P(x)$                 | Population at time step $x$        |
+
+- [9] Egg mortality rate:
+
+!!! warning
+
+    Equation in paper do not show the exponential function $exp()$. However, the exponential function is used in the Octave code.
+
+$$
+m_{E}(T) = -\ln\left( 0.955\, \exp\left[ -0.5 \left( \frac{T - 18.8}{21.53} \right)^{6} \right] \right)
+$$
+
+| Parameter | Description      |
+| --------- | ---------------- |
+| $T$       | Temperature (°C) |
+
+- [10] Juvenile mortality rate:
+
+!!! warning
+
+    Equation in paper do not show the exponential function $exp()$. However, the exponential function is used in the Octave code.
+
+$$
+m_{J}(T) = -\ln\left[\,0.977\, \exp\left(-0.5 \left(\frac{T - 21.8}{16.6}\right)^{6}\right)\,\right]
+$$
+
+| Parameter | Description      |
+| --------- | ---------------- |
+| $T$       | Temperature (°C) |
+
+- [11] Adult mortality rate:
+
+!!! warning
+
+    The equation reported on paper do not show the exponential $exp()$ found in the Octave/Matlab code. Additionally the equation in Octave should look like this.
+
+    $$
+    m_{A}(T) = 
+    \begin{cases}
+    -\ln\left[\,0.677\, \exp\left(-0.5 \left(\frac{T - 20.9}{13.2}\right)^{6}\right)\, T^{0.1}\,\right], & \text{if } T > 0 \\[1.5ex]
+    -\ln\left[\,0.677\, \exp\left(-0.5 \left(\frac{T - 20.9}{13.2}\right)^{6}\right)\,\right], & \text{if } T \leq 0
+    \end{cases}
+    $$
+
+$$
+m_{A}(T_{\text{mean}}) = -\ln\left[\,0.677\, \exp\left(-0.5 \left(\frac{T_{\text{mean}} - 20.9}{13.2}\right)^{6}\right)\, (T_{\text{mean}})^{0.1}\,\right]
+$$
+
+
+| Parameter         | Description      |
+| ----------------- | ---------------- |
+| $T_{\text{mean}}$ | Temperature (°C) |
+
+- `[NR 2]` (tentative) Diapausing egg mortality rate:
+!!! warning
+    The constants in the code are different than constants reported on the paper.
+
+$$
+m_{Ed}(T) = m_{E}(T) = -\ln\left( 0.955\, \exp\left[ -0.5 \left( \frac{T - 18.8}{21.53} \right)^{6} \right] \right)
+$$
+
+| Parameter | Description      |
+| --------- | ---------------- |
+| $T$       | Temperature (°C) |
+
