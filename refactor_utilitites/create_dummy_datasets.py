@@ -21,363 +21,217 @@ The Octave-compatible datasets are also saved as NetCDF files in the specified d
 
 import numpy as np
 import xarray as xr
+import os
+import logging
 
-# ----------------------------------------------------------------
-# ------------------   Dataset 1  (Temperature)  -----------------
-# ----------------------------------------------------------------
-# Three longitudes
-lon1 = np.array([0, 1, 2], dtype=np.float64)
 
-# Two latitudes
-lat1 = np.array([0, 1], dtype=np.float64)
+def create_dataset(
+    var_name: str,
+    lon: np.ndarray,
+    lat: np.ndarray,
+    time: np.ndarray,
+    data: np.ndarray,
+    coords_names: dict,
+    out_path: str,
+    attrs: dict,
+) -> xr.Dataset:
+    """
+    Create and save a NetCDF dataset with given parameters.
+    """
+    ds = xr.Dataset(
+        data_vars={
+            var_name: (
+                [coords_names["time"], coords_names["lat"], coords_names["lon"]],
+                data,
+            ),
+        },
+        coords={
+            coords_names["lon"]: lon,
+            coords_names["lat"]: lat,
+            coords_names["time"]: time,
+        },
+        attrs=attrs,
+    )
+    if coords_names.get("transpose", False):
+        ds = ds.transpose(
+            coords_names["lon"], coords_names["lat"], coords_names["time"]
+        )
+    ds.to_netcdf(out_path)
+    logging.info(f"Saved {out_path}")
+    return ds
 
-# Four timestamps
-time1 = np.array(
-    ["2024-01-01", "2024-01-02", "2024-01-03", "2024-01-04"], dtype="datetime64[ns]"
-)
 
-# shape (4, 2, 3) --> dimensions [time, latitude, longitude]
-data_array_1 = np.array(
-    [
+def main() -> None:
+    """
+    Main function to create dummy datasets for temperature, population, and rainfall.
+    """
+    logging.basicConfig(level=logging.INFO)
+    out_dir = os.path.join("data", "in", "Pratik_datalake")
+    os.makedirs(out_dir, exist_ok=True)
+
+    # Common arrays
+    lon1 = np.array([0, 1, 2], dtype=np.float64)
+    lat1 = np.array([0, 1], dtype=np.float64)
+    time1 = np.array(
+        ["2024-01-01", "2024-01-02", "2024-01-03", "2024-01-04"], dtype="datetime64[ns]"
+    )
+    data1 = np.array(
         [
-            [1, 2, 3],
-            [4, 5, 6],
+            [[1, 2, 3], [4, 5, 6]],
+            [[7, 8, 9], [10, 11, 12]],
+            [[13, 14, 15], [16, 17, 18]],
+            [[19, 20, 21], [22, 23, 24]],
         ],
+        dtype=np.float64,
+    )
+
+    lon2 = np.array([0, 1, 2], dtype=np.float64)
+    lat2 = np.array([0, 1], dtype=np.float64)
+    time2 = np.array(["2024-01-01"], dtype="datetime64[ns]")
+    data2 = np.array(
         [
-            [7, 8, 9],
-            [10, 11, 12],
+            [[0.1, 0.2, 0.3], [0.4, 0.5, 0.6]],
         ],
+        dtype=np.float64,
+    )
+
+    lon3 = np.array([1, 2, 3], dtype=np.float64)
+    lat3 = np.array([1, 2], dtype=np.float64)
+    time3 = time1
+    data3 = np.array(
         [
-            [13, 14, 15],
-            [16, 17, 18],
+            [[-1, -2, -3], [-4, -5, -6]],
+            [[-7, -8, -9], [-10, -11, -12]],
+            [[-13, -14, -15], [-16, -17, -18]],
+            [[-19, -20, -21], [-22, -23, -24]],
         ],
-        [
-            [19, 20, 21],
-            [22, 23, 24],
-        ],
-    ],
-    dtype=np.float64,
-)
+        dtype=np.float64,
+    )
 
-# data_array_1 = np.random.randint(1, 61, size=(3, 4, 5))
+    # Dataset specifications
+    datasets = [
+        {
+            "var_name": "temperature",
+            "lon": lon1,
+            "lat": lat1,
+            "time": time1,
+            "data": data1,
+            "coords_names": {
+                "lon": "longitude",
+                "lat": "latitude",
+                "time": "time",
+                "transpose": True,
+            },
+            "out_file": "dataset_temperature_dummy.nc",
+            "attrs": {
+                "name": "Dummy Temperature",
+                "description": "Dummy temperature dataset for testing purposes",
+            },
+        },
+        {
+            "var_name": "population",
+            "lon": lon2,
+            "lat": lat2,
+            "time": time2,
+            "data": data2,
+            "coords_names": {
+                "lon": "longitude",
+                "lat": "latitude",
+                "time": "time",
+                "transpose": True,
+            },
+            "out_file": "dataset_population_dummy.nc",
+            "attrs": {
+                "name": "Dummy Population",
+                "description": "Dummy population dataset for testing purposes",
+            },
+        },
+        {
+            "var_name": "rainfall",
+            "lon": lon1,
+            "lat": lat1,
+            "time": time1,
+            "data": data3,
+            "coords_names": {
+                "lon": "longitude",
+                "lat": "latitude",
+                "time": "time",
+                "transpose": True,
+            },
+            "out_file": "dataset_rainfall_dummy.nc",
+            "attrs": {
+                "name": "Dummy Rainfall",
+                "description": "Dummy rainfall dataset for testing purposes",
+            },
+        },
+        # Octave-compatible datasets
+        {
+            "var_name": "t2m",
+            "lon": lon1,
+            "lat": lat1,
+            "time": time1,
+            "data": data1,
+            "coords_names": {"lon": "longitude", "lat": "latitude", "time": "time"},
+            "out_file": "dataset_temperature_dummy_octave.nc",
+            "attrs": {
+                "name": "Dummy Temperature",
+                "description": "Dummy temperature dataset for testing purposes",
+            },
+        },
+        {
+            "var_name": "dens",
+            "lon": lon2,
+            "lat": lat2,
+            "time": time2,
+            "data": data2,
+            "coords_names": {"lon": "lon", "lat": "lat", "time": "time"},
+            "out_file": "dataset_population_dummy_octave.nc",
+            "attrs": {
+                "name": "Dummy Population",
+                "description": "Dummy population dataset for testing purposes",
+            },
+        },
+        {
+            "var_name": "tp",
+            "lon": lon1,
+            "lat": lat1,
+            "time": time1,
+            "data": data3,
+            "coords_names": {"lon": "longitude", "lat": "latitude", "time": "time"},
+            "out_file": "dataset_rainfall_dummy_octave.nc",
+            "attrs": {
+                "name": "Dummy Rainfall",
+                "description": "Dummy rainfall dataset for testing purposes",
+            },
+        },
+        {
+            "var_name": "dens",
+            "lon": lon3,
+            "lat": lat3,
+            "time": time3,
+            "data": data3,
+            "coords_names": {"lon": "lon", "lat": "lat", "time": "time"},
+            "out_file": "dataset_population_dummy_octave_notaligned.nc",
+            "attrs": {
+                "name": "Dummy Population not aligned",
+                "description": "Dummy population dataset for testing purposes. This dataset has lon/lat not aligned with others.",
+            },
+        },
+    ]
 
-dataset_temperature = xr.Dataset(
-    data_vars={
-        "temperature": (["time", "latitude", "longitude"], data_array_1),
-    },
-    coords={
-        "longitude": lon1,
-        "latitude": lat1,
-        "time": time1,
-    },
-    attrs={
-        "name": "Dummy Temperature",
-        "description": "Dummy temperature dataset for testing purposes",
-    },
-)
-
-# Transpose dimensions to (longitude, latitude, time)
-dataset_temperature = dataset_temperature.transpose("longitude", "latitude", "time")
-
-# Example [time, latitude, longitude]
-dataset_temperature_slice = dataset_temperature.temperature[0, :, :]
-print(dataset_temperature_slice.values)
-
-# Write to netcdf file
-dataset_temperature.to_netcdf("data/in/Pratik_datalake/dataset_temperature_dummy.nc")
-
-
-# ----------------------------------------------------------------
-# ----------------     Dataset 2  (Population)    ----------------
-# ----------------------------------------------------------------
-
-# Five longitudes
-lon2 = np.array([0, 1, 2], dtype=np.float64)
-
-# Four latitudes
-lat2 = np.array([0, 1], dtype=np.float64)
-
-# One timestamp
-time2 = np.array(["2024-01-01"], dtype="datetime64[ns]")
-data_array_2 = np.array(
-    [
-        [
-            [0.1, 0.2, 0.3],
-            [0.4, 0.5, 0.6],
-        ],
-    ],
-    dtype=np.float64,
-)
-
-# data_array_2 = np.random.randint(1, 61, size=(1, 2, 3))
-
-dataset_population = xr.Dataset(
-    data_vars={
-        "population": (["time", "latitude", "longitude"], data_array_2),
-    },
-    coords={
-        "longitude": lon2,
-        "latitude": lat2,
-        "time": time2,
-    },
-    attrs={
-        "name": "Dummy Population",
-        "description": "Dummy population dataset for testing purposes",
-    },
-)
-
-# Transpose dimensions to (longitude, latitude, time)
-dataset_population = dataset_population.transpose("longitude", "latitude", "time")
-
-# Example
-dataset_population_slice = dataset_population.population[0, :, :]
-print(dataset_population_slice.values)
-
-
-# Write to netcdf file
-dataset_population.to_netcdf("data/in/Pratik_datalake/dataset_population_dummy.nc")
-
-
-# -------------------------------------------------------------
-# ------------------   Dataset 3  (rainfall)  -----------------
-# -------------------------------------------------------------
-# Three longitudes
-lon3 = np.array([1, 2, 3], dtype=np.float64)
-
-# Two latitudes
-lat3 = np.array([1, 2], dtype=np.float64)
-
-# Four timestamps
-time3 = np.array(
-    ["2024-01-01", "2024-01-02", "2024-01-03", "2024-01-04"], dtype="datetime64[ns]"
-)
-
-# shape (4, 2, 3) --> dimensions [time, latitude, longitude]
-data_array_3 = np.array(
-    [
-        [
-            [-1, -2, -3],
-            [-4, -5, -6],
-        ],
-        [
-            [-7, -8, -9],
-            [-10, -11, -12],
-        ],
-        [
-            [-13, -14, -15],
-            [-16, -17, -18],
-        ],
-        [
-            [-19, -20, -21],
-            [-22, -23, -24],
-        ],
-    ],
-    dtype=np.float64,
-)
-
-# data_array_3 = np.random.randint(1, 61, size=(3, 4, 5))
-
-dataset_rainfall = xr.Dataset(
-    data_vars={
-        "rainfall": (["time", "latitude", "longitude"], data_array_3),
-    },
-    coords={
-        "longitude": lon1,
-        "latitude": lat1,
-        "time": time1,
-    },
-    attrs={
-        "name": "Dummy Rainfall",
-        "description": "Dummy rainfall dataset for testing purposes",
-    },
-)
-
-# Transpose dimensions to (longitude, latitude, time)
-dataset_rainfall = dataset_rainfall.transpose("longitude", "latitude", "time")
-print(dataset_rainfall.dims)
-
-# Example [time, latitude, longitude]
-dataset_rainfall_slice = dataset_rainfall.rainfall[0, :, :]
-print(dataset_rainfall_slice.values)
-
-# Write to netcdf file
-dataset_rainfall.to_netcdf("data/in/Pratik_datalake/dataset_rainfall_dummy.nc")
+    for spec in datasets:
+        out_path = os.path.join(out_dir, spec["out_file"])
+        create_dataset(
+            var_name=spec["var_name"],
+            lon=spec["lon"],
+            lat=spec["lat"],
+            time=spec["time"],
+            data=spec["data"],
+            coords_names=spec["coords_names"],
+            out_path=out_path,
+            attrs=spec["attrs"],
+        )
 
 
-# ----------------------------------------------------------------
-
-
-# ----------------------------------------------------------------------
-# ------------------   Dataset 1 Octave (Temperature)  -----------------
-# ----------------------------------------------------------------------
-# Three longitudes
-lon1 = np.array([0, 1, 2], dtype=np.float64)
-
-# Two latitudes
-lat1 = np.array([0, 1], dtype=np.float64)
-
-# Four timestamps
-time1 = np.array(
-    ["2024-01-01", "2024-01-02", "2024-01-03", "2024-01-04"], dtype="datetime64[ns]"
-)
-
-# shape (4, 2, 3) --> dimensions [time, latitude, longitude]
-data_array_1 = np.array(
-    [
-        [
-            [1, 2, 3],
-            [4, 5, 6],
-        ],
-        [
-            [7, 8, 9],
-            [10, 11, 12],
-        ],
-        [
-            [13, 14, 15],
-            [16, 17, 18],
-        ],
-        [
-            [19, 20, 21],
-            [22, 23, 24],
-        ],
-    ],
-    dtype=np.float64,
-)
-
-# data_array_1 = np.random.randint(1, 61, size=(3, 4, 5))
-
-dataset_temperature = xr.Dataset(
-    data_vars={
-        "t2m": (["time", "latitude", "longitude"], data_array_1),
-    },
-    coords={
-        "longitude": lon1,
-        "latitude": lat1,
-        "time": time1,
-    },
-    attrs={
-        "name": "Dummy Temperature",
-        "description": "Dummy temperature dataset for testing purposes",
-    },
-)
-
-# Example [time, latitude, longitude]
-dataset_temperature_slice = dataset_temperature.t2m[0, :, :]
-print(dataset_temperature_slice.values)
-
-# Write to netcdf file
-dataset_temperature.to_netcdf(
-    "data/in/Pratik_datalake/dataset_temperature_dummy_octave.nc"
-)
-
-
-# ----------------------------------------------------------------
-# ----------------     Dataset 2  (Population)    ----------------
-# ----------------------------------------------------------------
-
-# Five longitudes
-lon2 = np.array([0, 1, 2], dtype=np.float64)
-
-# Four latitudes
-lat2 = np.array([0, 1], dtype=np.float64)
-
-# One timestamp
-time2 = np.array(["2024-01-01"], dtype="datetime64[ns]")
-data_array_2 = np.array(
-    [
-        [
-            [0.1, 0.2, 0.3],
-            [0.4, 0.5, 0.6],
-        ],
-    ],
-    dtype=np.float64,
-)
-
-# data_array_2 = np.random.randint(1, 61, size=(1, 2, 3))
-
-dataset_population = xr.Dataset(
-    data_vars={
-        "dens": (["time", "lat", "lon"], data_array_2),
-    },
-    coords={
-        "lon": lon2,
-        "lat": lat2,
-        "time": time2,
-    },
-    attrs={
-        "name": "Dummy Population",
-        "description": "Dummy population dataset for testing purposes",
-    },
-)
-
-# Example
-dataset_population_slice = dataset_population.dens[0, :, :]
-print(dataset_population_slice.values)
-
-
-# Write to netcdf file
-dataset_population.to_netcdf(
-    "data/in/Pratik_datalake/dataset_population_dummy_octave.nc"
-)
-
-
-# -------------------------------------------------------------
-# ------------------   Dataset 3  (rainfall)  -----------------
-# -------------------------------------------------------------
-# Three longitudes
-lon3 = np.array([1, 2, 3], dtype=np.float64)
-
-# Two latitudes
-lat3 = np.array([1, 2], dtype=np.float64)
-
-# Four timestamps
-time3 = np.array(
-    ["2024-01-01", "2024-01-02", "2024-01-03", "2024-01-04"], dtype="datetime64[ns]"
-)
-
-# shape (4, 2, 3) --> dimensions [time, latitude, longitude]
-data_array_3 = np.array(
-    [
-        [
-            [-1, -2, -3],
-            [-4, -5, -6],
-        ],
-        [
-            [-7, -8, -9],
-            [-10, -11, -12],
-        ],
-        [
-            [-13, -14, -15],
-            [-16, -17, -18],
-        ],
-        [
-            [-19, -20, -21],
-            [-22, -23, -24],
-        ],
-    ],
-    dtype=np.float64,
-)
-
-# data_array_3 = np.random.randint(1, 61, size=(3, 4, 5))
-
-dataset_rainfall = xr.Dataset(
-    data_vars={
-        "tp": (["time", "latitude", "longitude"], data_array_3),
-    },
-    coords={
-        "longitude": lon1,
-        "latitude": lat1,
-        "time": time1,
-    },
-    attrs={
-        "name": "Dummy Rainfall",
-        "description": "Dummy rainfall dataset for testing purposes",
-    },
-)
-
-# Example [time, latitude, longitude]
-dataset_rainfall_slice = dataset_rainfall.tp[0, :, :]
-print(dataset_rainfall_slice.values)
-
-# Write to netcdf file
-dataset_rainfall.to_netcdf("data/in/Pratik_datalake/dataset_rainfall_dummy_octave.nc")
+if __name__ == "__main__":
+    main()
