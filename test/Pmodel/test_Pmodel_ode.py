@@ -50,7 +50,7 @@ def test_rk4_step_negative_value_correction():
     # Initial state is positive
     x0 = np.array([1.0])
     time_step = 0.1
-    params = {}
+    params = tuple()
 
     # Run RK4 step with negative ODE
     result = rk4_step(
@@ -70,7 +70,7 @@ def test_rk4_step_log_ode_path_trigger():
     # Initial state is near zero
     x0 = np.array([1e-30])
     time_step = 0.1
-    params = {}
+    params = tuple()
 
     # Run RK4 step with zero ODE and log-ODE correction
     result = rk4_step(
@@ -93,7 +93,7 @@ def test_rk4_step_shape_preservation():
     # Initial state is a vector of length 5
     x0 = np.ones(5)
     time_step = 0.1
-    params = {}
+    params = tuple()
 
     result = rk4_step(
         ode_func=shape_ode,
@@ -114,7 +114,7 @@ def test_rk4_step_shape_preservation_multidim():
     # Initial state is a multidimensional array
     x0 = np.ones((3, 2, 4, 5))
     time_step = 0.1
-    params = {}
+    params = tuple()
 
     result = rk4_step(
         ode_func=shape_ode,
@@ -134,7 +134,7 @@ def test_rk4_step_shape_preservation_multidim():
 def test_rk4_step_no_side_effects():
     x0 = np.ones(5)
     time_step = 0.1
-    params = {}
+    params = tuple()
     x0_copy = x0.copy()
 
     _ = rk4_step(
@@ -153,7 +153,7 @@ def test_rk4_step_no_side_effects():
 def test_rk4_step_zero_state():
     x0 = np.zeros(5)
     time_step = 0.1
-    params = {}
+    params = tuple()
 
     result = rk4_step(
         ode_func=shape_ode,
@@ -174,7 +174,8 @@ def test_rk4_step_zero_state():
 def test_rk4_step_parameter_passing():
     x0 = np.ones(3)
     time_step = 0.1
-    params = {"test_key": 42}
+    test_key = 42
+    params = test_key
     called = {}
 
     def mock_ode(state, model_params):
@@ -203,7 +204,7 @@ def test_rk4_step_parameter_passing():
 def test_rk4_step_nan_in_state():
     x0 = np.array([1.0, np.nan, 2.0])
     time_step = 0.1
-    params = {}
+    params = tuple()
 
     result = rk4_step(
         ode_func=shape_ode,
