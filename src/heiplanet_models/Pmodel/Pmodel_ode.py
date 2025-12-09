@@ -133,7 +133,7 @@ def albopictus_ode_system(
         - mort_a * state[..., 4]  # Adult mortality
     )
 
-    # Replace NaNs
+    # Replace internal NaNs
     derivatives[np.isnan(-derivatives)] = -state[np.isnan(-derivatives)] * step_t
 
     return derivatives
