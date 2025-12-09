@@ -402,7 +402,7 @@ def call_function(
             water_hatch,
         )
 
-        va = rk4_step(
+        state = rk4_step(
             albopictus_ode_system,
             albopictus_log_ode_system,
             state,
@@ -413,7 +413,7 @@ def call_function(
 
         # Zero compartment 2 (Python index 1) if needed
         if (t / time_step) % 365 == 200:
-            va[..., 1] = 0
+            state[..., 1] = 0
 
         # Store output every step_t
         logger.debug(f"time step: {t+1}")
@@ -422,6 +422,6 @@ def call_function(
             if ((idx_time) % 30) == 0:
                 logger.debug(f"MOY: {int(((t)/time_step) / 30)}")
             for j in range(5):
-                v_out[..., j, idx_time] = np.maximum(va[..., j], 0)
+                v_out[..., j, idx_time] = np.maximum(state[..., j], 0)
 
     return v_out
