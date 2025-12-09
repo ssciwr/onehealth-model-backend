@@ -1,10 +1,56 @@
 import numpy as np
+import xarray as xr
+import pytest
 
 from heiplanet_models.Pmodel.Pmodel_ode import (
     rk4_step,
     albopictus_ode_system,
     albopictus_log_ode_system,
+    call_function,
 )
+
+
+@pytest.fixture
+def call_function_test_arrays():
+    coords = {
+        "longitude": [0, 1],
+        "latitude": [10, 20],
+        "time": [0, 1, 2, 3],
+    }
+    temperature = xr.DataArray(
+        np.ones((2, 2, 4)), dims=["longitude", "latitude", "time"], coords=coords
+    )
+    temperature_mean = xr.DataArray(
+        np.ones((2, 2, 4)), dims=["longitude", "latitude", "time"], coords=coords
+    )
+    latitudes = xr.DataArray([10, 20], dims=["latitude"])
+    carrying_capacity = xr.DataArray(
+        np.ones((2, 2, 4)), dims=["longitude", "latitude", "time"], coords=coords
+    )
+    egg_activate = xr.DataArray(
+        np.ones((2, 2, 4)), dims=["longitude", "latitude", "time"], coords=coords
+    )
+    time_step = 1.0
+    return (
+        coords,
+        temperature,
+        temperature_mean,
+        latitudes,
+        carrying_capacity,
+        egg_activate,
+        time_step,
+    )
+
+
+@pytest.fixture
+def call_function_initial_state():
+    return np.ones((2, 2, 5))
+
+
+@pytest.fixture
+def call_function_random_state():
+    return np.random.rand(2, 2, 5)
+
 
 # ---- Pytest Fixtures
 
@@ -632,3 +678,210 @@ def test_albopictus_log_ode_system_negative_state_correction():
     assert np.all(
         np.isfinite(result)
     ), "Output contains non-finite values for negative state"
+
+
+# ---- Tests for call_function
+def test_call_function_shape_preservation():
+
+    # Minimal 2x2 grid, 4 time steps, 5 compartments
+    state = np.ones((2, 2, 5))
+    coords = {
+        "longitude": [0, 1],
+        "latitude": [10, 20],
+        "time": [0, 1, 2, 3],
+    }
+    temperature = xr.DataArray(
+        np.ones((2, 2, 4)), dims=["longitude", "latitude", "time"], coords=coords
+    )
+    temperature_mean = xr.DataArray(
+        np.ones((2, 2, 4)), dims=["longitude", "latitude", "time"], coords=coords
+    )
+    latitudes = xr.DataArray([10, 20], dims=["latitude"])
+    carrying_capacity = xr.DataArray(
+        np.ones((2, 2, 4)), dims=["longitude", "latitude", "time"], coords=coords
+    )
+    egg_activate = xr.DataArray(
+        np.ones((2, 2, 4)), dims=["longitude", "latitude", "time"], coords=coords
+    )
+    time_step = 1.0
+
+    result = call_function(
+        state,
+        temperature,
+        temperature_mean,
+        latitudes,
+        carrying_capacity,
+        egg_activate,
+        time_step,
+    )
+    # Output shape: (2, 2, 5, 4)
+    assert result.shape == (
+        2,
+        2,
+        5,
+        4,
+    ), f"call_function output shape {result.shape} is incorrect"
+
+
+# Test: Initial state propagation in call_function
+def test_call_function_initial_state_propagation():
+    # Minimal 2x2 grid, 4 time steps, 5 compartments
+    state = np.random.rand(2, 2, 5)
+    coords = {
+        "longitude": [0, 1],
+        "latitude": [10, 20],
+        "time": [0, 1, 2, 3],
+    }
+    temperature = xr.DataArray(
+        np.ones((2, 2, 4)), dims=["longitude", "latitude", "time"], coords=coords
+    )
+    temperature_mean = xr.DataArray(
+        np.ones((2, 2, 4)), dims=["longitude", "latitude", "time"], coords=coords
+    )
+    latitudes = xr.DataArray([10, 20], dims=["latitude"])
+    carrying_capacity = xr.DataArray(
+        np.ones((2, 2, 4)), dims=["longitude", "latitude", "time"], coords=coords
+    )
+    egg_activate = xr.DataArray(
+        np.ones((2, 2, 4)), dims=["longitude", "latitude", "time"], coords=coords
+    )
+    time_step = 1.0
+
+    result = call_function(
+        state.copy(),
+        temperature,
+        temperature_mean,
+        latitudes,
+        carrying_capacity,
+        egg_activate,
+        time_step,
+    )
+    # The first time step in result should be close to the initial state (allowing for model logic)
+    # This is a minimal check: the model may update state in the first step, but shape and type must match
+    assert (
+        result[..., 0].shape == state.shape
+    ), "First time step shape does not match initial state"
+    assert np.all(
+        np.isfinite(result[..., 0])
+    ), "First time step contains non-finite values"
+
+
+# Test: Integration progression in call_function
+def test_call_function_integration_progression(
+    call_function_test_arrays, call_function_initial_state
+):
+    (
+        _,
+        temperature,
+        temperature_mean,
+        latitudes,
+        carrying_capacity,
+        egg_activate,
+        time_step,
+    ) = call_function_test_arrays
+    state = call_function_initial_state
+    result = call_function(
+        state.copy(),
+        temperature,
+        temperature_mean,
+        latitudes,
+        carrying_capacity,
+        egg_activate,
+        time_step,
+    )
+    # Check that at least one time step's state differs from the initial state
+    initial_state = state
+    n_time = result.shape[-1]
+    changed = False
+    for t in range(n_time):
+        if not np.allclose(result[:, :, :, t], initial_state):
+            changed = True
+            break
+    assert (
+        changed
+    ), "No time step state differs from initial state; integration may not be progressing"
+
+
+# Test: Zero state propagation in call_function
+def test_call_function_zero_state(call_function_test_arrays):
+    (
+        coords,
+        temperature,
+        temperature_mean,
+        latitudes,
+        carrying_capacity,
+        egg_activate,
+        time_step,
+    ) = call_function_test_arrays
+    # All inputs and initial state are zeros
+    state = np.zeros((2, 2, 5))
+    temperature = xr.DataArray(
+        np.zeros((2, 2, 4)), dims=["longitude", "latitude", "time"], coords=coords
+    )
+    temperature_mean = xr.DataArray(
+        np.zeros((2, 2, 4)), dims=["longitude", "latitude", "time"], coords=coords
+    )
+    carrying_capacity = xr.DataArray(
+        np.zeros((2, 2, 4)), dims=["longitude", "latitude", "time"], coords=coords
+    )
+    egg_activate = xr.DataArray(
+        np.zeros((2, 2, 4)), dims=["longitude", "latitude", "time"], coords=coords
+    )
+    # latitudes can remain as in the fixture
+    result = call_function(
+        state,
+        temperature,
+        temperature_mean,
+        latitudes,
+        carrying_capacity,
+        egg_activate,
+        time_step,
+    )
+    # Output should be all zeros
+    assert np.all(
+        result == 0
+    ), f"call_function output should be all zeros, got {result}"
+
+
+# Test: Single time step edge case in call_function
+def test_call_function_single_time_step():
+    coords = {
+        "longitude": [0, 1],
+        "latitude": [10, 20],
+        "time": [0],
+    }
+    state = np.ones((2, 2, 5))
+    temperature = xr.DataArray(
+        np.ones((2, 2, 1)), dims=["longitude", "latitude", "time"], coords=coords
+    )
+    temperature_mean = xr.DataArray(
+        np.ones((2, 2, 1)), dims=["longitude", "latitude", "time"], coords=coords
+    )
+    latitudes = xr.DataArray([10, 20], dims=["latitude"])
+    carrying_capacity = xr.DataArray(
+        np.ones((2, 2, 1)), dims=["longitude", "latitude", "time"], coords=coords
+    )
+    egg_activate = xr.DataArray(
+        np.ones((2, 2, 1)), dims=["longitude", "latitude", "time"], coords=coords
+    )
+    time_step = 1.0
+
+    result = call_function(
+        state,
+        temperature,
+        temperature_mean,
+        latitudes,
+        carrying_capacity,
+        egg_activate,
+        time_step,
+    )
+    # Output shape should be (2, 2, 5, 1)
+    assert result.shape == (
+        2,
+        2,
+        5,
+        1,
+    ), f"call_function output shape {result.shape} is incorrect for single time step"
+    assert np.all(
+        np.isfinite(result)
+    ), "call_function output contains non-finite values for single time step"
