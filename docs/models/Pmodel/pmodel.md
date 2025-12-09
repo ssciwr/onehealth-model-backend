@@ -280,7 +280,7 @@ Process:
     - File associated: `mosq_birth.m`
   
     - Comments:
-        - TODO: This equation is not present in the suplement material.
+        - TODO: This equation is not present in the supplementary material.
 
     ```octave
     T = Temp(:,:,t);
