@@ -316,13 +316,6 @@ def test_mosq_surv_ed_multidimensional_input_2d(multidimensional_temperature_arr
         mosq_surv_ed(multidimensional_temperature_array)
 
 
-def test_mosq_surv_ed_known_matrix_output(temperature_array_4x3x2):
-    T = temperature_array_4x3x2
-    expected = mosq_surv_ed(T)
-    result = mosq_surv_ed(T)
-    np.testing.assert_allclose(result.data, expected.data)
-
-
 def test_mosq_surv_ed_raises_on_non_xarray():
     arr = np.array([1, 2, 3])
     with pytest.raises(
