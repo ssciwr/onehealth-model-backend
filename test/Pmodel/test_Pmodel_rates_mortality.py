@@ -137,24 +137,10 @@ def test_mosq_mort_e_non_numeric_input():
         mosq_mort_e(xr.DataArray(["a", "b"], dims=["time"]))
 
 
-def test_mosq_mort_e_output_consistency(typical_temperature_array):
-    result1 = mosq_mort_e(typical_temperature_array)
-    result2 = mosq_mort_e(typical_temperature_array)
-    np.testing.assert_allclose(result1.data, result2.data)
-
-
 def test_mosq_mort_e_multidimensional_input(multidimensional_temperature_array):
     result = mosq_mort_e(multidimensional_temperature_array)
     assert result.shape == multidimensional_temperature_array.shape
     assert isinstance(result, xr.DataArray)
-
-
-def test_mosq_mort_e_known_matrix_output():
-    arr = np.array([[10, 20], [30, 40]], dtype=float)
-    temp = xr.DataArray(arr, dims=["x", "y"])
-    expected = mosq_mort_e(temp)
-    result = mosq_mort_e(temp)
-    np.testing.assert_allclose(result.data, expected.data)
 
 
 # ---- Unit Tests for mosq_mort_j
@@ -202,24 +188,10 @@ def test_mosq_mort_j_non_numeric_input():
         mosq_mort_j(xr.DataArray(["a", "b"], dims=["time"]))
 
 
-def test_mosq_mort_j_output_consistency(typical_temperature_array):
-    result1 = mosq_mort_j(typical_temperature_array)
-    result2 = mosq_mort_j(typical_temperature_array)
-    np.testing.assert_allclose(result1.data, result2.data)
-
-
 def test_mosq_mort_j_multidimensional_input(multidimensional_temperature_array):
     result = mosq_mort_j(multidimensional_temperature_array)
     assert result.shape == multidimensional_temperature_array.shape
     assert isinstance(result, xr.DataArray)
-
-
-def test_mosq_mort_j_known_matrix_output():
-    arr = np.array([[10, 20], [30, 40]], dtype=float)
-    temp = xr.DataArray(arr, dims=["x", "y"])
-    expected = mosq_mort_j(temp)
-    result = mosq_mort_j(temp)
-    np.testing.assert_allclose(result.data, expected.data)
 
 
 def test_mosq_mort_j_numerical_stability_near_zero():
@@ -278,20 +250,6 @@ def test_mosq_mort_a_empty_array(empty_temperature_array):
 def test_mosq_mort_a_non_numeric_input():
     with pytest.raises(TypeError):
         mosq_mort_a(xr.DataArray(["a", "b"], dims=["time"]))
-
-
-def test_mosq_mort_a_output_consistency(typical_temperature_array):
-    result1 = mosq_mort_a(typical_temperature_array)
-    result2 = mosq_mort_a(typical_temperature_array)
-    np.testing.assert_allclose(result1.data, result2.data)
-
-
-def test_mosq_mort_a_known_matrix_output():
-    arr = np.array([[10, 20], [30, 40]], dtype=float)
-    temp = xr.DataArray(arr, dims=["x", "y"])
-    expected = mosq_mort_a(temp)
-    result = mosq_mort_a(temp)
-    np.testing.assert_allclose(result.data, expected.data)
 
 
 def test_mosq_mort_a_numerical_stability_near_zero():
@@ -353,22 +311,9 @@ def test_mosq_surv_ed_non_numeric_input():
         mosq_surv_ed(xr.DataArray(arr, dims=["x", "y", "t"]))
 
 
-def test_mosq_surv_ed_output_consistency(typical_3d_temperature_array):
-    result1 = mosq_surv_ed(typical_3d_temperature_array)
-    result2 = mosq_surv_ed(typical_3d_temperature_array)
-    np.testing.assert_allclose(result1.data, result2.data)
-
-
 def test_mosq_surv_ed_multidimensional_input_2d(multidimensional_temperature_array):
     with pytest.raises(ValueError):
         mosq_surv_ed(multidimensional_temperature_array)
-
-
-def test_mosq_surv_ed_known_matrix_output(temperature_array_4x3x2):
-    T = temperature_array_4x3x2
-    expected = mosq_surv_ed(T)
-    result = mosq_surv_ed(T)
-    np.testing.assert_allclose(result.data, expected.data)
 
 
 def test_mosq_surv_ed_raises_on_non_xarray():
