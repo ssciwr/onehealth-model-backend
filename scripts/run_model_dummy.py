@@ -1,3 +1,18 @@
+"""
+The purpose of this script is to run a dummy version of the Albopictus model
+using a small subset of data for testing and debugging purposes.
+It reads configuration settings, loads necessary datasets, and executes
+the model's ODE system over a specified time range, logging key outputs
+for verification.
+
+You can verify intermediate outputs by checking the logs generated during execution.
+Compare the outputs from the matlab/octave version of the model to ensure consistency.
+
+Note: the structure mimic the structure found in the octave version of the model. With this you can easily
+compare both implementations step by step.
+
+"""
+
 import logging
 from pathlib import Path
 
@@ -25,6 +40,7 @@ from heiplanet_models.Pmodel.Pmodel_rates_birth import (
     mosq_dia_lay,
 )
 from heiplanet_models.Pmodel.Pmodel_initial import (
+    assemble_filepaths,
     read_global_settings,
     check_all_paths_exist,
     load_all_data,
@@ -46,6 +62,9 @@ INITIAL_YEAR = 2024
 FINAL_YEAR = 2024
 
 
+# --------------------------------------------------------------#
+# -----             Helper functions               ------------ #
+# --------------------------------------------------------------#
 def assemble_filepaths_no_year(**etl_settings) -> dict[str, Path]:
     """Assemble file paths for datasets for a given year based on ETL settings.
 
@@ -113,7 +132,10 @@ def main():
         )
 
         # 2. Assemble paths
-        paths = assemble_filepaths_no_year(**ETL_SETTINGS)  # OK
+        # paths = assemble_filepaths_no_year(**ETL_SETTINGS)  # Use this with the dummy data
+        paths = assemble_filepaths(
+            year, **ETL_SETTINGS
+        )  # Use this with the real sample datasets
 
         # 3. Verify if all the files exist for a given year
         if check_all_paths_exist(path_dict=paths) is False:
@@ -128,7 +150,7 @@ def main():
         # ----------------------------------------------------------------------------
         # ------    Entering to the first level: `model_run` function (octave)   ------
         # ----------------------------------------------------------------------------
-        # Verify carrying capacity function. OK
+        # [OK] ---- Verify carrying capacity function
         CC = carrying_capacity(
             rainfall_data=model_data.rainfall,
             population_data=model_data.population_density,
@@ -136,7 +158,7 @@ def main():
         logger.debug(f"Dim. Carrying capacity data: {CC.values.shape}")
         # logger.debug(f"Carrying capacity data: \n{print_time_slices(CC)}")
 
-        # Verify water hatching function. OK
+        # [OK] ---- Verify water hatching function.
         egg_active = water_hatching(
             rainfall_data=model_data.rainfall,
             population_data=model_data.population_density,
@@ -144,7 +166,7 @@ def main():
         logger.debug(f"Dim. Egg active data: {egg_active.values.shape}")
         # logger.debug(f"Egg active data: \n{print_time_slices(egg_active)}")
 
-        # Verify initial conditions. OK
+        # [OK] ---- Verify initial conditions. OK
         logger.debug(
             f"Dim. initial conditions: {model_data.initial_conditions.values.shape}"
         )
@@ -155,7 +177,7 @@ def main():
         # ----------------------------------------------------------------------------------
         # ------    Entering to the second level: `call_function` function (octave)   ------
         # ----------------------------------------------------------------------------------
-        # Verify diapause lay. OK
+        #  [OK] ---- Verify diapause lay.
         diapause_lay = mosq_dia_lay(
             temperature=model_data.temperature_mean,
             latitude=model_data.latitude,
@@ -163,7 +185,7 @@ def main():
         logger.info(f"Dim. Diapause laying data: {diapause_lay.values.shape}")
         # logger.debug(f"Diapause laying data: \n{print_time_slices(diapause_lay)}")
 
-        # Verify diapause hatch. OK
+        #  [OK] ---- Verify diapause hatch.
         diapause_hatch = mosq_dia_hatch(
             temperature=model_data.temperature_mean,
             latitude=model_data.latitude,
@@ -171,7 +193,7 @@ def main():
         logger.debug(f"Dim. Diapause hatching data: {diapause_hatch.values.shape}")
         # logger.debug(f"Diapause hatching data: \n{print_time_slices(diapause_hatch)}")
 
-        # Verify ed survival
+        #  [OK] ---- Verify ed survival
         ed_survival = mosq_surv_ed(
             temperature=model_data.temperature,
             step_t=ETL_SETTINGS["ode_system"]["time_step"],
@@ -183,7 +205,7 @@ def main():
         Temp = model_data.temperature
         step_t = ETL_SETTINGS["ode_system"]["time_step"]
 
-        # Verify the output array shape
+        # Create output array
         shape_output = (
             model_data.initial_conditions.shape[0],
             model_data.initial_conditions.shape[1],
@@ -193,11 +215,13 @@ def main():
         v_out = np.zeros(shape=shape_output, dtype=np.float64)
         logger.debug(f"Shape v_out:{v_out.shape}")
 
+        # Initialize state variable
         v0 = model_data.initial_conditions.compute().values
         v = v0.copy()
 
+        # Time loop (it will iterate over all time steps)
         for t in range(model_data.temperature.shape[2]):
-            # if t == 2: # Just to run a portion of the code
+            # if t == 2: # just for debugging purposes
             #    break
 
             logger.info(f"--- Time step {t} ---")
@@ -270,10 +294,10 @@ def main():
 
             # Line m. Verify mort_a rate
             mort_a = mosq_mort_a(Tmean_slice)
-            # logger.info(f"Dim. mort_a rate at time {t}: {mort_a.values.shape}")
-            # logger.info(f"mort_a rate at time {t}:\n{mort_a.values}")
+            logger.debug(f"Dim. mort_a rate at time {t}: {mort_a.values.shape}")
+            # logger.debug(f"mort_a rate at time {t}:\n{mort_a.values}")
 
-            # Line n. Verify the variables that will passed to the ODE solver step
+            # Line n. Verify the variables that will passed to the ODE solver step (all numpy arrays)
             vars_tuple = (
                 idx_time,  # Octave uses 1-based, so pass idx_time+1
                 step_t,
@@ -295,14 +319,7 @@ def main():
             for i, var in enumerate(vars_tuple):
                 logger.debug(f"  Var {i} shape: {getattr(var, 'shape', None)}")
 
-            # Line o. Call the ODE solver step (call_function)
-            # v = rk4_step(
-            #     eqsys,
-            #     eqsys_log,
-            #     v,
-            #     vars_tuple,
-            #     step_t
-            # )
+            # Line o. Call the ODE solver step
             v = rk4_step(
                 albopictus_ode_system,
                 albopictus_log_ode_system,
@@ -320,7 +337,6 @@ def main():
                 v[..., 1] = 0
 
             if (t + 1) % step_t == 0:
-                logger.debug(f"Time in if:  {(t + 1) % step_t}")
                 if ((idx_time) % 30) == 0:
                     logger.debug(f"MOY: {int(((t)/step_t) / 30)}")
                 for j in range(5):
@@ -329,13 +345,40 @@ def main():
         # logger.debug(f" >>> END Processing year {year} \n")
         logger.debug(f"Shape of final output v_out for year {year}: {v_out.shape}")
         logger.debug(
-            f"Value of final output v_out for year {year}:\n{print_time_slices(v_out[:, :, 4, :])}"
+            f"Adult array in output v_out for year {year}:\n{print_time_slices(v_out[:, :, 4, :])}"
         )
+
+        compartments = ETL_SETTINGS["ode_system"]["model_variables"]
+
+        # Create a dict of DataArrays, one for each compartment
+        data_vars = {}
+        for i, name in enumerate(compartments):
+            logger.debug(f"Processing compartment: {name}")
+            logger.debug(f"Processing slot: {i}")
+            logger.debug(f"v_out shape: {v_out.shape}")
+            data_vars[name] = xr.DataArray(
+                data=v_out[..., i, :],  # shape: (longitude, latitude, time)
+                dims=("longitude", "latitude", "time"),
+                coords={
+                    "longitude": model_data.temperature_mean["longitude"],
+                    "latitude": model_data.temperature_mean["latitude"],
+                    "time": model_data.temperature_mean["time"],
+                },
+                name=name,
+            )
+
+        # Combine into a Dataset
+        v_ds = xr.Dataset(data_vars)
+
+        # Save to NetCDF if desired
+        v_ds.to_netcdf(f"data/out/Pratik_datalake/mosquito_population_year_{year}.nc")
+
+        logger.info(f" >>> END Processing year {year} \n")
 
 
 if __name__ == "__main__":
 
-    # More complete loggger
+    # a more complete loggger
     # logging.basicConfig(
     #    format="{asctime} {name}  {levelname} - {message}",
     #    style="{",
@@ -343,7 +386,7 @@ if __name__ == "__main__":
     #    level=logging.INFO,
     # )
 
-    # Very basic logger
+    # basic logger
     logging.basicConfig(level=logging.INFO)
 
     main()

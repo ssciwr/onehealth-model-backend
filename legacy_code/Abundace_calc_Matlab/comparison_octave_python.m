@@ -98,8 +98,8 @@ egg_active = water_hatch(PR, DENS);
 %----------------------------------------------------------------------------
 % Verify diapause lay
 diapause_lay = mosq_dia_lay(Tmean, LAT, step_t);
-disp(['Dimension of diapause_lay: ', mat2str(size(diapause_lay))]);
-disp(diapause_lay)
+%disp(['Dimension of diapause_lay: ', mat2str(size(diapause_lay))]);
+%disp(diapause_lay)
 
 % Verify diapause_hatch
 diapause_hatch = mosq_dia_hatch(Tmean, LAT, step_t);
@@ -122,7 +122,7 @@ for t = 1:size(Temp, 3)
     #  break;
     #end
 
-    #disp(['--- Time Step ', mat2str(t), ' ---']);
+    disp(['--- Time Step ', mat2str(t), ' ---']);
 
     # Line a. Verify this slice
     T = Temp(:,:,t);
@@ -245,10 +245,11 @@ for t = 1:size(Temp, 3)
     end
 end
 
-disp(size(v_out))
+disp(['Shape output size: ', num2str(size(v_out))]);
+
 for i = 1:4
-  disp(['out adult time: ', mat2str(i)]);
-  disp(v_out(:, :, 5, i));
+  disp(['out adult time: ', mat2str(i)']);
+  disp(v_out(:, :, 5, i)); # <--- print the mosquito adult values
 end
 
 

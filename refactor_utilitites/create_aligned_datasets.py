@@ -49,13 +49,9 @@ data_population = data_population.isel(time=0).drop_vars("time")
 data_population_broadcasted = data_population.expand_dims(
     {"time": [data_temperature.time.isel(time=0).values]}
 )
-
 print(data_population_broadcasted)
 
-# result = data_temperature["temperature"] + data_population_broadcasted["population"]
-
-# print(result.values)
-
+# 7. Save the aligned population dataset to a new NetCDF file
 data_population_broadcasted.to_netcdf(
     "data/in/Pratik_datalake/pop_dens_2024_global_0.5_aligned.nc"
 )
