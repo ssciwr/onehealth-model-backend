@@ -152,3 +152,7 @@ site
 
 # Other
 sandbox
+
+legacy_code/Abundace_calc_Matlab/ERA5land_global_t2m_daily_0.5_2024.nc
+legacy_code/Abundace_calc_Matlab/ERA5land_global_tp_daily_0.5_2024.nc
+legacy_code/Abundace_calc_Matlab/pop_dens_2024_global_0.5.nc

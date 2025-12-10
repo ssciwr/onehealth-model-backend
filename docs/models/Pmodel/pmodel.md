@@ -61,13 +61,139 @@ You can find a dataflow diagram [here](https://drive.google.com/file/d/1gM3l2zma
 
 ## 4. Mathematical Model
 
-Categories:
+### Description
 
-- Development
-- Birth
-- Mortality
-- <another>
-- <another one>
+Six stage differential equation model
+
+- Three aquatic stages:
+    - Egg $E$
+    - Diapaussing egg $E_{\text{dia}}$
+    - Juvenile stage (Larval stage + Pupal stage)
+
+- Three aerial stages:
+    - Emerging adult $A_{\text{em}}$
+    - Blood fed adults $A_{b}$
+    - Ovipositing adults $A_{0}$
+
+### System of Equations
+
+| Differential Equation                                                                                                                                                      |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| $\dot{E} = \beta(T)(1-\omega(\overline{T}, \overline{S}))M - Q(W,P)\delta_{E}(T)E - m_{E}(T)E$                                                                             |
+| $\dot{E_{\text{dia}}} = \delta_{E}(T)\omega(\overline{T}, \overline{S})E_{\text{dia}} - \sigma(\overline{T},S)Q(W,P)\delta_{E}(T)E_{\text{dia}} - m_{Ed}(T)E_{\text{dia}}$ |
+| $\dot{J} = Q(W,P)\delta_{E}(T)E + \sigma(\overline{T},S)Q(W,P)\delta_{E}(T)E_{\text{dia}} - \delta_{J}(T)J - \left( \frac{J}{K_{J}(W,P)} + m_{J}(T) \right)J$              |
+| $\dot{A_{\text{em}}} = \frac{1}{2}\delta_{J}(T)J - \delta_{A_{\text{em}}}(T)A_{\text{em}} - m_{A}(T)A_{\text{em}}$                                                         |
+| $\dot{A_{b}} = \delta_{A_{\text{em}}}(T)A_{\text{em}} + \delta_{A_{o}}A_{o} - \left( m_{A}(T) + r + \delta_{A_{b}}(T) \right)A_{b}$                                        |
+| $\dot{A_{o}} = \delta_{A_{b}}(T)A_{b} - \left( m_{A}(T) + r + \delta_{A_{o}}A_{o} \right)$                                                                                 |
+
+### Variables and Parameters
+
+#### State Variables
+
+| Variable         | Description                          | Units       |
+| ---------------- | ------------------------------------ | ----------- |
+| $E$              | Egg population                       | individuals |
+| $E_{\text{dia}}$ | Diapaussing egg population           | individuals |
+| $J$              | Juvenile population (larvae + pupae) | individuals |
+| $A_{\text{em}}$  | Emerging adult population            | individuals |
+| $A_{b}$          | Blood fed adult population           | individuals |
+| $A_{o}$          | Ovipositing adult population         | individuals |
+
+#### Environmental Inputs
+
+| Variable       | Description                                            | Units      |
+| -------------- | ------------------------------------------------------ | ---------- |
+| $T$            | Temperature                                            | °C         |
+| $S$            | Photoperiod (day-light length). Using *Forsythe model* | hours      |
+| $W$            | Precipitation/Rainfall                                 | mm         |
+| $P$            | Human population density                               | people/km² |
+| $\overline{T}$ | Mean temperature over previous 7 days                  | °C         |
+| $\overline{S}$ | Mean day-light over previous 7 days                    | hours      |
+
+
+
+#### Additional equations
+| Parameter       | Description                         | Function                                                | Units | Function |
+| --------------- | ----------------------------------- | ------------------------------------------------------- | ----- | -------- |
+| $f(X)$          | Sigmoidal "step-function"           | $f(X)=\frac{1}{1+e^{20X}}$                              |       |          |
+| $\check{S}_{a}$ | Critical day-light length in autumn | $\check{S}_{a}=10.058+0.08965 \times Latitude(degrees)$ | hours |          |
+| $M$             | `unknown`                           | `unknown`                                               |       |          |
+| $\check{T}_{D}$ | Critical diapause temperature (°C)  | $\check{T}_{D}=21$                                      | °C    |          |
+| $\underline{S}$ | `unknown`                           | `unknown`                                               |       |          |
+| $\underline{T}$ | `unknown`                           | `unknown`                                               |       |          |
+
+
+#### Rate Parameters
+
+| Number |                                      | Parameter                                                 | Description | Units               | Function |
+| :----: | ------------------------------------ | --------------------------------------------------------- | ----------- | ------------------- | -------- |
+|   1    | $\beta(T)$                           | Egg per female per day                                    | 1/day       | `mosq_birth`        |
+|   2    | $\omega(\overline{T}, \overline{S})$ | Diapausing egg proportion                                 | `NA`        | `mosq_dev_e`        |
+|   3    | $Q(W,P)$                             | Hatching fraction depending in human density and rainfall | `NA`        | `mosq_dev_e`        |
+|   4    | $\delta_{E}(T)$                      | Egg development rate                                      | 1/day       | `mosq_dev_j`        |
+|        | $\delta_{A_{\text{em}}}(T)$          |                                                           |             | `mosq_dev_i`        |
+|        | $\delta_{A_{b}}(T)$                  |                                                           |             | -                   |
+|        | $\delta_{A_{o}}$                     |                                                           |             | -                   |
+|        | $m_{E}(T)$                           |                                                           |             | `mosq_mort_e`       |
+|        | $m_{Ed}(T)$                          |                                                           |             | `mosq_surv_ed`      |
+|        | $m_{J}(T)$                           |                                                           |             | `mosq_mort_j`       |
+|        | $m_{A}(T)$                           |                                                           |             | `mosq_mort_a`       |
+|        | $\omega(\overline{T}, \overline{S})$ |                                                           |             | `mosq_dia_lay`      |
+|        | $\sigma(\overline{T}, S)$            |                                                           |             | `mosq_dia_hatch`    |
+|        |                                      |                                                           |             | `water_hatching`    |
+|        | $K_{J}(W,P)$                         |                                                           |             | `carrying_capacity` |
+|        | $r$                                  |                                                           |             | -                   |
+|        | $M$                                  |                                                           |             | -                   |
+
+
+##### Equations
+
+**1. Egg per female per day**
+
+$$
+\begin{align}
+\beta(T) &= \max(-0.0163 + 1.2897T -15.837T^{2})
+\end{align}
+$$
+
+**2. Diapausing egg proportion**
+
+!!! warning 
+    The equation in Octave should look like this.
+
+    $$
+    \omega(T, \text{lat}, t) =
+    \begin{cases}
+    0.5, & \text{if } S(\text{lat}, t) \leq \text{CPP}(\text{lat}) \text{ and } t > 183 \\
+    0,   & \text{otherwise}
+    \end{cases}
+    $$
+
+$$
+\begin{align}
+\omega(\underline{T}, \underline{S}) = 0.5 \times f\left(\underline{S} - \check{S}_{a}\right)\, f\left(-\underline{T} - \check{T}_{D}\right)
+\end{align}
+$$
+
+**3. Hatching fraction depending in human density and rainfall**
+
+$$
+\begin{align}
+Q(W, P) = 0.8 \left( \frac{2.5\, e^{-0.05\,(W(t)-8)^2}}{e^{-0.05\,(W(t)-8)^2} + 1.5} \right) + 0.2 \left( \frac{0.01}{0.01 + e^{-0.01 P(t)}} \right)
+\end{align}
+$$
+
+**4. Egg development rate**
+
+$$
+\begin{align}
+\delta_{E} =
+\end{align}
+$$
+
+
+
+
 
 ### Equations
 
@@ -631,7 +757,7 @@ Q(W, P) = 0.8 \left( \frac{2.5\, e^{-0.05\,(W(t)-8)^2}}{e^{-0.05\,(W(t)-8)^2} + 
 $$
 
 
-| Parameter | Description                                                    |
+| Constants | Description                                                    |
 | --------- | -------------------------------------------------------------- |
 | $W$       | Precipitation or Rainfall (mm)                                 |
 | $P$       | Human population density ($\frac{\text{people}}{\text{km}^2}$) |
