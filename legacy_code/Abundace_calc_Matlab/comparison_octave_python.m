@@ -118,9 +118,9 @@ v = v0;
 v_out = zeros(size(v, 1), size(v, 2), 5, size(Temp, 3)/step_t);
 
 for t = 1:size(Temp, 3)
-    if t == 31  # Just to run a portion of the code
-      break;
-    end
+    #if t == 31  # Just to run a portion of the code
+    #  break;
+    #end
 
     disp(['--- Time Step ', mat2str(t), ' ---']);
 
