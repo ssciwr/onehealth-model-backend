@@ -890,16 +890,201 @@ Process:
 
 | Number   | Description                                               | Symbol                                 | Unit            |
 | -------- | --------------------------------------------------------- | -------------------------------------- | --------------- |
-| [5]      | Juvenile development rate                                 |                                        | $\frac{1}{day}$ |
-| [6]      | Emerging adult development                                |                                        | $\frac{1}{day}$ |
+| [5]      | Juvenile development rate                                 | $\delta_{J}(T)$                        | $\frac{1}{day}$ |
+| [6]      | Emerging adult development                                | $\delta_{Aem}(T)$                      | $\frac{1}{day}$ |
 | `[NR 1]` | (tentative) Emerging adult development Briere model.      |                                        | `[NR 1]`        |
-| [14]     | Juvenile carrying capacity                                |                                        | `NA`            |
+| [14]     | Juvenile carrying capacity                                | $K_{J}(W,P)$                           | `NA`            |
 | [9]      | Egg mortality rate                                        | $m_{E}(T)$                             | $\frac{1}{day}$ |
 | [10]     | Juvenile mortality rate                                   | $m_{J}(T)$                             | $\frac{1}{day}$ |
 | [11]     | Adult mortality rate                                      | $m_{A}(Tmean)$                         | $\frac{1}{day}$ |
-| `[NR 2]` | (tentative) Diapausing egg mortality rate                 | $m_{Ed}(T)$                            | $\frac{1}{day}$ |
+| `[NR 2]` | (tentative) Diapausing egg mortality rate                 |                                        | $\frac{1}{day}$ |
 | `[NR 3]` | `Not reported`                                            | `Not reported`                         | `[NR 3]`        |
 | [3]      | (tentative) Spring hatching rate                          | $\sigma(\underline{T},S)$              | $\frac{1}{day}$ |
 | [2]      | (tentative) Diapausing egg proportion                     | $\omega(\underline{T}, \underline{S})$ | `NA`            |
 | [13]     | Hatching fraction depending in human density and rainfall | $Q(W,P)$                               | `NA`            |
+
+### List of equations to understand mapping between code and paper
+
+- [5] Juvenile development rate: $\delta_{J}(T)$
+$$
+\delta_{J}(T) = \frac{1}{0.08T^{2} - 4.89T + 83.85}
+$$
+
+    | Parameter | Description      |
+    | --------- | ---------------- |
+    | $T$       | Temperature (°C) |
+
+- [6] Emerging adult development rate: 
+$$
+\delta_{Aem}(T) = \frac{1}{0.069T^{2} - 3.574T + 50.1}
+$$
+
+    | Parameter | Description      |
+    | --------- | ---------------- |
+    | $T$       | Temperature (°C) |
+
+- `[NR 1]` (tentative) Emerging adult development Briere model
+$$
+    BM = q \cdot T \cdot (T - T_0) \cdot \sqrt{T_m - T}
+$$
+
+    | Parameter | Description                                |
+    | --------- | ------------------------------------------ |
+    | $q$       | Empirical coefficient for development rate |
+    | $T$       | Temperature (°C)                           |
+    | $T_0$     | Minimum threshold temperature (°C)         |
+    | $T_m$     | Maximum threshold temperature (°C)         |
+
+- [14] Juvenile carrying capacity: 
+$$
+K_{J}(W,P) = \lambda\,\frac{0.1}{1 - 0.9^{t}}\sum_{x=1}^{t} 0.9^{(t-x)}\left(\alpha_{\text{rain}}W(x) + \alpha_{\text{dens}}P(x)\right)
+$$
+
+    | Parameter              | Description                        |
+    | ---------------------- | ---------------------------------- |
+    | $\lambda$              | Scaling coefficient                |
+    | $t$                    | ---                                |
+    | $x$                    | ---                                |
+    | $\alpha_{\text{rain}}$ | Weight for rainfall contribution   |
+    | $W(x)$                 | Rainfall at time step $x$          |
+    | $\alpha_{\text{dens}}$ | Weight for population contribution |
+    | $P(x)$                 | Population at time step $x$        |
+
+- [9] Egg mortality rate:
+
+!!! warning
+
+    Equation in paper do not show the exponential function $exp()$. However, the exponential function is used in the Octave code.
+
+$$
+m_{E}(T) = -\ln\left( 0.955\, \exp\left[ -0.5 \left( \frac{T - 18.8}{21.53} \right)^{6} \right] \right)
+$$
+
+| Parameter | Description      |
+| --------- | ---------------- |
+| $T$       | Temperature (°C) |
+
+- [10] Juvenile mortality rate:
+
+!!! warning
+
+    Equation in paper do not show the exponential function $exp()$. However, the exponential function is used in the Octave code.
+
+$$
+m_{J}(T) = -\ln\left[\,0.977\, \exp\left(-0.5 \left(\frac{T - 21.8}{16.6}\right)^{6}\right)\,\right]
+$$
+
+| Parameter | Description      |
+| --------- | ---------------- |
+| $T$       | Temperature (°C) |
+
+- [11] Adult mortality rate:
+
+!!! warning
+
+    The equation reported on paper do not show the exponential $exp()$ found in the Octave/Matlab code. Additionally the equation in Octave should look like this.
+
+    $$
+    m_{A}(T) = 
+    \begin{cases}
+    -\ln\left[\,0.677\, \exp\left(-0.5 \left(\frac{T - 20.9}{13.2}\right)^{6}\right)\, T^{0.1}\,\right], & \text{if } T > 0 \\[1.5ex]
+    -\ln\left[\,0.677\, \exp\left(-0.5 \left(\frac{T - 20.9}{13.2}\right)^{6}\right)\,\right], & \text{if } T \leq 0
+    \end{cases}
+    $$
+
+$$
+m_{A}(T_{\text{mean}}) = -\ln\left[\,0.677\, \exp\left(-0.5 \left(\frac{T_{\text{mean}} - 20.9}{13.2}\right)^{6}\right)\, (T_{\text{mean}})^{0.1}\,\right]
+$$
+
+
+| Parameter         | Description      |
+| ----------------- | ---------------- |
+| $T_{\text{mean}}$ | Temperature (°C) |
+
+- `[NR 2]` (tentative) Diapausing egg mortality rate:
+!!! warning
+    The constants in the code are different than constants reported on the paper.
+
+$$
+m_{Ed}(T) = m_{E}(T) = -\ln\left( 0.955\, \exp\left[ -0.5 \left( \frac{T - 18.8}{21.53} \right)^{6} \right] \right)
+$$
+
+| Parameter | Description      |
+| --------- | ---------------- |
+| $T$       | Temperature (°C) |
+
+
+
+- `[NR 3]` 
+!!! warning
+    **Missing name**
+    
+    The following formula has been deducted from octave code
+
+    $$
+    b(T) =
+    \begin{cases}
+    33.2\, \exp\left(-0.5 \left(\frac{T - 70.3}{14.1}\right)^2\right)\, (38.8 - T)^{1.5}, & \text{if } T < 38.8 \\[1.5ex]
+    0, & \text{if } T \geq 38.8
+    \end{cases}
+    $$
+
+
+- [3] Spring hatching rate
+
+!!! warning 
+    The equation in Octave should look like this.
+
+    $$
+    \begin{cases}
+    \text{ratio}_{\text{dia\_hatch}}, & \text{if } \overline{T}_{\text{last 7 days}} \geq \text{CTT} \text{ and } D(\text{lat}, t) \geq \text{CPP} \\
+    0, & \text{otherwise}
+    \end{cases}
+    $$
+
+$$
+\sigma(\underline{T}, S) = 0.1 \times f(\check{T} - \underline{T})\, f(-\check{S}_{s} - S)
+$$
+
+| Parameter       | Description                                   |
+| --------------- | --------------------------------------------- |
+| $\check{T}$     | **missing description**                       |
+| $\underline{T}$ | **missing description**                       |
+| $\check{S}_{s}$ | Critical day-light length in spring   (hours) |
+| $S$             | Day-light (hours)                             |
+
+- [2] (tentative) Diapausing egg proportion
+!!! warning 
+    The equation in Octave should look like this.
+
+    $$
+    \omega(T, \text{lat}, t) =
+    \begin{cases}
+    0.5, & \text{if } S(\text{lat}, t) \leq \text{CPP}(\text{lat}) \text{ and } t > 183 \\
+    0,   & \text{otherwise}
+    \end{cases}
+    $$
+
+$$
+\omega(\underline{T}, \underline{S}) = 0.5 \times f\left(\underline{S} - \check{S}_{a}\right)\, f\left(-\underline{T} - \check{T}_{D}\right)
+$$
+
+| Parameter       | Description                                                                                          |
+| --------------- | ---------------------------------------------------------------------------------------------------- |
+| $\underline{T}$ | **missing description**                                                                              |
+| $\underline{S}$ | **missing description**                                                                              |
+| $\check{S}_{a}$ | Critical day-light length in autumn, $\check{S}_{a}=10.058+0.08965 \times Latitude(degrees)$ (hours) |
+| $\check{T}_{D}$ | Critical diapause temperature (°C)                                                                   |
+
+- [13] Hatching fraction depending in human density and rainfall:
+
+$$
+Q(W, P) = 0.8 \left( \frac{2.5\, e^{-0.05\,(W(t)-8)^2}}{e^{-0.05\,(W(t)-8)^2} + 1.5} \right) + 0.2 \left( \frac{0.01}{0.01 + e^{-0.01 P(t)}} \right)
+$$
+
+
+| Constants | Description                                                    |
+| --------- | -------------------------------------------------------------- |
+| $W$       | Precipitation or Rainfall (mm)                                 |
+| $P$       | Human population density ($\frac{\text{people}}{\text{km}^2}$) |
 
