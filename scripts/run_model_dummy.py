@@ -224,7 +224,7 @@ def main():
 
         # Time loop (it will iterate over all time steps)
         for t in range(model_data.temperature.shape[2]):
-            # if t == 2: # just for debugging purposes
+            # if t == 30: # just for debugging purposes
             #    break
 
             logger.info(f"--- Time step {t} ---")
