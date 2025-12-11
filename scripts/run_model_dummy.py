@@ -40,7 +40,7 @@ from heiplanet_models.Pmodel.Pmodel_rates_birth import (
     mosq_dia_lay,
 )
 from heiplanet_models.Pmodel.Pmodel_initial import (
-    assemble_filepaths,
+    #    assemble_filepaths,
     read_global_settings,
     check_all_paths_exist,
     load_all_data,
@@ -132,10 +132,13 @@ def main():
         )
 
         # 2. Assemble paths
-        # paths = assemble_filepaths_no_year(**ETL_SETTINGS)  # Use this with the dummy data
-        paths = assemble_filepaths(
-            year, **ETL_SETTINGS
-        )  # Use this with the real sample datasets
+        paths = assemble_filepaths_no_year(
+            **ETL_SETTINGS
+        )  # Use this with the dummy data
+
+        # paths = assemble_filepaths( # Use this with the real sample datasets
+        #     year, **ETL_SETTINGS
+        # )
 
         # 3. Verify if all the files exist for a given year
         if check_all_paths_exist(path_dict=paths) is False:
@@ -371,7 +374,7 @@ def main():
         v_ds = xr.Dataset(data_vars)
 
         # Save to NetCDF if desired
-        v_ds.to_netcdf(f"data/out/Pratik_datalake/mosquito_population_year_{year}.nc")
+        v_ds.to_netcdf(f"data/out/mosquito_population_year_{year}.nc")
 
         logger.info(f" >>> END Processing year {year} \n")
 
