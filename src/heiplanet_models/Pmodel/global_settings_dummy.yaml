@@ -9,16 +9,20 @@ ingestion:
     
     filename_components:
         temperature_dataset: 
-            prefix: "ERA5land_global_t2m_daily_0.5_"
+            prefix: "dataset_temperature_dummy"
+            #prefix: "ERA5land_global_t2m_daily_0.5_"
             suffix: 
             extension: ".nc"
         rainfall_dataset: 
-            prefix: "ERA5land_global_tp_daily_0.5_"
+            prefix: "dataset_rainfall_dummy"
+            #prefix: "ERA5land_global_tp_daily_0.5_"
             suffix: 
             extension: ".nc"
         human_population_dataset: 
-            prefix: "pop_dens_"
-            suffix: "_global_0.5"
+            prefix: "dataset_population_dummy"
+            #prefix: "pop_dens_"
+            suffix: 
+            #suffix: "_global_0.5"
             extension: ".nc"
 
     initial_conditions:
@@ -31,10 +35,12 @@ ingestion:
 transformation:
     # # ---- Temperature Data
     temperature_dataset:
-        data_variable : "t2m"
+        data_variable : "temperature"
+        #data_variable: "t2m"
         preprocessing:
             names_dimensions: 
-                "valid_time": "time"
+                "time": "time"
+                #"valid_time": "time"
             dimension_order: 
                 - "longitude"
                 - "latitude"
@@ -42,7 +48,8 @@ transformation:
         
     # # ---- Rainfall Data
     rainfall_dataset:
-        data_variable : "tp"
+        data_variable : "rainfall"
+        #data_variable: "tp"
         preprocessing:
             dimension_order: 
                 - "longitude"
@@ -51,11 +58,14 @@ transformation:
     
     # # ---- Human population Data
     human_population_dataset:
-        data_variable : "dens"
+        data_variable : "population"
+        #data_variable: "dens"
         preprocessing:
             names_dimensions: 
-                "lon": "longitude"
-                "lat": "latitude"
+                "longitude": "longitude"
+                #"lon": "longitude"
+                "latitude": "latitude"
+                #"lat": "latitude"
             dimension_order: 
                 - "longitude"
                 - "latitude"
@@ -85,4 +95,3 @@ ode_system:
         - "juv"
         - "imm"
         - "adults"
-    
