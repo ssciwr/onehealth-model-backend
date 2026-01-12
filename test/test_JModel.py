@@ -89,15 +89,15 @@ def test_read_default_config():
     config = jm.read_default_config()
     assert isinstance(config, dict), "Config should be a dictionary"
     assert "graph" in config, "Config should contain 'graph' key"
-    assert (
-        "setup_modeldata" in config["graph"]
-    ), "Graph should contain 'setup_modeldata' key"
-    assert (
-        "kwargs" in config["graph"]["setup_modeldata"]
-    ), "Setup model data should have 'kwargs' key"
-    assert (
-        "input" in config["graph"]["setup_modeldata"]["kwargs"]
-    ), "Input path should be specified in the config"
+    assert "setup_modeldata" in config["graph"], (
+        "Graph should contain 'setup_modeldata' key"
+    )
+    assert "kwargs" in config["graph"]["setup_modeldata"], (
+        "Setup model data should have 'kwargs' key"
+    )
+    assert "input" in config["graph"]["setup_modeldata"]["kwargs"], (
+        "Input path should be specified in the config"
+    )
 
 
 def test_model_read_input_data(make_test_data, tmp_path):
@@ -122,18 +122,18 @@ def test_model_read_input_data(make_test_data, tmp_path):
         assert (
             read_data.longitude.min() > -180.1 and read_data.longitude.max() < 180.1
         ), "Longitude values should be within the expected range for EPSG:4326"
-        assert (
-            read_data.latitude.min() > -90.1 and read_data.latitude.max() < 90.1
-        ), "Latitude values should be within the expected range for EPSG:4326"
-        assert (
-            read_data.t2m.shape[1] < data.t2m.shape[1]
-        ), "Longitude dimension should be smaller than original data due to geo clipping"
-        assert (
-            read_data.t2m.shape[0] < data.t2m.shape[0]
-        ), "Latitude dimension should be smaller than original data due to geo clipping"
-        assert (
-            read_data.latitude.size == 13 and read_data.longitude.size == 9
-        ), "Longitude and latitude dimensions should match the expected size after clipping"
+        assert read_data.latitude.min() > -90.1 and read_data.latitude.max() < 90.1, (
+            "Latitude values should be within the expected range for EPSG:4326"
+        )
+        assert read_data.t2m.shape[1] < data.t2m.shape[1], (
+            "Longitude dimension should be smaller than original data due to geo clipping"
+        )
+        assert read_data.t2m.shape[0] < data.t2m.shape[0], (
+            "Latitude dimension should be smaller than original data due to geo clipping"
+        )
+        assert read_data.latitude.size == 13 and read_data.longitude.size == 9, (
+            "Longitude and latitude dimensions should match the expected size after clipping"
+        )
 
 
 def test_model_read_input_data_noclip(make_test_data, tmp_path):
@@ -156,9 +156,9 @@ def test_model_read_input_data_noclip(make_test_data, tmp_path):
         assert (
             read_data.longitude.min() > -180.1 and read_data.longitude.max() < 180.1
         ), "Longitude values should be within the expected range for EPSG:4326"
-        assert (
-            read_data.latitude.min() > -90.1 and read_data.latitude.max() < 90.1
-        ), "Latitude values should be within the expected range for EPSG:4326"
+        assert read_data.latitude.min() > -90.1 and read_data.latitude.max() < 90.1, (
+            "Latitude values should be within the expected range for EPSG:4326"
+        )
         assert (
             read_data.latitude.size == data.latitude.size
             and read_data.longitude.size == data.longitude.size
