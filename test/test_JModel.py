@@ -211,6 +211,10 @@ def test_model_run(make_test_data, tmp_path):
             assert not np.isnan(
                 output_data.r0.values
             ).all()  # TODO: this generates NaNs on occassion?!
+            # assert that invalid temperature values lead to 0 R0
+            # this is the case for the test data elements
+            # for example, elements [0,:]
+            assert (output_data.r0.values[0, :] == 0.0).all()
 
 
 def test_computation_with_default_config(tmp_path, make_test_data):
@@ -238,7 +242,6 @@ def test_computation_with_default_config(tmp_path, make_test_data):
 
         with xr.open_dataset(output_path) as data:
             output_data = data.compute()
-            print(output_data)
             assert isinstance(output_data, xr.Dataset)
             assert "R0" in output_data.data_vars
             assert output_data.R0.shape == (

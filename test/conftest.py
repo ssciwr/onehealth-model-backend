@@ -13,7 +13,13 @@ def make_rioxarray_testdata(
     else:
         lon = np.linspace(-120, 120, resolution)
         lat = np.linspace(-70, 76, resolution)
-    data = np.random.rand(resolution, resolution) * 10
+
+    # create test data but not random so tests are reproducible
+    t_min = -25.0
+    t_max = 40.0
+    data = np.linspace(t_min, t_max, resolution * resolution).reshape(
+        (resolution, resolution)
+    )
 
     # Create dataset with proper dimension order for geospatial data
     ds = xr.Dataset(

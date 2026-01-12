@@ -170,6 +170,9 @@ def _interpolate_r0(
             right=np.nan,
         )
 
+    # set all other values to 0
+    result[~valid_mask] = 0.0
+
     return result
 
 
