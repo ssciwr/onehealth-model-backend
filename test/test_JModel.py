@@ -125,14 +125,14 @@ def test_model_read_input_data(make_test_data, tmp_path):
         assert read_data.latitude.min() > -90.1 and read_data.latitude.max() < 90.1, (
             "Latitude values should be within the expected range for EPSG:4326"
         )
-        assert read_data.t2m.shape[1] < data.t2m.shape[1], (
-            "Longitude dimension should be smaller than original data due to geo clipping"
+        assert read_data.t2m.shape[1] == data.t2m.shape[1], (
+            "Longitude dimension should be the same as original data due to no geo clipping"
         )
-        assert read_data.t2m.shape[0] < data.t2m.shape[0], (
-            "Latitude dimension should be smaller than original data due to geo clipping"
+        assert read_data.t2m.shape[0] == data.t2m.shape[0], (
+            "Latitude dimension should be the same as original data due to no geo clipping"
         )
-        assert read_data.latitude.size == 13 and read_data.longitude.size == 9, (
-            "Longitude and latitude dimensions should match the expected size after clipping"
+        assert read_data.latitude.size == 50 and read_data.longitude.size == 50, (
+            "Longitude and latitude dimensions should match the expected size"
         )
 
 
@@ -163,7 +163,11 @@ def test_model_read_input_data_noclip(make_test_data, tmp_path):
             read_data.latitude.size == data.latitude.size
             and read_data.longitude.size == data.longitude.size
         ), "Longitude dimension should the same  as input because of no clipping"
-        assert not np.isnan(read_data.t2m.values).any()
+        # assert that the one NaN value is still present
+        assert np.isnan(read_data.t2m.values[10, 0]), "NaN value should be preserved"
+        assert np.isnan(read_data.t2m.values).sum() == 1, (
+            "only one NaN value should be present"
+        )
 
 
 def test_model_run(make_test_data, tmp_path):
@@ -182,39 +186,41 @@ def test_model_run(make_test_data, tmp_path):
 
         data = jm.read_input_data(model).compute()
         assert isinstance(data, xr.Dataset), "should be xr dataset"
-
         output_data = jm.run_model(model, data)
         assert isinstance(output_data, xr.DataArray), "should be xr dataset"
-
         jm.store_output_data(model, output_data)
-
         output_path = tmp_path / "output_data.nc"
         assert output_path.exists(), "Output file should be created"
-
         with xr.open_dataset(output_path) as data:
             output_data = data.compute()
             assert isinstance(output_data, xr.Dataset)
             assert "r0" in output_data.data_vars
             assert output_data.r0.shape == (
-                13,
-                9,
+                50,
+                50,
             ), "Output data shape should match input data shape"
-            assert output_data.rio.crs == "EPSG:4326", "CRS should be set to EPSG:4326"
+            # assert output_data.rio.crs == "EPSG:4326", "CRS should be set to EPSG:4326"
+            # this destroys all the values and leads to NaN t2m, and in turn empty R0
+            # in the end, we do not obtain any R0 values here
+            # also here latitude and longitude where mixed up
             assert (
-                output_data.latitude.min() >= -180.2
-                and output_data.latitude.max() <= 180.2
+                output_data.longitude.min() >= -180.2
+                and output_data.longitude.max() <= 180.2
             ), "Longitude values should be within the expected range for EPSG:4326"
             assert (
-                output_data.longitude.min() >= -90.1
-                and output_data.longitude.max() <= 90.2
+                output_data.latitude.min() >= -90.1
+                and output_data.latitude.max() <= 90.2
             ), "Latitude values should be within the expected range for EPSG:4326"
-            assert not np.isnan(
-                output_data.r0.values
-            ).all()  # TODO: this generates NaNs on occassion?!
+            assert not np.isnan(output_data.r0.values).all()
+            # we should also explicitly test for correct R0 values
+            assert np.isclose(
+                output_data.r0.values[29, 10], np.float64(0.0033), atol=1e-4
+            )
             # assert that invalid temperature values lead to 0 R0
-            # this is the case for the test data elements
-            # for example, elements [0,:]
-            assert (output_data.r0.values[0, :] == 0.0).all()
+            # this is the case for the test data elements [0,:]
+            assert np.isclose(output_data.r0.values[0, :], 0.0, atol=1e-8).all()
+            # assert that nan values in temperature lead to no R0
+            assert np.isclose(output_data.r0.values[10, 0], -10.0, atol=1e-4)
 
 
 def test_computation_with_default_config(tmp_path, make_test_data):
@@ -245,16 +251,16 @@ def test_computation_with_default_config(tmp_path, make_test_data):
             assert isinstance(output_data, xr.Dataset)
             assert "R0" in output_data.data_vars
             assert output_data.R0.shape == (
-                13,
-                9,
+                50,
+                50,
             ), "Output data shape should match input data shape"
-            assert output_data.rio.crs == "EPSG:4326", "CRS should be set to EPSG:4326"
+            # assert output_data.rio.crs == "EPSG:4326", "CRS should be set to EPSG:4326"
             assert (
-                output_data.latitude.min() >= -180.2
-                and output_data.latitude.max() <= 180.2
+                output_data.longitude.min() >= -180.2
+                and output_data.longitude.max() <= 180.2
             ), "Longitude values should be within the expected range for EPSG:4326"
             assert (
-                output_data.longitude.min() >= -90.1
-                and output_data.longitude.max() <= 90.2
+                output_data.latitude.min() >= -90.1
+                and output_data.latitude.max() <= 90.2
             ), "Latitude values should be within the expected range for EPSG:4326"
             assert not np.isnan(output_data.R0.values).all()

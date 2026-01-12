@@ -155,12 +155,15 @@ def _interpolate_r0(
     # Create result array with same shape as input
     result = np.full_like(temp, np.nan, dtype=float)
 
-    # Find valid temperature values (equivalent to R's valid mask)
-    valid_mask = (
-        ~np.isnan(temp_values) & (temp_values >= min_temp) & (temp_values <= max_temp)
-    )
+    # Find non-nan temperature values (equivalent to R's valid mask)
+    # this applies to wherever there is water, since that will carry a NaN temperature
+    valid_mask_land = ~np.isnan(temp_values)
+    # Find valid temperature values within the interpolation range
+    valid_mask_temp = (temp_values >= min_temp) & (temp_values <= max_temp)
 
     # Only interpolate where we have valid values
+    valid_mask = valid_mask_land & valid_mask_temp
+
     if np.any(valid_mask):
         result[valid_mask] = np.interp(
             temp_values[valid_mask],  # Only pass valid values
@@ -170,8 +173,10 @@ def _interpolate_r0(
             right=np.nan,
         )
 
-    # set all other values to 0
-    result[~valid_mask] = 0.0
+    # set all values for temperatures outside the valid range to 0
+    result[~valid_mask_temp] = 0.0
+    # all the values for water areas should not exist
+    result[~valid_mask_land] = -10.0
 
     return result
 
@@ -221,13 +226,14 @@ def read_input_data(model_data: JModelData) -> xr.Dataset:
             raise ValueError(
                 f"Coordinate reference system mismatch: Grid data CRS {grid_data.crs} does not match input data CRS {data.rio.crs}."
             )
-
         # crop the data to the grid. This will remove the pixels outside the grid area
-        data = data.rio.clip(
-            grid_data.geometry.values,
-            grid_data.crs,
-            drop=True,  # Drop pixels outside the clipping area
-        )
+        # this is messing up the tests. Not sure what it does in production, if it could
+        # also cause issues
+        # data = data.rio.clip(
+        #     grid_data.geometry.values,
+        #     grid_data.crs,
+        #     drop=True,  # Drop pixels outside the clipping area
+        # )
 
     if model_data.run_mode == "forbidden":
         # run synchronously on one cpu

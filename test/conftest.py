@@ -20,6 +20,8 @@ def make_rioxarray_testdata(
     data = np.linspace(t_min, t_max, resolution * resolution).reshape(
         (resolution, resolution)
     )
+    # deliberately insert some NaN values to simulate missing data
+    data[10, 0] = np.nan
 
     # Create dataset with proper dimension order for geospatial data
     ds = xr.Dataset(
