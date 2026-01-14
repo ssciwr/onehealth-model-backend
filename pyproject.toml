@@ -21,14 +21,14 @@ dynamic = ["version"]
 
 dependencies = [
   "xarray[parallel]",
-  "rioxarray",
   "netcdf4",
-  "geopandas[all]",
   "matplotlib",
   "numpy",
   "dask",
   "jupyter",
   "cftime>=1.6.4.post1",
+  "geopandas>=1.0.1",
+  "scipy>=1.13.1",
 ]
 
 [project.optional-dependencies]
@@ -64,7 +64,7 @@ packages = ["src/heiplanet_models"]
 source = "vcs"
 tag-pattern = "v(?P<version>.+)"
 
-# test config 
+# test config
 
 [tool.coverage.run]
 branch = true
