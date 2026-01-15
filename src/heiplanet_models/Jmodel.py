@@ -158,7 +158,7 @@ def _interpolate_r0(
     # set all values for temperatures outside the valid range to 0
     result[~valid_mask_temp] = 0.0
     # all the values for water areas should not exist
-    result[~valid_mask_land] = -10.0
+    result[~valid_mask_land] = np.nan
 
     return result
 
