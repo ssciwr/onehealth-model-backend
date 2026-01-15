@@ -8,8 +8,6 @@ import math
 import numpy as np
 import json
 
-# TODO: make more unit-testy, less integration-testy
-
 
 def test_jmodel_initialization():
     # Test valid initialization
@@ -34,16 +32,25 @@ def test_jmodel_initialization():
     assert math.isclose(model.min_temp, 8.6)
     assert math.isclose(model.max_temp, 13.0)
 
-    with pytest.raises(ValueError):
+
+def test_jmodel_initialization_failure():
+    path = Path.cwd() / "test" / "test_r0.csv"
+
+    with pytest.raises(
+        ValueError, match="Output data path must be provided in the configuration."
+    ):
         jm.setup_modeldata(
             input="input_data.csv",
             output=None,
             r0_path=str(path),
-            run_mode="forbidden",  # Invalid run mode
+            run_mode="forbidden",
             grid_data_baseurl="https://example.com/grid_data",
             year=2024,
         )
-    with pytest.raises(ValueError):
+
+    with pytest.raises(
+        ValueError, match="R0 data path must be provided in the configuration."
+    ):
         jm.setup_modeldata(
             input="input_data.csv",
             output="output_data.csv",
@@ -53,7 +60,10 @@ def test_jmodel_initialization():
             year=2024,
         )
 
-    with pytest.raises(ValueError):
+    with pytest.raises(
+        ValueError,
+        match="Invalid run mode: invalid_mode. Supported modes are 'forbidden', 'parallelized'. For the meaning of these modes, see the documentation. of xarray.apply_ufunc",
+    ):
         jm.setup_modeldata(
             input="input_data.csv",
             output="output_data.csv",
@@ -63,12 +73,15 @@ def test_jmodel_initialization():
             year=2024,
         )
 
-    with pytest.raises(ValueError):
+    with pytest.raises(
+        ValueError,
+        match="Grid data configuration is incomplete. Please provide all parameters: grid_data_baseurl, and year, or do not set any to have them all set to 'None'",
+    ):
         jm.setup_modeldata(
             input="input_data.csv",
             output="output_data.csv",
             r0_path=path,
-            run_mode="parallelized",  # Invalid run mode
+            run_mode="parallelized",
             grid_data_baseurl=None,
             year=2024,
         )
@@ -128,6 +141,25 @@ def test_model_read_input_data(make_test_data, tmp_path):
         )
 
 
+def test_model_read_input_data_failure(make_test_data, tmp_path, monkeypatch):
+    monkeypatch.setattr(
+        "heiplanet_models.Jmodel.xr.open_dataset",
+        lambda *a, **k: (_ for _ in ()).throw(Exception("Failed to read")),
+    )
+
+    with pytest.raises(RuntimeError, match="Input data source could not be read"):
+        model = jm.setup_modeldata(
+            input=tmp_path / "test_data.nc",
+            output="output_data.csv",
+            r0_path=Path.cwd() / "test" / "test_r0.csv",
+            run_mode="parallelized",
+            grid_data_baseurl="https://gisco-services.ec.europa.eu/distribution/v2/nuts",
+            year=2024,
+        )
+
+        jm.read_input_data(model)
+
+
 def test_model_run(make_test_data, tmp_path):
     with make_test_data as _:  # only the written file is needed here
         model = jm.setup_modeldata(
@@ -142,11 +174,14 @@ def test_model_run(make_test_data, tmp_path):
 
         data = jm.read_input_data(model).compute()
         assert isinstance(data, xr.Dataset), "should be xr dataset"
+
         output_data = jm.run_model(model, data)
         assert isinstance(output_data, xr.DataArray), "should be xr dataset"
+
         jm.store_output_data(model, output_data)
         output_path = tmp_path / "output_data.nc"
         assert output_path.exists(), "Output file should be created"
+
         with xr.open_dataset(output_path) as data:
             output_data = data.compute()
             assert isinstance(output_data, xr.Dataset)
