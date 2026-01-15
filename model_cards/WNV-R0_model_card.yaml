@@ -1,0 +1,129 @@
+
+model_name: WNV-R0
+model_version: "1.0"
+model_type: Epidemiological
+model_class: Vector–Host Compartmental Model
+primary_task: Basic Reproduction Number (R₀) Estimation
+domain: Infectious Disease Modeling (West Nile Virus)
+
+organization: HeiPlanet
+date_created: "2026-01-12"
+contact: your-email@organization.com
+
+description: >
+  WNV-R0 is a dynamic epidemiological model designed to estimate the basic
+  reproduction number (R₀) for West Nile Virus transmission across geographic
+  regions using environmental, entomological, and host population data.
+
+intended_use:
+  in_scope:
+    - Seasonal and regional WNV transmission risk assessment
+    - Comparative R₀ analysis across regions or years
+    - Scenario analysis under alternative climate or vector conditions
+    - Public health preparedness and surveillance planning
+  out_of_scope:
+    - Individual-level risk prediction
+    - Real-time outbreak detection
+    - Automated policy decision-making
+
+architecture:
+  type: Deterministic compartmental model
+  characteristics:
+    - Vector–host transmission dynamics
+    - Temperature-dependent biological rates
+    - Environmental forcing
+    - Seasonal modulation
+
+input_features:
+  temperature:
+    description: Daily mean ambient temperature
+    units: Celsius
+  precipitation:
+    description: Daily accumulated precipitation
+    units: mm
+  vector_density:
+    description: Mosquito abundance or surveillance index
+    units: Index
+  host_population:
+    description: Susceptible host population size
+    units: Count
+  seasonal_factors:
+    description: Photoperiod and seasonal indicators
+    units: Encoded
+
+outputs:
+  r0_estimate:
+    description: Estimated basic reproduction number
+    units: Dimensionless
+
+training_data:
+  sources:
+    - CDC West Nile Virus Surveillance Data
+    - ERA5 Climate Reanalysis (Copernicus)
+    - Entomological surveys
+  time_period: TBD
+  geographic_coverage: TBD
+  preprocessing:
+    - Missing value imputation
+    - Temperature-dependent rate transformations
+    - Seasonal normalization
+
+evaluation:
+  testing_data:
+    description: Historical WNV outbreak data from endemic regions
+    size: TBD
+  metrics:
+    - name: RMSE
+      value: TBD
+    - name: MAE
+      value: TBD
+    - name: Correlation Coefficient
+      value: TBD
+
+assumptions:
+  - Stable transmission dynamics within a season
+  - Homogeneous spatial mixing
+  - No explicit modeling of human behavior or interventions
+
+limitations:
+  data:
+    - Sparse surveillance data in some regions
+    - Underreporting of cases
+  technical:
+    - Requires complete climate and vector inputs
+    - Deterministic structure
+  biological:
+    - No strain-specific variation
+    - Simplified host dynamics
+  geographic:
+    - Optimized for temperate and subtropical regions
+  temporal:
+    - Seasonal use only, not real-time
+
+known_biases:
+  - Bias toward regions with strong surveillance systems
+
+fairness_considerations:
+  - Outputs should not be interpreted as equal risk across regions
+  - Lower R₀ does not imply lower vulnerability
+
+potential_harms:
+  - Overreliance without expert review
+  - Misallocation of public health resources
+
+risk_mitigation:
+  - Expert epidemiological review
+  - Uncertainty communication
+  - Regular validation and recalibration
+
+maintenance:
+  update_frequency: Annual or as new data become available
+  versioning: Semantic Versioning (MAJOR.MINOR.PATCH)
+  deprecation_policy: Maintain prior versions for 2 years
+
+datasets:
+  - CDC West Nile Virus Activity
+  - Copernicus Climate Data Store (ERA5)
+
+publications: []
+related_models: []
