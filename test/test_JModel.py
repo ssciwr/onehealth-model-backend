@@ -176,7 +176,7 @@ def test_model_run(make_test_data, tmp_path):
             # this is the case for the test data elements [0,:]
             assert np.isclose(output_data.r0.values[0, :], 0.0, atol=1e-8).all()
             # assert that nan values in temperature lead to no R0
-            assert np.isclose(output_data.r0.values[10, 0], -10.0, atol=1e-4)
+            assert np.isnan(output_data.r0.values[10, 0])
 
 
 def test_computation_with_default_config(tmp_path, make_test_data):
