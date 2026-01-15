@@ -4,7 +4,6 @@ import xarray as xr
 import pandas as pd
 import dask.array as da
 from pathlib import Path
-from .utils import read_geodata, detect_csr
 import numpy as np
 from dataclasses import dataclass
 import json
@@ -23,8 +22,6 @@ class JModelData:
     temp_colname: str = "t2m"
     out_colname: str = "R0"
     grid_data_baseurl: str | None = None
-    nuts_level: int | None = None  # NUTS level for the model, default is 0
-    resolution: str | None = None  # Resolution for the nuts data
     year: int | None = None  # Year for the model
 
 
@@ -46,8 +43,6 @@ def setup_modeldata(
     r0_path: str | None = None,
     run_mode: str = "forbidden",
     grid_data_baseurl: str | None = None,
-    nuts_level: int | None = None,
-    resolution: str | None = None,
     year: int | None = None,
     temp_colname: str = "t2m",
     out_colname: str = "R0",
@@ -60,8 +55,6 @@ def setup_modeldata(
         r0_path (str | None): Path to the R0 data file.
         run_mode (str): Dask run mode used by xarray, default is "forbidden".
         grid_data_baseurl (str | None): Base URL for the grid data.
-        nuts_level (int | None): NUTS level for the model, default is None
-        resolution (str | None): Resolution for the NUTS data, default is None.
         year (int | None): Year for the model, default is None.
         temp_colname (str): Name of the temperature column in the input data, default is "t2m".
         out_colname (str): Name of the output column for R0 data, default is "R0".
@@ -92,23 +85,14 @@ def setup_modeldata(
     min_temp = r0_data.Temperature.min()
     max_temp = r0_data.Temperature.max()
 
-    if any(
-        [
-            grid_data_baseurl is None,
-            nuts_level is None,
-            resolution is None,
-            year is None,
-        ]
-    ) and not all(
-        [
-            grid_data_baseurl is None,
-            nuts_level is None,
-            resolution is None,
-            year is None,
-        ]
-    ):
+    isnone_params = [
+        grid_data_baseurl is None,
+        year is None,
+    ]
+
+    if any(isnone_params) and not all(isnone_params):
         raise ValueError(
-            "Grid data configuration is incomplete. Please provide all parameters: grid_data_baseurl, nuts_level, resolution, and year, or do not set any to have them all set to 'None'."
+            "Grid data configuration is incomplete. Please provide all parameters: grid_data_baseurl, and year, or do not set any to have them all set to 'None'."
         )
     else:
         # don´t do anything here, because None indicates the grid data is not used
@@ -126,8 +110,6 @@ def setup_modeldata(
         temp_colname=temp_colname,
         out_colname=out_colname,
         grid_data_baseurl=grid_data_baseurl,
-        nuts_level=nuts_level,
-        resolution=resolution,
         year=year,
     )
 
@@ -199,42 +181,6 @@ def read_input_data(model_data: JModelData) -> xr.Dataset:
     if data is None:
         raise ValueError("Input data source is not defined in the configuration.")
 
-    # ensure the data has a coordinate reference system (CRS)
-    data = detect_csr(data)
-
-    # read the grid data if we want to crop the data
-    if all(
-        [
-            model_data.grid_data_baseurl is not None,
-            model_data.nuts_level is not None,
-            model_data.resolution is not None,
-            model_data.year is not None,
-        ]
-    ):
-        grid_data = read_geodata(
-            base_url=model_data.grid_data_baseurl,
-            nuts_level=model_data.nuts_level,
-            resolution=model_data.resolution,
-            year=model_data.year,
-            url=lambda base_url,
-            resolution,
-            year,
-            nuts_level: f"{base_url}/geojson/NUTS_RG_{resolution}_{year}_4326_LEVL_{nuts_level}.geojson",
-        )
-
-        if grid_data.crs != data.rio.crs:
-            raise ValueError(
-                f"Coordinate reference system mismatch: Grid data CRS {grid_data.crs} does not match input data CRS {data.rio.crs}."
-            )
-        # crop the data to the grid. This will remove the pixels outside the grid area
-        # this is messing up the tests. Not sure what it does in production, if it could
-        # also cause issues
-        # data = data.rio.clip(
-        #     grid_data.geometry.values,
-        #     grid_data.crs,
-        #     drop=True,  # Drop pixels outside the clipping area
-        # )
-
     if model_data.run_mode == "forbidden":
         # run synchronously on one cpu
         return data.compute()
@@ -248,8 +194,8 @@ def run_model(
     """Runs the JModel with the provided input data. Applies the R0 interpolation based on temperature values from the stored R0 data and returns a new dataset or dataframe with the R0 data.
 
     Args:
-        model_data (JModelData): _description_
-        data (xr.Dataset | pd.DataFrame): _description_
+        model_data (JModelData): Data class containing the model configuration and R0 data.
+        data (xr.Dataset | pd.DataFrame): Input data containing temperature values.
 
     Returns:
         xr.Dataset | pd.DataFrame: A dataset or dataframe with the incoming R0 data interpolated based on the temperature values at each grid point.

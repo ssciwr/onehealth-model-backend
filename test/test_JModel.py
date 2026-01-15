@@ -8,6 +8,8 @@ import math
 import numpy as np
 import json
 
+# TODO: make more unit-testy, less integration-testy
+
 
 def test_jmodel_initialization():
     # Test valid initialization
@@ -20,8 +22,6 @@ def test_jmodel_initialization():
         r0_path=path,
         run_mode="parallelized",
         grid_data_baseurl="https://example.com/grid_data",
-        nuts_level=3,
-        resolution="10M",
         year=2024,
     )
 
@@ -30,8 +30,6 @@ def test_jmodel_initialization():
     assert model.run_mode == "parallelized"
     assert isinstance(model.r0_data, pd.DataFrame)
     assert model.grid_data_baseurl == "https://example.com/grid_data"
-    assert model.nuts_level == 3
-    assert model.resolution == "10M"
     assert model.year == 2024
     assert math.isclose(model.min_temp, 8.6)
     assert math.isclose(model.max_temp, 13.0)
@@ -43,8 +41,6 @@ def test_jmodel_initialization():
             r0_path=str(path),
             run_mode="forbidden",  # Invalid run mode
             grid_data_baseurl="https://example.com/grid_data",
-            nuts_level=3,
-            resolution="10M",
             year=2024,
         )
     with pytest.raises(ValueError):
@@ -54,8 +50,6 @@ def test_jmodel_initialization():
             r0_path=None,
             run_mode="forbidden",  # Invalid run mode
             grid_data_baseurl="https://example.com/grid_data",
-            nuts_level=3,
-            resolution="10M",
             year=2024,
         )
 
@@ -66,8 +60,6 @@ def test_jmodel_initialization():
             r0_path=str(path),
             run_mode="invalid_mode",  # Invalid run mode
             grid_data_baseurl="https://example.com/grid_data",
-            nuts_level=3,
-            resolution="10M",
             year=2024,
         )
 
@@ -78,8 +70,6 @@ def test_jmodel_initialization():
             r0_path=path,
             run_mode="parallelized",  # Invalid run mode
             grid_data_baseurl=None,
-            nuts_level=3,
-            resolution="10M",
             year=2024,
         )
 
@@ -108,8 +98,6 @@ def test_model_read_input_data(make_test_data, tmp_path):
             r0_path=Path.cwd() / "test" / "test_r0.csv",
             run_mode="parallelized",
             grid_data_baseurl="https://gisco-services.ec.europa.eu/distribution/v2/nuts",
-            nuts_level=3,
-            resolution="10M",
             year=2024,
         )
 
@@ -117,7 +105,6 @@ def test_model_read_input_data(make_test_data, tmp_path):
 
         assert isinstance(read_data, xr.Dataset), "should be xr dataset"
         assert "t2m" in read_data.data_vars, "correct data dim should be in the dataset"
-        assert read_data.rio.crs == "EPSG:4326", "CRS should be set to EPSG:4326"
 
         assert (
             read_data.longitude.min() > -180.1 and read_data.longitude.max() < 180.1
@@ -134,35 +121,6 @@ def test_model_read_input_data(make_test_data, tmp_path):
         assert read_data.latitude.size == 50 and read_data.longitude.size == 50, (
             "Longitude and latitude dimensions should match the expected size"
         )
-
-
-def test_model_read_input_data_noclip(make_test_data, tmp_path):
-    with make_test_data as data:
-        model = jm.setup_modeldata(
-            input=tmp_path / "test_data.nc",
-            output="output_data.csv",
-            r0_path=Path.cwd() / "test" / "test_r0.csv",
-            run_mode="parallelized",
-            grid_data_baseurl=None,
-            nuts_level=None,
-            resolution=None,
-            year=None,
-        )
-        read_data = jm.read_input_data(model).compute()
-        assert isinstance(read_data, xr.Dataset), "should be xr dataset"
-        assert "t2m" in read_data.data_vars, "correct data dim should be in the dataset"
-        assert read_data.rio.crs == "EPSG:4326", "CRS should be set to EPSG:4326"
-
-        assert (
-            read_data.longitude.min() > -180.1 and read_data.longitude.max() < 180.1
-        ), "Longitude values should be within the expected range for EPSG:4326"
-        assert read_data.latitude.min() > -90.1 and read_data.latitude.max() < 90.1, (
-            "Latitude values should be within the expected range for EPSG:4326"
-        )
-        assert (
-            read_data.latitude.size == data.latitude.size
-            and read_data.longitude.size == data.longitude.size
-        ), "Longitude dimension should the same  as input because of no clipping"
         # assert that the one NaN value is still present
         assert np.isnan(read_data.t2m.values[10, 0]), "NaN value should be preserved"
         assert np.isnan(read_data.t2m.values).sum() == 1, (
@@ -178,8 +136,6 @@ def test_model_run(make_test_data, tmp_path):
             r0_path=Path.cwd() / "test" / "test_r0.csv",
             run_mode="parallelized",
             grid_data_baseurl="https://gisco-services.ec.europa.eu/distribution/v2/nuts",
-            nuts_level=3,
-            resolution="10M",
             year=2024,
             out_colname="r0",
         )
