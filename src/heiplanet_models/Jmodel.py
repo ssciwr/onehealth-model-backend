@@ -38,9 +38,9 @@ def read_default_config() -> dict[str, str | np.int64 | None]:
 
 
 def setup_modeldata(
-    input: str | None = None,
-    output: str | None = None,
-    r0_path: str | None = None,
+    input: str | Path | None = None,
+    output: str | Path | None = None,
+    r0_path: str | Path | None = None,
     run_mode: str = "forbidden",
     grid_data_baseurl: str | None = None,
     year: int | None = None,
@@ -173,19 +173,15 @@ def read_input_data(model_data: JModelData) -> xr.Dataset:
         xr.Dataset: xarray dataset containing the input data for the model.
     """
 
-    # nothing done here yet
-    data = xr.open_dataset(
-        model_data.input, chunks=None if model_data.run_mode == "forbidden" else "auto"
-    )
+    try:
+        data = xr.open_dataset(
+            model_data.input,
+            chunks=None if model_data.run_mode == "forbidden" else "auto",
+        )
+    except Exception as e:
+        raise RuntimeError("Input data source could not be read.") from e
 
-    if data is None:
-        raise ValueError("Input data source is not defined in the configuration.")
-
-    if model_data.run_mode == "forbidden":
-        # run synchronously on one cpu
-        return data.compute()
-    else:
-        return data
+    return data
 
 
 def run_model(
@@ -221,4 +217,3 @@ def store_output_data(
     model_data: JModelData, data: xr.Dataset | xr.DataArray | pd.DataFrame
 ) -> None:
     data.to_netcdf(model_data.output)
-    data.close()  # Close the dataset to free resources
