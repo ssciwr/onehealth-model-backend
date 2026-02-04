@@ -20,7 +20,7 @@ authors = [
 dynamic = ["version"]
 
 dependencies = [
-  "xarray[parallel]",
+  "xarray[io,parallel]",
   "rioxarray",
   "netcdf4",
   "geopandas[all]",

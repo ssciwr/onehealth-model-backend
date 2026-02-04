@@ -346,7 +346,7 @@ def main():
                     v_out[..., j, idx_time] = np.maximum(v[..., j], 0)
 
         # logger.debug(f" >>> END Processing year {year} \n")
-        logger.debug(f"Shape of final output v_out for year {year}: {v_out.shape}")
+        logger.info(f"Shape of final output v_out for year {year}: {v_out.shape}")
         logger.debug(
             f"Adult array in output v_out for year {year}:\n{print_time_slices(v_out[:, :, 4, :])}"
         )

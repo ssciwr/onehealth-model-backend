@@ -1,9 +1,13 @@
-import pytest
+# Standard library
+from pathlib import Path
 
+# Third-party
+import pytest
 import numpy as np
 import pandas as pd
 import xarray as xr
 
+# Local application
 from heiplanet_models.Pmodel.Pmodel_rates_development import (
     mosq_dev_j,
     mosq_dev_i,
@@ -15,8 +19,18 @@ from heiplanet_models.Pmodel.Pmodel_params import (
     CONSTANTS_CARRYING_CAPACITY,
 )
 
+# -------------------
+# ---- Structure ----
+# -------------------
+#       1. pytest fixtures
+#       2. unit tests (grouped by function)
 
+
+# -----------------------------------------------------------
 # ---- Pytest Fixtures
+# -----------------------------------------------------------
+
+
 @pytest.fixture
 def typical_temperature_array():
     """Provides a 1D numpy array of typical temperature values."""
@@ -141,7 +155,25 @@ def rainfall_with_nan_fixture():
     )
 
 
-# ---- Unit Tests for mosq_dev_j
+@pytest.fixture
+def dummy_file_rainfall_dataset():
+    """Loads the real rainfall dataset from test resources."""
+    resources_dir = Path(__file__).parent.parent.parent / "resources"
+    dataset_path = resources_dir / "dataset_rainfall_dummy.nc"
+    return xr.open_dataset(dataset_path).rainfall
+
+
+@pytest.fixture
+def dummy_file_population_dataset():
+    """Loads the real population dataset from test resources."""
+    resources_dir = Path(__file__).parent.parent.parent / "resources"
+    dataset_path = resources_dir / "dataset_population_dummy.nc"
+    return xr.open_dataset(dataset_path).population
+
+
+# ------------------------------------
+# ---- function under test: mosq_dev_j
+# ------------------------------------
 def test_mosq_dev_j_typical_temperatures(typical_temperature_array):
     """Test mosq_dev_j with typical temperature values."""
     result = mosq_dev_j(typical_temperature_array)
@@ -227,7 +259,9 @@ def test_mosq_dev_j_known_matrix_output():
     np.testing.assert_allclose(result, expected, atol=1e-6)
 
 
-# ---- Unit Tests for mosq_dev_i
+# ------------------------------------
+# ---- function under test: mosq_dev_i
+# ------------------------------------
 def test_mosq_dev_i_typical_temperatures(typical_temperature_array_i):
     """Test mosq_dev_i with typical temperature values."""
     result = mosq_dev_i(typical_temperature_array_i)
@@ -312,7 +346,9 @@ def test_mosq_dev_i_known_matrix_output():
     np.testing.assert_allclose(result, expected, atol=1e-6)
 
 
-# ---- Unit Tests for mosq_dev_e
+# ------------------------------------
+# ---- function under test: mosq_dev_e
+# ------------------------------------
 def test_mosq_dev_e_scalar_input():
     """Test mosq_dev_e with a scalar temperature value."""
     temp = 25.0
@@ -525,3 +561,45 @@ def test_carrying_capacity_output_properties(
     assert isinstance(result, xr.DataArray)
     assert result.shape == rainfall_data_fixture.shape
     assert result.dtype == float
+
+
+def test_carrying_capacity_regression(
+    dummy_file_rainfall_dataset, dummy_file_population_dataset
+):
+    """
+    Regression test: Compare carrying_capacity output against known expected values.
+
+    This test ensures the function produces consistent results with real datasets.
+    If this test fails, it indicates the implementation has changed.
+    """
+    result = carrying_capacity(
+        dummy_file_rainfall_dataset, dummy_file_population_dataset
+    )
+
+    # Expected output from Octave baseline computation
+    # Octave shape: (latitude=3, longitude=2, time=4)
+    expected_values = np.array(
+        [
+            # latitude row 0
+            [
+                [-6.2438e07, -2.5981e08, -4.6373e08, -6.7417e08],
+                [-2.4975e08, -4.4712e08, -6.5104e08, -8.6148e08],
+            ],
+            # latitude row 1
+            [
+                [-1.2488e08, -3.2224e08, -5.2617e08, -7.3661e08],
+                [-3.1219e08, -5.0956e08, -7.1348e08, -9.2392e08],
+            ],
+            # latitude row 2
+            [
+                [-1.8731e08, -3.8468e08, -5.8860e08, -7.9905e08],
+                [-3.7462e08, -5.7199e08, -7.7592e08, -9.8636e08],
+            ],
+        ]
+    )
+
+    # Create xarray DataArray with same structure as result
+    expected = xr.DataArray(expected_values, dims=result.dims, coords=result.coords)
+
+    # Compare result against expected values
+    xr.testing.assert_allclose(result, expected, rtol=1e-4, atol=1e-4)

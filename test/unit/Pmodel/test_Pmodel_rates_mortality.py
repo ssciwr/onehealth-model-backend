@@ -329,3 +329,22 @@ def test_mosq_surv_ed_chunking(chunked_temperature_array):
     result = mosq_surv_ed(chunked_temperature_array)
     assert isinstance(result, xr.DataArray)
     assert result.shape == chunked_temperature_array.shape
+
+
+def test_mosq_surv_ed_regression(model_input_dummy_datasets, test_etl_settings):
+
+    temperature = model_input_dummy_datasets.temperature
+    time_step = test_etl_settings["ode_system"]["time_step"]
+
+    result = mosq_surv_ed(temperature=temperature, step_t=time_step)
+
+    base_slice = np.array([[0.8845, 0.9236], [0.9045, 0.9272], [0.9167, 0.9289]])
+
+    # Tile the array to create 40 copies along the third dimension
+    expected_values = np.tile(base_slice[:, :, np.newaxis], (1, 1, 40))
+
+    # Create xarray DataArray with same structure as result
+    expected = xr.DataArray(expected_values, dims=result.dims, coords=result.coords)
+
+    # Compare result against expected values
+    xr.testing.assert_allclose(result, expected, rtol=1e-4, atol=1e-4)
