@@ -20,7 +20,7 @@ from heiplanet_models.Pmodel.Pmodel_params import (
     DAYS_YEAR,
     HALF_DAYS_YEAR,
 )
-from test.unit.Pmodel.conftest import model_input_dummy_datasets
+
 
 
 # ---- Pytest Fixtures
@@ -465,9 +465,12 @@ def test_mosq_dia_hatch_regression(model_input_dummy_datasets):
 
     expected_values = np.array(
         [
-            [[0, 0, 0.1, 0.1], [0, 0, 0.1, 0.1]],  # latitude 0
-            [[0, 0, 0.1, 0.1], [0, 0.1, 0.1, 0.1]],  # latitude 1
-            [[0, 0, 0.1, 0.1], [0, 0.1, 0.1, 0.1]],  # latitude 2
+            # latitude 0
+            [[0, 0, 0.1, 0.1], [0, 0, 0.1, 0.1]],
+            # latitude 1
+            [[0, 0, 0.1, 0.1], [0, 0.1, 0.1, 0.1]],
+            # latitude 2
+            [[0, 0, 0.1, 0.1], [0, 0.1, 0.1, 0.1]],
         ]
     )
 
@@ -548,7 +551,7 @@ def test_mosq_dia_lay_regression(model_input_dummy_datasets):
     expected = xr.DataArray(expected_values, dims=result.dims, coords=result.coords)
 
     # Compare result against expected values
-    xr.testing.assert_allclose(result, expected, rtol=1e-4, atol=1e-4)
+    xr.testing.assert_allclose(result, expected, rtol=1e-6, atol=1e-6)
 
 
 # ---- water_hatching()
@@ -704,8 +707,10 @@ def test_water_hatching_regression(
         ]
     )
 
+    # Compare dimensions
+    expected_dim = (3, 2, 4)
+    assert result.shape == expected_dim
+
     # Create xarray DataArray with same structure as result
     expected = xr.DataArray(expected_values, dims=result.dims, coords=result.coords)
-
-    # Compare result against expected values
     xr.testing.assert_allclose(result, expected, rtol=1e-4, atol=1e-4)

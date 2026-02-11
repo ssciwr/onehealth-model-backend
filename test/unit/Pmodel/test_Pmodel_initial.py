@@ -444,6 +444,22 @@ def mock_model_inputs():
     }
 
 
+@pytest.fixture
+def dummy_file_initial_conditions_path():
+    """Loads the initial conditions dummy file dataset from test resources."""
+    resources_dir = Path(__file__).parent.parent.parent / "resources"
+    dataset_path = resources_dir / "initial_conditions_dummy.nc"
+    return dataset_path
+
+
+@pytest.fixture
+def dummy_file_etl_settings_yaml():
+    """Loads the initial conditions dummy file dataset from test resources."""
+    resources_dir = Path(__file__).parent.parent.parent / "resources"
+    dataset_path = resources_dir / "global_settings_dummy.yaml"
+    return Pmodel_initial.read_global_settings(dataset_path)
+
+
 # ===================================
 # ===         Unit tests          ===
 # ===================================
@@ -1511,6 +1527,77 @@ def test_load_initial_conditions_ignores_extra_variables(
         np.testing.assert_allclose(
             result_v0.isel(variable=i).values, expected_data[var], rtol=1e-6
         )
+
+
+def test_load_initial_conditions_nofile_regression(dummy_file_etl_settings_yaml):
+
+    etl_settings = dummy_file_etl_settings_yaml
+
+    number_longitudes = 3
+    number_latitudes = 2
+    sizes = (number_longitudes, number_latitudes)
+
+    result = Pmodel_initial.load_initial_conditions(
+        filepath=None, sizes=sizes, **etl_settings
+    )
+
+    expected_values = np.zeros((3, 2, 5), dtype=np.float64)
+    expected_values[:, :, 1] = 62500.0
+    expected_values = xr.DataArray(
+        expected_values, dims=result.dims, coords=result.coords
+    )
+
+    # Compare dimensions
+    expected_dim = (3, 2, 5)
+    assert result.shape == expected_dim
+
+    # Assert values
+    xr.testing.assert_allclose(result, expected_values, rtol=1e-4, atol=1e-4)
+
+
+def test_load_initial_conditions_regression(
+    dummy_file_etl_settings_yaml, dummy_file_initial_conditions_path
+):
+    etl_settings = dummy_file_etl_settings_yaml
+
+    number_longitudes = 3
+    number_latitudes = 2
+
+    sizes = (number_longitudes, number_latitudes)
+
+    result = Pmodel_initial.load_initial_conditions(
+        filepath=dummy_file_initial_conditions_path, sizes=sizes, **etl_settings
+    )
+
+    expected_values = np.array(
+        [
+            # longitude 0
+            [
+                [5.9, 11.8, 17.7, 23.6, 35.4],
+                [6.05, 12.1, 18.15, 24.2, 36.3],
+            ],
+            # longitude 1
+            [
+                [5.95, 11.9, 17.85, 23.8, 35.7],
+                [6.1, 12.2, 18.3, 24.4, 36.6],
+            ],
+            # longitude 2
+            [
+                [6.0, 12.0, 18.0, 24.0, 36.0],
+                [6.15, 12.3, 18.45, 24.6, 36.9],
+            ],
+        ]
+    )
+    expected_values = xr.DataArray(
+        expected_values, dims=result.dims, coords=result.coords
+    )
+
+    # Compare dimensions
+    expected_dim = (3, 2, 5)
+    assert result.shape == expected_dim
+
+    # Assert values
+    xr.testing.assert_allclose(result, expected_values, rtol=1e-4, atol=1e-4)
 
 
 # ---- Unit tests for load_all_data

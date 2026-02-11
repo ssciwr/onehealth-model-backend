@@ -597,9 +597,14 @@ def test_carrying_capacity_regression(
             ],
         ]
     )
+    expected_values = xr.DataArray(
+        expected_values, dims=result.dims, coords=result.coords
+    )
+
+    # Compare dimensions
+    expected_dim = (3, 2, 4)
+    assert result.shape == expected_dim
 
     # Create xarray DataArray with same structure as result
-    expected = xr.DataArray(expected_values, dims=result.dims, coords=result.coords)
 
-    # Compare result against expected values
-    xr.testing.assert_allclose(result, expected, rtol=1e-4, atol=1e-4)
+    xr.testing.assert_allclose(result, expected_values, rtol=1e-4, atol=1e-4)

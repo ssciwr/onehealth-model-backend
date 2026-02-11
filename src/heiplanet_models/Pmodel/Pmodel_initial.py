@@ -77,7 +77,7 @@ def check_all_paths_exist(path_dict: dict[str, Union[str, Path]]) -> bool:
 
 
 # ---- ETL Functions
-def assemble_filepaths(year: int, **etl_settings) -> dict[str, Path]:
+def assemble_filepaths(year: int | None = None, **etl_settings) -> dict[str, Path]:
     """Assemble file paths for datasets for a given year based on ETL settings.
 
     Args:
@@ -94,18 +94,27 @@ def assemble_filepaths(year: int, **etl_settings) -> dict[str, Path]:
     """
     # TODO: move to utils.py in the future
 
-    if not isinstance(year, int):
+    if (year is not None) and (not isinstance(year, int)):
         logger.error(f"Year {year} is not an integer.")
         raise TypeError
 
     path_root = Path(etl_settings["ingestion"]["path_root_datasets"])
     filename_components = etl_settings["ingestion"]["filename_components"]
 
-    dict_paths = {
-        dataset_name: path_root
-        / f"{comp['prefix']}{year}{comp['suffix'] or ''}{comp['extension']}"
-        for dataset_name, comp in filename_components.items()
-    }
+    if year:
+        dict_paths = {
+            dataset_name: path_root
+            / f"{comp['prefix']}{year}{comp['suffix'] or ''}{comp['extension']}"
+            for dataset_name, comp in filename_components.items()
+        }
+
+    else:
+        dict_paths = {
+            dataset_name: path_root
+            / f"{comp['prefix']}{comp['suffix'] or ''}{comp['extension']}"
+            for dataset_name, comp in filename_components.items()
+        }
+
     return dict_paths
 
 
