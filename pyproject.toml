@@ -21,14 +21,14 @@ dynamic = ["version"]
 
 dependencies = [
   "xarray[parallel]",
-  "rioxarray",
   "netcdf4",
-  "geopandas[all]",
   "matplotlib",
   "numpy",
   "dask",
   "jupyter",
   "cftime>=1.6.4.post1",
+  "geopandas>=1.0.1",
+  "scipy>=1.13.1",
 ]
 
 [project.optional-dependencies]
@@ -73,6 +73,7 @@ omit = [
     "src/heiplanet_models/__init__.py",
     "src/heiplanet_models/*/__init__.py",
     "src/heiplanet_models/Pmodel/run_model.py",
+    "test/*.py"
 ]
 
 [tool.coverage.report]
