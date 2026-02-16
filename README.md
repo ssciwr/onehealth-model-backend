@@ -1,6 +1,6 @@
 # heiplanet-models
 
-[![Top Language](https://img.shields.io/github/languages/top/ssciwr/heiplanet-models)](https://github.com/ssciwr/heiplanet-models) [![Documentation](https://img.shields.io/website?url=https%3A%2F%2Fssciwr.github.io%2Fheiplanet-models%2F)](https://ssciwr.github.io/heiplanet-models/) [![Codecov](https://codecov.io/gh/ssciwr/heiplanet-models/branch/main/graph/badge.svg)](https://codecov.io/gh/ssciwr/heiplanet-models) [![License](https://img.shields.io/github/license/ssciwr/heiplanet-models)](https://github.com/ssciwr/heiplanet-models/blob/main/LICENSE)
+[![Top Language](https://img.shields.io/github/languages/top/ssciwr/heiplanet-models)](https://github.com/ssciwr/heiplanet-models) [![Documentation](https://img.shields.io/badge/Documentation-online-brightgreen)](https://ssciwr.github.io/heiplanet-models/) [![Codecov](https://codecov.io/gh/ssciwr/heiplanet-models/branch/main/graph/badge.svg)](https://codecov.io/gh/ssciwr/heiplanet-models) [![License](https://img.shields.io/github/license/ssciwr/heiplanet-models)](https://github.com/ssciwr/heiplanet-models/blob/main/LICENSE)
 
 ## Description
 This repository consists of a collection of models that share the same infrastructure code, used for the [heiplanet project](http://129.206.4.157/)
