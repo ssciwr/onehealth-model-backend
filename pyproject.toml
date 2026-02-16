@@ -52,8 +52,8 @@ docs = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/ssciwr/onehealth-model-backend"
-Issues = "https://github.com/ssciwr/onehealth-model-backend/issues"
+Homepage = "https://github.com/ssciwr/heiplanet-models"
+Issues = "https://github.com/ssciwr/heiplanet-models/issues"
 
 # tool-specific configurations
 [tool.hatch.build.targets.wheel]
