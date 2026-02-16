@@ -1,9 +1,9 @@
 # heiplanet-models
 
-[![Documentation](https://img.shields.io/website?url=https%3A%2F%2Fssciwr.github.io%2Fonehealth-model-backend%2F)](https://ssciwr.github.io/onehealth-model-backend/) [![Codecov](https://codecov.io/gh/ssciwr/onehealth-model-backend/branch/main/graph/badge.svg)](https://codecov.io/gh/ssciwr/onehealth-model-backend) [![License](https://img.shields.io/github/license/ssciwr/onehealth-model-backend)](https://github.com/ssciwr/onehealth-model-backend/blob/main/LICENSE)
+[![Top Language](https://img.shields.io/github/languages/top/ssciwr/onehealth-model-backend)](https://github.com/ssciwr/onehealth-model-backend) [![Documentation](https://img.shields.io/website?url=https%3A%2F%2Fssciwr.github.io%2Fonehealth-model-backend%2F)](https://ssciwr.github.io/onehealth-model-backend/) [![Codecov](https://codecov.io/gh/ssciwr/onehealth-model-backend/branch/main/graph/badge.svg)](https://codecov.io/gh/ssciwr/onehealth-model-backend) [![License](https://img.shields.io/github/license/ssciwr/onehealth-model-backend)](https://github.com/ssciwr/onehealth-model-backend/blob/main/LICENSE)
 
 ## Description
-This repository consists of a collection of models that share the same infrastructure code, used for the [heiplanet project](http://129.206.4.157/).
+This repository consists of a collection of models that share the same infrastructure code, used for the [heiplanet project](http://129.206.4.157/)
 
 
 ## Installation
