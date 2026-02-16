@@ -1,6 +1,6 @@
 # heiplanet-models
 
-[![Top Language](https://img.shields.io/github/languages/top/ssciwr/onehealth-model-backend)](https://github.com/ssciwr/onehealth-model-backend) [![Documentation](https://img.shields.io/website?url=https%3A%2F%2Fssciwr.github.io%2Fonehealth-model-backend%2F)](https://ssciwr.github.io/onehealth-model-backend/) [![Codecov](https://codecov.io/gh/ssciwr/onehealth-model-backend/branch/main/graph/badge.svg)](https://codecov.io/gh/ssciwr/onehealth-model-backend) [![License](https://img.shields.io/github/license/ssciwr/onehealth-model-backend)](https://github.com/ssciwr/onehealth-model-backend/blob/main/LICENSE)
+[![Top Language](https://img.shields.io/github/languages/top/ssciwr/heiplanet-models)](https://github.com/ssciwr/heiplanet-models) [![Documentation](https://img.shields.io/website?url=https%3A%2F%2Fssciwr.github.io%2Fheiplanet-models%2F)](https://ssciwr.github.io/heiplanet-models/) [![Codecov](https://codecov.io/gh/ssciwr/heiplanet-models/branch/main/graph/badge.svg)](https://codecov.io/gh/ssciwr/heiplanet-models) [![License](https://img.shields.io/github/license/ssciwr/heiplanet-models)](https://github.com/ssciwr/heiplanet-models/blob/main/LICENSE)
 
 ## Description
 This repository consists of a collection of models that share the same infrastructure code, used for the [heiplanet project](http://129.206.4.157/)
@@ -36,7 +36,7 @@ Graphviz itself has additional dependencies it needs to install. For more detail
 Clone the repository
 
 ```bash
-git clone https://github.com/ssciwr/onehealth-model-backend.git
+git clone https://github.com/ssciwr/heiplanet-models.git
 ```
 Create some virtual environment as described above.
 Then, go to the base directory of the repository, and run
